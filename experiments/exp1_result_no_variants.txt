@@ -1,0 +1,149 @@
+modo: so termo+apelidos  limiar=80
+gabarito em escopo (tem termo canonico): 173   fora de escopo: 24   manter: 2
+acertos: 77   perdidos: 96   falsos positivos: 3
+
+por termo (acertos/total):
+  CEMIG                 55/77
+  EBITDA                10/17
+  bi                     0/11
+  CPFL                   0/9
+  debêntures             2/5
+  OPEX                   0/5
+  tri                    0/4
+  Adeus INSS             3/3
+  IPCA                   0/3
+  TIR                    0/3
+  Markowitz              2/3
+  emissão                0/2
+  Ward                   0/2
+  reais                  0/2
+  Taesa                  0/2
+  dividendo              2/2
+  CAPEX                  0/2
+  Engie                  0/2
+  buy and hold           0/1
+  Gasmig                 1/1
+  Cemig D                0/1
+  Cemig GT               0/1
+  Nubank                 0/1
+  Geração Dividendos     0/1
+  diluição               0/1
+  RAP                    0/1
+  Klabin                 1/1
+  desalavancagem         0/1
+  valuation              1/1
+  Warren Buffett         0/1
+  alíquota               0/1
+  acionista              0/1
+  Sabesp                 0/1
+  Copasa                 0/1
+  Leo                    0/1
+  Ártica                 0/1
+  preço teto             0/1
+
+perdidos:
+  0:58   'BU hold' -> buy and hold
+  1:14   'semix' -> CEMIG
+  3:22   'mississões' -> emissão
+  3:36   'EBA' -> EBITDA
+  3:50   'segundo trad de 2025' -> tri
+  5:13   '4.6 B' -> bi
+  5:13   'SEMigd' -> Cemig D
+  5:18   'GT' -> Cemig GT
+  6:04   'Word' -> Ward
+  7:21   'SEMI' -> CEMIG
+  7:24   'SEMIC' -> CEMIG
+  7:46   'PCA' -> IPCA
+  7:50   'PCA' -> IPCA
+  8:24   'segundo trio 2026' -> tri
+  8:32   'no bank' -> Nubank
+  8:59   'segundo TR de 2025' -> tri
+  9:10   'tir' -> TIR
+  9:13   'tir' -> TIR
+  10:21  'sobre bit' -> EBITDA
+  10:44  'SEMIX' -> CEMIG
+  10:59  'Ox' -> OPEX
+  10:59  'Ox' -> OPEX
+  11:03  'O PX' -> OPEX
+  11:03  'Ox' -> OPEX
+  11:20  'Ox' -> OPEX
+  12:19  'Geração de Dentes' -> Geração Dividendos
+  12:36  'SEMIC' -> CEMIG
+  12:51  '44 bilhões deais' -> reais
+  12:56  'Word' -> Ward
+  13:06  '42.9 bit' -> bi
+  13:06  '43 B' -> bi
+  13:27  '6.7 B' -> bi
+  13:34  '6.7 B' -> bi
+  13:48  '9.3 bilhões deais' -> reais
+  13:54  'você me caiu' -> CEMIG
+  14:06  '2.2 B' -> bi
+  14:45  'ebígita' -> EBITDA
+  15:03  'inibição de cotas' -> emissão
+  15:05  'deuind acionista' -> diluição
+  15:10  'debentor' -> debêntures
+  15:13  'debentor' -> debêntures
+  15:20  'bitera' -> EBITDA
+  15:24  'taa' -> Taesa
+  15:25  'rap' -> RAP
+  15:57  'sem amig' -> CEMIG
+  16:39  'semicaiu' -> CEMIG
+  17:04  '10 alavancagens' -> desalavancagem
+  17:45  'web ebit' -> EBITDA
+  18:18  'Warnbuff' -> Warren Buffett
+  18:29  'capx' -> CAPEX
+  18:31  'líquota' -> alíquota
+  18:38  'aoonista' -> acionista
+  18:53  'deementories' -> debêntures
+  19:57  'BBI' -> EBITDA
+  20:11  'segundo TR de 2026' -> tri
+  20:15  'em PCA' -> IPCA
+  20:26  '6.7 7 B' -> bi
+  20:28  '6.6 B' -> bi
+  20:33  '4 B' -> bi
+  20:35  '4 B' -> bi
+  21:08  'índia' -> Engie
+  21:28  'sem amig' -> CEMIG
+  21:34  'semiga' -> CEMIG
+  22:28  'esse amigo' -> CEMIG
+  22:31  'esse amigo' -> CEMIG
+  22:33  'esse amigo' -> CEMIG
+  23:02  'autocapex' -> CAPEX
+  23:52  'Sabespe' -> Sabesp
+  24:08  'Copaz' -> Copasa
+  24:51  'ser MIG' -> CEMIG
+  24:56  'venda do 100' -> CEMIG
+  26:12  'Lu' -> Leo
+  26:36  'End' -> Engie
+  26:36  'Taa' -> Taesa
+  26:42  'gestor da arte' -> Ártica
+  27:03  'sua tira' -> TIR
+  27:20  'Marcovit' -> Markowitz
+  28:11  'CMIG' -> CEMIG
+  28:38  '32 bit' -> bi
+  28:44  'sobre bicho' -> EBITDA
+  28:55  'CIC' -> CEMIG
+  28:57  'CIC' -> CEMIG
+  29:30  'CPFE' -> CPFL
+  29:41  'ser MIG' -> CEMIG
+  30:02  'CPFE' -> CPFL
+  30:08  'ser mig' -> CEMIG
+  30:41  'CPFE' -> CPFL
+  30:43  'CPFE' -> CPFL
+  30:45  'CPFE' -> CPFL
+  30:46  'preço delet' -> preço teto
+  30:46  'CPFE' -> CPFL
+  30:53  'CPFE' -> CPFL
+  31:08  'CMIG' -> CEMIG
+  31:08  'CPFE' -> CPFL
+  31:28  'serig' -> CEMIG
+  31:28  'CPFE' -> CPFL
+
+falsos positivos (unicos por trecho):
+    1x 'preço Então' -> preço teto
+    1x 'dividido' -> dividendo
+    1x 'preço e' -> preço teto
+
+mexeu nas linhas manter?
+  7:30 'Léo ruim': None
+  10:27 'dívida livre': None

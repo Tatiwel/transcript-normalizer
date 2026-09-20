@@ -1,0 +1,73 @@
+modo: com variantes  limiar=80
+gabarito em escopo (tem termo canonico): 168   fora de escopo: 28   manter: 2
+acertos: 152   perdidos: 16   falsos positivos: 10
+
+por termo (acertos/total):
+  CEMIG                 75/77
+  EBITDA                16/17
+  bi                    11/11
+  CPFL                   8/8
+  debêntures             5/5
+  OPEX                   5/5
+  tri                    3/4
+  Adeus INSS             3/3
+  IPCA                   3/3
+  Markowitz              3/3
+  emissão                0/2
+  Ward                   2/2
+  reais                  1/2
+  Taesa                  2/2
+  dividendo              2/2
+  CAPEX                  1/2
+  Engie                  2/2
+  buy and hold           1/1
+  Gasmig                 1/1
+  Cemig D                0/1
+  Cemig GT               0/1
+  Nubank                 1/1
+  Geração Dividendos     0/1
+  diluição               0/1
+  Klabin                 1/1
+  desalavancagem         0/1
+  valuation              1/1
+  Warren Buffett         1/1
+  alíquota               0/1
+  acionista              0/1
+  Sabesp                 0/1
+  Copasa                 1/1
+  Leo                    1/1
+  Ártica                 1/1
+  preço teto             1/1
+
+perdidos:
+  3:22   'mississões' -> emissão
+  5:13   'SEMigd' -> Cemig D
+  5:18   'GT' -> Cemig GT
+  8:24   'segundo trio 2026' -> tri
+  12:19  'Geração de Dentes' -> Geração Dividendos
+  13:48  '9.3 bilhões deais' -> reais
+  15:03  'inibição de cotas' -> emissão
+  15:05  'deuind acionista' -> diluição
+  17:04  '10 alavancagens' -> desalavancagem
+  18:31  'líquota' -> alíquota
+  18:38  'aoonista' -> acionista
+  19:57  'BBI' -> EBITDA
+  23:02  'autocapex' -> CAPEX
+  23:52  'Sabespe' -> Sabesp
+  24:51  'ser MIG' -> CEMIG
+  31:28  'serig' -> CEMIG
+
+falsos positivos (unicos por trecho):
+    2x 'dos 10' -> CEMIG
+    1x 'mês caiu' -> CEMIG
+    1x 'preço Então' -> preço teto
+    1x 'nesse ramo' -> CEMIG
+    1x 'SEMigd' -> CEMIG
+    1x 'A SEMigd' -> CEMIG
+    1x 'dividido' -> dividendo
+    1x 'de eBit' -> EBITDA
+    1x 'e caiu' -> CEMIG
+
+mexeu nas linhas manter?
+  7:30 'Léo ruim': None
+  10:27 'dívida livre': None

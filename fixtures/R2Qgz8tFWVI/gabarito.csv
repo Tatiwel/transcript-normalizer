@@ -1,0 +1,198 @@
+﻿timestamp,trecho_errado,correcao,termo_canonico,classe,status
+0:02,SEMIG,CEMIG,CEMIG,companhia,certo
+0:08,semig,CEMIG,CEMIG,companhia,certo
+0:13,semig,CEMIG,CEMIG,companhia,certo
+0:33,SEMIG,CEMIG,CEMIG,companhia,certo
+0:58,BU hold,buy and hold,buy and hold,estrangeirismo,certo
+1:14,semix,CEMIG,CEMIG,companhia,certo
+2:49,SEMIG,CEMIG,CEMIG,companhia,certo
+2:51,SEMIG,CEMIG,CEMIG,companhia,certo
+2:53,SEMIG,CEMIG,CEMIG,companhia,certo
+2:55,ADUS NSS,Adeus INSS,Adeus INSS,serie do canal,conferido
+2:58,ADUS NSS,Adeus INSS,Adeus INSS,serie do canal,conferido
+3:22,mississões,Tanto as emissões,emissão,operacao,conferido
+3:36,EBA,EBITDA,EBITDA,indicador,certo
+3:50,segundo trad de 2025,segundo tri de 2025,tri,periodo,certo
+4:02,SEMIG,CEMIG,CEMIG,companhia,certo
+4:08,SEMIG,CEMIG,CEMIG,companhia,certo
+4:39,SEMIG,CEMIG,CEMIG,companhia,certo
+5:03,Gas MIG,Gasmig,Gasmig,companhia,certo
+5:04,SEMIG,CEMIG,CEMIG,companhia,certo
+5:13,4.6 B,"4,6 bi",bi,unidade,certo
+5:13,SEMigd,Cemig D,Cemig D,companhia,certo
+5:16,debentories,debêntures,debêntures,instrumento,certo
+5:18,GT,Cemig GT,Cemig GT,companhia,certo
+5:22,debentories,debêntures,debêntures,instrumento,certo
+5:55,SEMIG,CEMIG,CEMIG,companhia,certo
+6:04,Word,Ward,Ward,ferramenta,conferido
+6:06,SEMIG,CEMIG,CEMIG,companhia,certo
+7:10,SEMIG,CEMIG,CEMIG,companhia,certo
+7:14,semig,CEMIG,CEMIG,companhia,certo
+7:21,SEMI,CEMIG,CEMIG,companhia,certo
+7:24,SEMIG,CEMIG,CEMIG,companhia,certo
+7:24,SEMIC,CEMIG,CEMIG,companhia,certo
+7:30,Léo ruim,"manter (locutor: ""Leo, ruim?"")",,fala comum,manter
+7:46,PCA,IPCA,IPCA,indice,certo
+7:50,PCA,IPCA,IPCA,indice,certo
+8:04,Ebítida,EBITDA,EBITDA,indicador,certo
+8:22,ebíta,EBITDA,EBITDA,indicador,certo
+8:22,ebíta,EBITDA,EBITDA,indicador,certo
+8:24,segundo trio 2026,segundo tri 2026,tri,periodo,certo
+8:32,no bank,Nubank,Nubank,companhia,certo
+8:36,financii,financiei,,fala comum,certo
+8:49,10 men 1,10 menos 1,,fala comum,certo
+8:59,SEMIG,CEMIG,CEMIG,companhia,certo
+8:59,segundo TR de 2025,segundo tri de 2025,tri,periodo,certo
+9:10,tir,TIR,,indicador,so_caixa
+9:13,tir,TIR,,indicador,so_caixa
+9:24,SEMIG,CEMIG,CEMIG,companhia,certo
+9:28,SEMIG,CEMIG,CEMIG,companhia,certo
+9:31,semig,CEMIG,CEMIG,companhia,certo
+9:35,web ebita,EBITDA,EBITDA,indicador,certo
+10:21,sobre bit,sobre EBITDA,EBITDA,indicador,certo
+10:27,dívida livre,manter (locutor disse assim),dívida líquida,indicador,manter
+10:44,SEMIX,CEMIG,CEMIG,companhia,certo
+10:59,Ox,OPEX,OPEX,indicador,certo
+10:59,Ox,OPEX,OPEX,indicador,certo
+11:03,O PX,OPEX,OPEX,indicador,certo
+11:03,Ox,OPEX,OPEX,indicador,certo
+11:20,Ox,OPEX,OPEX,indicador,certo
+12:19,Geração de Dentes,Geração Dividendos,Geração Dividendos,canal,certo
+12:31,vai m rápido,vai mais rápido,,fala comum,certo
+12:36,SEMIC,CEMIG,CEMIG,companhia,certo
+12:48,2013,2030,,numero,conferido
+12:51,44 bilhões deais,44 bilhões de reais,reais,unidade,certo
+12:54,SEMIG,CEMIG,CEMIG,companhia,certo
+12:56,Word,Ward,Ward,ferramenta,conferido
+12:59,SEMIG,CEMIG,CEMIG,companhia,certo
+13:01,SEMIG,CEMIG,CEMIG,companhia,certo
+13:03,SEMIG,CEMIG,CEMIG,companhia,certo
+13:06,42.9 bit,"42,9 bi",bi,unidade,certo
+13:06,43 B,43 bi,bi,unidade,certo
+13:09,44 milhões,44 bilhões,,numero,conferido
+13:27,6.7 B,"6,7 bi",bi,unidade,certo
+13:34,6.7 B,"6,7 bi",bi,unidade,certo
+13:48,9.3 bilhões deais,"9,3 bilhões de reais",reais,unidade,certo
+13:51,SEMIG,CEMIG,CEMIG,companhia,certo
+13:54,você me caiu,CEMIG caiu,CEMIG,companhia,certo
+13:56,ladaainha,ladainha,,fala comum,certo
+14:06,2.2 B,"2,2 bi",bi,unidade,certo
+14:13,ebítida,EBITDA,EBITDA,indicador,certo
+14:41,800 di por 2239,800 dividido por 2239,,fala comum,conferido
+14:45,ebígita,EBITDA,EBITDA,indicador,certo
+15:03,inibição de cotas,emissão de cotas,emissão,operacao,conferido
+15:05,deuind acionista,diluindo acionistas,diluição,operacao,conferido
+15:10,debentor,debêntures,debêntures,instrumento,certo
+15:13,debentor,debêntures,debêntures,instrumento,certo
+15:20,bitera,EBITDA era,EBITDA,indicador,certo
+15:24,previsivo,previsível,,fala comum,certo
+15:24,taa,Taesa,Taesa,companhia,certo
+15:25,rap,RAP,,sigla setorial,so_caixa
+15:31,SEMIG,CEMIG,CEMIG,companhia,certo
+15:57,sem amig,CEMIG,CEMIG,companhia,certo
+15:59,dividend,dividendo,dividendo,indicador,certo
+16:09,80 dividendo,"R$ 0,80 de dividendos",,numero,conferido
+16:14,Clabin,Klabin,Klabin,companhia,certo
+16:25,dividenda,dividendo,dividendo,indicador,certo
+16:39,semicaiu,CEMIG caiu,CEMIG,companhia,certo
+17:04,10 alavancagens,desalavancagem,desalavancagem,indicador,conferido
+17:25,SEMIG,CEMIG,CEMIG,companhia,certo
+17:42,Ebítida,EBITDA,EBITDA,indicador,certo
+17:44,Ebíta,EBITDA,EBITDA,indicador,certo
+17:45,web ebit,EBITDA,EBITDA,indicador,certo
+18:11,valation,valuation,valuation,estrangeirismo,certo
+18:18,Warnbuff,Warren Buffett,Warren Buffett,pessoa,certo
+18:29,capx,CAPEX,CAPEX,indicador,certo
+18:31,líquota,alíquota,alíquota,tributario,certo
+18:38,aoonista,ao acionista,acionista,,certo
+18:38,SEMIG,CEMIG,CEMIG,companhia,certo
+18:44,SEMIG,CEMIG,CEMIG,companhia,certo
+18:53,deementories,debêntures,debêntures,instrumento,certo
+19:48,quees,que eles,,fala comum,certo
+19:55,SEMIG,CEMIG,CEMIG,companhia,certo
+19:57,BBI,EBITDA,EBITDA,indicador,conferido
+20:02,"4,83 milhões","R$ 483,3 milhões",,numero,conferido
+20:11,segundo TR de 2026,segundo tri de 2026,tri,periodo,certo
+20:13,SEMIG,CEMIG,CEMIG,companhia,certo
+20:15,em PCA,IPCA,IPCA,indice,certo
+20:26,6.7 7 B,"6,7 bi",bi,unidade,certo
+20:28,6.6 B,"6,6 bi",bi,unidade,certo
+20:33,4 B,4 bi,bi,unidade,certo
+20:35,4 B,4 bi,bi,unidade,certo
+21:08,índia,Engie,Engie,companhia,conferido
+21:19,efeidade,efeito didático,,fala comum,conferido
+21:28,sem amig,CEMIG,CEMIG,companhia,certo
+21:34,semiga,CEMIG,CEMIG,companhia,certo
+22:01,ponto su,pontos,,fala comum,conferido
+22:10,SEMIG,CEMIG,CEMIG,companhia,certo
+22:27,SEMIG,CEMIG,CEMIG,companhia,certo
+22:28,esse amigo,CEMIG,CEMIG,companhia,certo
+22:31,esse amigo,CEMIG,CEMIG,companhia,certo
+22:33,esse amigo,CEMIG,CEMIG,companhia,certo
+22:47,SEMIG,CEMIG,CEMIG,companhia,certo
+22:50,SEMIG,CEMIG,CEMIG,companhia,certo
+22:55,SEMIG,CEMIG,CEMIG,companhia,certo
+23:02,autocapex,alto CAPEX,CAPEX,indicador,certo
+23:15,degladiie,degladie,,fala comum,certo
+23:36,SEMIG,CEMIG,CEMIG,companhia,certo
+23:39,tm,têm,,fala comum,certo
+23:52,Sabespe,Sabesp,Sabesp,companhia,certo
+23:56,depois da São valores,depois da são valores que chegam,,fala comum,conferido
+24:08,Copaz,Copasa,Copasa,companhia,certo
+24:51,ser MIG,CEMIG,CEMIG,companhia,certo
+24:56,venda do 100,venda de CEMIG,CEMIG,companhia,conferido
+25:00,curtoprasistas,curto-prazistas,,fala comum,certo
+25:15,tm,têm,,fala comum,certo
+26:12,Lu,Leo,Leo,pessoa,conferido
+26:15,vaif,vai,,fala comum,conferido
+26:20,SEMIG,CEMIG,CEMIG,companhia,certo
+26:22,SEMIG,CEMIG,CEMIG,companhia,certo
+26:24,SEMIG,CEMIG,CEMIG,companhia,certo
+26:25,SEMIG,CEMIG,CEMIG,companhia,certo
+26:27,Deus NSS,Adeus INSS,Adeus INSS,serie do canal,conferido
+26:31,SEMIG,CEMIG,CEMIG,companhia,certo
+26:36,End,Engie,Engie,companhia,conferido
+26:36,Taa,Taesa,Taesa,companhia,certo
+26:42,gestor da arte,gestor da Ártica,Ártica,gestora,certo
+27:03,sua tira,sua TIR,,indicador,so_caixa
+27:19,Markovitz sendado,Markowitz sentado,Markowitz,pessoa,certo
+27:20,Marcovit,Markowitz,Markowitz,pessoa,certo
+27:25,Markovit,Markowitz,Markowitz,pessoa,certo
+27:59,SEMIG,CEMIG,CEMIG,companhia,certo
+28:05,Ebítida,EBITDA,EBITDA,indicador,certo
+28:05,Ebíta,EBITDA,EBITDA,indicador,certo
+28:11,CMIG,CEMIG,CEMIG,companhia,conferido
+28:15,Ebida,EBITDA,EBITDA,indicador,certo
+28:27,SEMIG,CEMIG,CEMIG,companhia,certo
+28:38,32 bit,32 bi,bi,unidade,certo
+28:44,sobre bicho,sobre EBITDA,EBITDA,indicador,certo
+28:55,CIC,CEMIG,CEMIG,companhia,certo
+28:57,CIC,CEMIG,CEMIG,companhia,certo
+28:59,flux,fluxo,,fala comum,certo
+29:02,fluo,fluxo,,fala comum,certo
+29:22,SEMIG,CEMIG,CEMIG,companhia,certo
+29:30,CPFE,CPFL,CPFL,companhia,certo
+29:34,SEMIG,CEMIG,CEMIG,companhia,certo
+29:41,ser MIG,CEMIG,CEMIG,companhia,certo
+29:48,pagar R,pagar R$ 40,,numero,conferido
+29:50,o R,o R$ 40,,numero,conferido
+29:57,SEMIG,CEMIG,CEMIG,companhia,certo
+30:01,semig,CEMIG,CEMIG,companhia,certo
+30:02,CPFE,CPFL,CPFL,companhia,certo
+30:04,semig,CEMIG,CEMIG,companhia,certo
+30:08,ser mig,CEMIG,CEMIG,companhia,certo
+30:37,SEMIG,CEMIG,CEMIG,companhia,certo
+30:41,SEMIG,CEMIG,CEMIG,companhia,certo
+30:41,CPFE,CPFL,CPFL,companhia,certo
+30:45,CPFE,CPFL,CPFL,companhia,certo
+30:46,preço delet,preço teto,preço teto,indicador,certo
+30:46,SEMIG,CEMIG,CEMIG,companhia,certo
+30:46,CPFE,CPFL,CPFL,companhia,certo
+30:50,SEMIG,CEMIG,CEMIG,companhia,certo
+30:53,CPFE,CPFL,CPFL,companhia,certo
+30:58,SEMIG,CEMIG,CEMIG,companhia,certo
+31:02,SEMIG,CEMIG,CEMIG,companhia,certo
+31:08,CMIG,CEMIG,CEMIG,companhia,conferido
+31:08,CPFE,CPFL,CPFL,companhia,certo
+31:28,serig,ser CEMIG,CEMIG,companhia,certo
+31:28,CPFE,CPFL,CPFL,companhia,certo

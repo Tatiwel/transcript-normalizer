@@ -1,0 +1,97 @@
+# Lista de termos do video R2Qgz8tFWVI. Primeira versao, um video so.
+# Variantes vieram do gabarito. Termo com "?" no gabarito nao entrou.
+termos:
+  - termo: CEMIG
+    classe: companhia
+    apelidos: [Cemig, Cemig D, Cemig GT, CMIG4, CMIG3]
+    variantes: [SEMIG, SEMI, SEMIC, SEMIX, CIC, CMIG, semiga, sem amig, esse amigo, ser MIG, semicaiu, SEMigd, "do 100", "me caiu"]
+  - termo: CPFL
+    classe: companhia
+    variantes: [CPFE]
+  - termo: Taesa
+    classe: companhia
+    apelidos: [TAESA, TAEE11]
+    variantes: [taa, Taía]
+  - termo: Klabin
+    classe: companhia
+    variantes: [Clabin]
+  - termo: Sabesp
+    classe: companhia
+    variantes: [Sabespe]
+  - termo: Copasa
+    classe: companhia
+    variantes: [Copaz]
+  - termo: Gasmig
+    classe: companhia
+    variantes: [Gas MIG]
+  - termo: Nubank
+    classe: companhia
+    variantes: [no bank]
+  - termo: Ártica
+    classe: gestora
+    variantes: [arte]
+  - termo: Geração Dividendos
+    classe: canal
+    apelidos: [MGD]
+    variantes: [Geração de Dentes]
+  - termo: EBITDA
+    classe: indicador
+    variantes: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bicho, bitera]
+    colocacoes: [dívida líquida sobre EBITDA, margem EBITDA]
+  - termo: OPEX
+    classe: indicador
+    variantes: [Ox, O PX]
+  - termo: CAPEX
+    classe: indicador
+    variantes: [capx, autocapex]
+  - termo: IPCA
+    classe: indice
+    variantes: [PCA]
+  - termo: TIR
+    classe: indicador
+    variantes: [tir, tira]
+  - termo: RAP
+    classe: sigla setorial
+    variantes: [rap]
+  - termo: debêntures
+    classe: instrumento
+    variantes: [debentories, debentor, deementories]
+  - termo: dividendo
+    classe: indicador
+    variantes: [dividend, dividenda]
+  - termo: preço teto
+    classe: indicador
+    variantes: [preço delet]
+  - termo: valuation
+    classe: estrangeirismo
+    variantes: [valation]
+  - termo: buy and hold
+    classe: estrangeirismo
+    variantes: [BU hold]
+  - termo: Warren Buffett
+    classe: pessoa
+    variantes: [Warnbuff]
+  - termo: Markowitz
+    classe: pessoa
+    variantes: [Markovitz, Marcovit, Markovit]
+  - termo: tri
+    classe: periodo
+    variantes: [trad, trio, TR]
+  - termo: Engie
+    classe: companhia
+    variantes: [índia, End]
+  - termo: Ward
+    classe: ferramenta
+    apelidos: [ward.app.br]
+    variantes: [Word]
+  - termo: Adeus INSS
+    classe: serie do canal
+    variantes: [ADUS NSS, Deus NSS]
+  - termo: Leo
+    classe: pessoa
+    variantes: [Lu, Léo]
+regras_de_unidade:
+  - padrao: "numero + (B | bit | bi | be)"
+    correcao: "numero bi"
+  - padrao: "bilhões deais"
+    correcao: "bilhões de reais"
