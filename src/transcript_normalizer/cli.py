@@ -1,10 +1,17 @@
-"""`transcript-normalizer <legenda.txt> --pack <pack.yaml> [--confirm]`."""
+"""The `transcript-normalizer` command.
+
+    transcript-normalizer [normalize] <legenda.txt> --pack <pack.yaml>
+    transcript-normalizer fetch <url>
+
+`normalize` is the default, so a caption file may be given straight away.
+"""
 
 from __future__ import annotations
 
 import argparse
 import csv
 import os
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -21,6 +28,7 @@ from .core.standoff import (
     write_json,
 )
 from .core.text import Transcript, read_caption
+from .ingest import fetch as ingest_fetch
 from .runs import (
     ANNOTATIONS_FILE,
     GOLD_DRAFT_FILE,
@@ -28,6 +36,9 @@ from .runs import (
     learned_file,
     run_dir,
 )
+
+PROG = "transcript-normalizer"
+COMMANDS = ("normalize", "fetch")
 
 #: How many example lines the confirmation loop shows per term.
 EXAMPLES_PER_TERM = 3
@@ -163,39 +174,7 @@ def confirm_loop(
     return learned
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="transcript-normalizer",
-        description="Propose stand-off normalizations for a caption file. "
-        "The transcript itself is never modified (D-004), and every output goes "
-        "under runs/ (D-015).",
-    )
-    parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
-    parser.add_argument("--pack", type=Path, required=True, help="domain pack, e.g. pack.yaml")
-    parser.add_argument(
-        "--out",
-        type=Path,
-        metavar="DIR",
-        help="write into DIR instead of runs/<input-stem>/",
-    )
-    parser.add_argument(
-        "--learned",
-        type=Path,
-        metavar="PATH",
-        help="learned layer file, instead of runs/learned/<pack-name>.learned.yaml",
-    )
-    parser.add_argument(
-        "--gold-draft",
-        action="store_true",
-        help="also write gold-draft.csv, the applied annotations with status `draft`",
-    )
-    parser.add_argument(
-        "--confirm",
-        action="store_true",
-        help="review the medium band and record the answers in the learned layer (D-013)",
-    )
-    args = parser.parse_args(argv)
-
+def run_normalize(args: argparse.Namespace) -> int:
     learned_at = learned_file(args.pack, args.learned)
     pack = load_pack(args.pack, learned_from=learned_at)
     transcript = read_caption(args.caption)
@@ -230,3 +209,67 @@ def main(argv: list[str] | None = None) -> int:
             # D-013 and D-015: the learned layer under runs/, never pack.yaml.
             print(f"\nlearned layer written to {save_learned(learned, learned_at)}")
     return 0
+
+
+def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
+    parser.add_argument("--pack", type=Path, required=True, help="domain pack, e.g. pack.yaml")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        metavar="DIR",
+        help="write into DIR instead of runs/<input-stem>/",
+    )
+    parser.add_argument(
+        "--learned",
+        type=Path,
+        metavar="PATH",
+        help="learned layer file, instead of runs/learned/<pack-name>.learned.yaml",
+    )
+    parser.add_argument(
+        "--gold-draft",
+        action="store_true",
+        help="also write gold-draft.csv, the applied annotations with status `draft`",
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="review the medium band and record the answers in the learned layer (D-013)",
+    )
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=PROG,
+        description="Domain-term normalization for ASR transcripts and auto-captions. "
+        "The transcript is never modified (D-004) and every output goes under "
+        "runs/ (D-015).",
+    )
+    commands = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
+
+    normalize = commands.add_parser(
+        "normalize",
+        help="annotate a caption file against a domain pack (the default command)",
+        description="Propose stand-off normalizations for a caption file.",
+    )
+    add_normalize_arguments(normalize)
+    normalize.set_defaults(run=run_normalize)
+
+    fetch = commands.add_parser(
+        "fetch",
+        help="download a platform caption, or transcribe locally with --whisper",
+        description=ingest_fetch.run.__doc__,
+    )
+    ingest_fetch.add_arguments(fetch)
+    fetch.set_defaults(run=ingest_fetch.run)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    # `normalize` is the default: a bare caption file still works.
+    if argv and argv[0] not in COMMANDS and not argv[0].startswith("-"):
+        argv.insert(0, "normalize")
+    args = build_parser().parse_args(argv)
+    return args.run(args)

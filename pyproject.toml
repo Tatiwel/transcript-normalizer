@@ -16,6 +16,12 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.optional-dependencies]
+ingest = [
+    "yt-dlp>=2024.1.1",
+    "faster-whisper>=1.0",
+]
+
 [project.scripts]
 transcript-normalizer = "transcript_normalizer.cli:main"
 
