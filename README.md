@@ -17,14 +17,29 @@ The tool never asks "does this word exist?". It asks "does this stretch of text 
 - Correction is **stand-off**: the original text and timestamps are never modified. Normalization is a separate layer pointing at offsets, recording which rule fired and which dictionary version was used.
 - Every confirmed correction is added to the pack's observed variants, so the next transcript benefits.
 
+## Usage
+
+```
+transcript-normalizer <legenda.txt> --pack <pack.yaml> [--gold-draft] [--confirm]
+```
+
+Every output goes under `runs/` in the current directory, never beside the input:
+
+- `runs/<input-stem>/annotations.json` — the stand-off layer, every proposal with its band.
+- `runs/<input-stem>/report.txt` — the same text the command prints.
+- `runs/<input-stem>/gold-draft.csv` — with `--gold-draft`, the applied annotations as the starting point for a new gold file.
+- `runs/learned/<pack-name>.learned.yaml` — with `--confirm`, what you confirmed and what you turned down.
+
+`--out DIR` writes a run somewhere else, `--learned PATH` points at a different learned layer. `runs/` is gitignored. The pack file is never written to.
+
 ## Status
 
-Experimental. There is no library yet, only:
+Experimental, but the engine is a package with a regression test.
 
 - `fixtures/R2Qgz8tFWVI/`: one Brazilian Portuguese finance video (31 min). `legenda.txt` is the raw platform caption, `gold.csv` is a hand-checked gold list of 168 domain-term errors plus 2 lines that must not be touched, `pack.yaml` is the first domain pack.
 - `experiments/`: throwaway scripts that measured how far naive approaches go against that fixture. Results are in `docs/DECISIONS.md`.
 
-Measured so far on the fixture, with RapidFuzz plus a hand-curated variant list, a unit rule, and a disciplined threshold: 152 of 168 hits, 10 false positives in ~1000 caption lines, zero changes to the lines that had to stay untouched.
+Measured on the fixture, with RapidFuzz plus a hand-curated variant list, a unit rule, and a disciplined threshold: 156 of 168 hits, 9 false positives in ~1000 caption lines, zero changes to the lines that had to stay untouched.
 
 ## Test content
 

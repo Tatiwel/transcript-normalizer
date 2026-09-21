@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# transcript-normalizer run outputs (D-015)
+runs/

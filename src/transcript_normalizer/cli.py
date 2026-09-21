@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from .core.matcher import find_annotations, resolve_overlaps
-from .core.pack import Learned, Pack, learned_path, load_pack, save_learned
+from .core.pack import Learned, Pack, load_pack, save_learned
 from .core.standoff import (
     BAND_HIGH,
     BAND_LOW,
@@ -20,6 +21,13 @@ from .core.standoff import (
     write_json,
 )
 from .core.text import Transcript, read_caption
+from .runs import (
+    ANNOTATIONS_FILE,
+    GOLD_DRAFT_FILE,
+    REPORT_FILE,
+    learned_file,
+    run_dir,
+)
 
 #: How many example lines the confirmation loop shows per term.
 EXAMPLES_PER_TERM = 3
@@ -30,10 +38,6 @@ DRAFT_STATUS = "draft"
 
 #: What the gold file calls the class of a unit-rule row.
 UNIT_CLASS = "unidade"
-
-
-def annotations_path(caption: Path) -> Path:
-    return caption.with_suffix(".annotations.json")
 
 
 def form(annotation: Annotation) -> str:
@@ -163,42 +167,66 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="transcript-normalizer",
         description="Propose stand-off normalizations for a caption file. "
-        "The transcript itself is never modified (D-004).",
+        "The transcript itself is never modified (D-004), and every output goes "
+        "under runs/ (D-015).",
     )
     parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
     parser.add_argument("--pack", type=Path, required=True, help="domain pack, e.g. pack.yaml")
     parser.add_argument(
-        "--gold-draft",
+        "--out",
         type=Path,
-        metavar="PATH.CSV",
-        help="write the applied annotations as a gold.csv draft, status `draft`",
+        metavar="DIR",
+        help="write into DIR instead of runs/<input-stem>/",
+    )
+    parser.add_argument(
+        "--learned",
+        type=Path,
+        metavar="PATH",
+        help="learned layer file, instead of runs/learned/<pack-name>.learned.yaml",
+    )
+    parser.add_argument(
+        "--gold-draft",
+        action="store_true",
+        help="also write gold-draft.csv, the applied annotations with status `draft`",
     )
     parser.add_argument(
         "--confirm",
         action="store_true",
-        help="review the medium band and record the answers in <pack>.learned.yaml (D-013)",
+        help="review the medium band and record the answers in the learned layer (D-013)",
     )
     args = parser.parse_args(argv)
 
-    pack = load_pack(args.pack)
+    learned_at = learned_file(args.pack, args.learned)
+    pack = load_pack(args.pack, learned_from=learned_at)
     transcript = read_caption(args.caption)
     annotations = resolve_overlaps(find_annotations(transcript, pack))
 
-    out_path = annotations_path(args.caption)
-    write_json(annotations, out_path)
+    out_dir = run_dir(args.caption, args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"{args.caption}: {len(transcript.lines)} caption lines, pack {pack.version}")
-    print(report(annotations))
-    print(f"\n{len(annotations)} annotations written to {out_path}")
-
+    written = [write_json(annotations, out_dir / ANNOTATIONS_FILE)]
     if args.gold_draft:
-        draft = write_gold_draft(transcript, annotations, pack, args.gold_draft)
-        print(f"{len(applied(annotations))} draft gold rows written to {draft}")
+        written.append(
+            write_gold_draft(transcript, annotations, pack, out_dir / GOLD_DRAFT_FILE)
+        )
+    written.append(out_dir / REPORT_FILE)
+
+    lines = [
+        f"{args.caption}: {len(transcript.lines)} caption lines, pack {pack.version}",
+        report(annotations),
+        "",
+        f"{len(annotations)} annotations, {len(applied(annotations))} applied",
+        f"written to {out_dir}{os.sep}",
+    ]
+    lines += [f"  {path.name}" for path in written]
+    text = "\n".join(lines) + "\n"
+
+    (out_dir / REPORT_FILE).write_text(text, encoding="utf-8")
+    print(text, end="")
 
     if args.confirm:
         learned = confirm_loop(transcript, annotations, pack.learned)
         if not learned.is_empty():
-            # D-013: the learned layer, never pack.yaml.
-            path = save_learned(learned, learned_path(args.pack))
-            print(f"\nlearned layer written to {path}")
+            # D-013 and D-015: the learned layer under runs/, never pack.yaml.
+            print(f"\nlearned layer written to {save_learned(learned, learned_at)}")
     return 0

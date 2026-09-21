@@ -88,6 +88,14 @@ Why: the pack is curated and shareable; the learned layer is personal and unrevi
 
 Effect, measured: the 5:13 row becomes a hit and the two `SEMigd` → CEMIG false positives disappear. New regression bounds: hits >= 156, false positives <= 9, in scope 168. Nothing else in the per-term table moves, and the remaining nine false positives are the ones D-012 already recorded.
 
+## D-015 User outputs live in `runs/<id>/`
+
+User outputs live in runs/<id>/, gitignored; the package never writes beside its inputs or into fixtures/.
+
+A run writes `annotations.json`, `report.txt` and, when asked, `gold-draft.csv` into `runs/<input-stem>/` under the current directory (`--out DIR` overrides). The learned layer of D-013 moves with them, to `runs/learned/<pack-name>.learned.yaml` (`--learned PATH` overrides).
+
+Why: the first version wrote `legenda.annotations.json` next to its input, which meant a run against the fixture dirtied `fixtures/`. Outputs are disposable and regenerable; inputs are not.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

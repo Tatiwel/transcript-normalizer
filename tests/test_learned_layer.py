@@ -4,14 +4,31 @@ import hashlib
 import io
 import shutil
 
-import pytest
 import yaml
 
 from transcript_normalizer import find_annotations, load_pack, read_caption
 from transcript_normalizer.cli import main
-from transcript_normalizer.core.pack import learned_path, load_learned
+from transcript_normalizer.core.pack import load_learned
+from transcript_normalizer.runs import learned_file
 
 from .conftest import CAPTION, PACK
+
+CONFIRMED_SEMIGA = (
+    "version: 1\n"
+    "confirmed:\n"
+    "  CEMIG:\n"
+    "    - variant: semiga\n"
+    "      date: '2026-09-20'\n"
+    "rejected: []\n"
+)
+REJECTED_PRECO_DELA = (
+    "version: 1\n"
+    "confirmed: {}\n"
+    "rejected:\n"
+    "  - text: preço dela\n"
+    "    term: preço teto\n"
+    "    date: '2026-09-20'\n"
+)
 
 
 def pack_copy(tmp_path, drop_variants=()):
@@ -43,16 +60,9 @@ def test_confirmed_variant_is_matched_as_a_high_band_variant(tmp_path, transcrip
     before = at(transcript, find_annotations(transcript, load_pack(path)), "21:34", "semiga")
     assert [(a.rule, a.band) for a in before] == [("term:fuzzy", "medium")]
 
-    learned_path(path).write_text(
-        "version: 1\n"
-        "confirmed:\n"
-        "  CEMIG:\n"
-        "    - variant: semiga\n"
-        "      date: '2026-09-20'\n"
-        "rejected: []\n",
-        "utf-8",
-    )
-    pack = load_pack(path)
+    layer = tmp_path / "learned.yaml"
+    layer.write_text(CONFIRMED_SEMIGA, "utf-8")
+    pack = load_pack(path, learned_from=layer)
     assert "semiga" in pack.terms[0].learned_variants
 
     after = at(transcript, find_annotations(transcript, pack), "21:34", "semiga")
@@ -69,26 +79,19 @@ def test_a_rejected_pair_is_never_proposed_again(tmp_path, transcript):
     before = at(transcript, find_annotations(transcript, load_pack(path)), "19:36", "preço dela")
     assert [(a.term, a.band) for a in before] == [("preço teto", "medium")]
 
-    learned_path(path).write_text(
-        "version: 1\n"
-        "confirmed: {}\n"
-        "rejected:\n"
-        "  - text: preço dela\n"
-        "    term: preço teto\n"
-        "    date: '2026-09-20'\n",
-        "utf-8",
-    )
-    pack = load_pack(path)
+    layer = tmp_path / "learned.yaml"
+    layer.write_text(REJECTED_PRECO_DELA, "utf-8")
+    pack = load_pack(path, learned_from=layer)
     assert pack.is_rejected("preco dela", "preço teto")
 
     after = find_annotations(transcript, pack)
-    assert not at(transcript, after, "19:36", "preço dela")
     assert not [a for a in after if a.original == "preço dela"]
 
 
 def test_confirm_run_writes_the_learned_file_and_never_the_pack(
     tmp_path, monkeypatch, capsys
 ):
+    monkeypatch.chdir(tmp_path)
     path = pack_copy(tmp_path)
     digest_before = hashlib.sha256(path.read_bytes()).hexdigest()
     caption = tmp_path / "legenda.txt"
@@ -100,7 +103,13 @@ def test_confirm_run_writes_the_learned_file_and_never_the_pack(
 
     assert hashlib.sha256(path.read_bytes()).hexdigest() == digest_before
 
-    learned = load_learned(learned_path(path))
+    # D-015: the learned layer lives under runs/, not beside the pack.
+    layer = learned_file(path)
+    assert layer == tmp_path / "runs" / "learned" / "pack.learned.yaml"
+    assert layer.exists()
+    assert not (tmp_path / "pack.learned.yaml").exists()
+
+    learned = load_learned(layer)
     assert learned.confirmed, "the `y` answer should have confirmed a term"
     assert learned.rejected, "the `n` answer should have recorded a rejection"
     for confirmations in learned.confirmed.values():
@@ -109,10 +118,11 @@ def test_confirm_run_writes_the_learned_file_and_never_the_pack(
 
     out = capsys.readouterr().out
     assert "to confirm:" in out
-    assert str(learned_path(path)) in out
+    assert str(layer) in out
 
 
 def test_a_second_run_honours_what_the_first_one_learned(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     path = pack_copy(tmp_path)
     caption = tmp_path / "legenda.txt"
     shutil.copy(CAPTION, caption)
@@ -120,7 +130,7 @@ def test_a_second_run_honours_what_the_first_one_learned(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.stdin", io.StringIO("n\n"))
     main([str(caption), "--pack", str(path), "--confirm"])
 
-    rejected = load_learned(learned_path(path)).rejected
+    rejected = load_learned(learned_file(path)).rejected
     assert rejected
     transcript = read_caption(caption)
     annotations = find_annotations(transcript, load_pack(path))

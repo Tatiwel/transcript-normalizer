@@ -11,6 +11,8 @@ from pathlib import Path
 
 import yaml
 
+from ..runs import learned_file
+
 _KEEP = re.compile(r"[^a-z0-9$ ]+")
 
 #: Schema version written into a new learned file.
@@ -115,12 +117,6 @@ class Learned:
         return yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
 
 
-def learned_path(pack_path: str | Path) -> Path:
-    """`pack.yaml` -> `pack.learned.yaml`, next to the pack file."""
-    pack_path = Path(pack_path)
-    return pack_path.with_suffix(".learned.yaml")
-
-
 def load_learned(path: str | Path) -> Learned:
     path = Path(path)
     if not path.exists():
@@ -154,6 +150,7 @@ def load_learned(path: str | Path) -> Learned:
 
 def save_learned(learned: Learned, path: str | Path) -> Path:
     path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(learned.to_yaml(), encoding="utf-8")
     return path
 
@@ -179,16 +176,21 @@ def _strings(raw: dict, key: str) -> tuple[str, ...]:
     return tuple(nfc(str(s)) for s in raw.get(key) or ())
 
 
-def load_pack(path: str | Path, learned: Learned | None = None) -> Pack:
-    """Read a domain pack from YAML, merging the learned layer beside it (D-013).
+def load_pack(
+    path: str | Path,
+    learned: Learned | None = None,
+    learned_from: str | Path | None = None,
+) -> Pack:
+    """Read a domain pack from YAML, merging the learned layer of D-013.
 
-    `fixtures/R2Qgz8tFWVI/pack.yaml` is the schema. Pass `learned` to override the
-    file that would be read from `<pack>.learned.yaml`.
+    `fixtures/R2Qgz8tFWVI/pack.yaml` is the schema. The learned layer is read
+    from `runs/learned/<pack-name>.learned.yaml` (D-015); `learned_from` names a
+    different file and `learned` supplies the layer directly.
     """
     path = Path(path)
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if learned is None:
-        learned = load_learned(learned_path(path))
+        learned = load_learned(learned_file(path, learned_from))
 
     terms: list[Term] = []
     candidates: list[Candidate] = []
