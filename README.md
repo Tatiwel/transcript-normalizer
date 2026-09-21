@@ -35,6 +35,22 @@ Every output goes under `runs/` in the current directory, never beside the input
 
 `--out DIR` writes a run somewhere else, `--learned PATH` points at a different learned layer. `runs/` is gitignored. The pack file is never written to.
 
+## Where things are
+
+```
+src/transcript_normalizer/
+  core/        the engine: pack, rules, text, matcher, stand-off, render
+  ingest/      fetching captions; optional, needs the `ingest` extra
+packs/         your domain packs, and the learned layer beside them (D-017)
+fixtures/      frozen test material; the regression test reads it, nothing writes it
+experiments/   the throwaway scripts that measured the decisions, kept as record
+runs/          everything a command produces, gitignored (D-015)
+  <id>/        annotations.json, report.txt, normalized.txt, the raw caption
+    review/    what needs a person: gold-draft.csv, to-confirm.txt (D-016)
+```
+
+`packs/` is yours to edit; the pack under `fixtures/` is a frozen copy that the regression test depends on. `runs/` and `packs/*.learned.yaml` are disposable and gitignored.
+
 ## Status
 
 Experimental, but the engine is a package with a regression test.

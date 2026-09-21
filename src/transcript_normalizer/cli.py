@@ -37,6 +37,7 @@ from .runs import (
     NORMALIZED_FILE,
     REPORT_FILE,
     TO_CONFIRM_FILE,
+    default_pack,
     learned_file,
     review_dir,
     run_dir,
@@ -223,6 +224,16 @@ def keep_original(caption: Path, out_dir: Path) -> Path:
 
 
 def run_normalize(args: argparse.Namespace) -> int:
+    if not args.pack.exists():
+        print(f"no pack at {args.pack}", file=sys.stderr)
+        if args.pack == default_pack():
+            print(
+                "that is the default pack; pass --pack, or put one in "
+                f"{default_pack().parent}{os.sep} (D-017).",
+                file=sys.stderr,
+            )
+        return 2
+
     learned_at = learned_file(args.pack, args.learned)
     pack = load_pack(args.pack, learned_from=learned_at)
     transcript = read_caption(args.caption)
@@ -276,7 +287,12 @@ def run_normalize(args: argparse.Namespace) -> int:
 
 def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
-    parser.add_argument("--pack", type=Path, required=True, help="domain pack, e.g. pack.yaml")
+    parser.add_argument(
+        "--pack",
+        type=Path,
+        default=default_pack(),
+        help=f"domain pack. default: {default_pack().relative_to(Path.cwd()) }",
+    )
     parser.add_argument(
         "--out",
         type=Path,

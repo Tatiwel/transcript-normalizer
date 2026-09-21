@@ -102,6 +102,14 @@ Rendered outputs. runs/<id>/normalized.txt is the original caption with applied 
 
 `annotations.json` and `report.txt` stay at the top of the run directory: they describe the run, they are not something to hand to a person. A rendered file carries no provenance header, which is why the raw caption is copied in beside it.
 
+## D-017 `packs/` is the user's knowledge directory
+
+packs/ is the user's knowledge directory; fixtures/ packs are frozen test copies.
+
+`packs/financas-ptbr.yaml` is the first one, copied from the fixture pack, and it is what `--pack` falls back to. The learned layer of a pack moves here too, to `packs/<name>.learned.yaml`, superseding the `runs/learned/` location of D-015: what the user confirmed belongs with the pack it is about, not with a disposable run. The learned file is gitignored; the pack is not.
+
+Why: `fixtures/R2Qgz8tFWVI/pack.yaml` is an input to the regression test and has to stay frozen, so it cannot also be the pack people edit as they work.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

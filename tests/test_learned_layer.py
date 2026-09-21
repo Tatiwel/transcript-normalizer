@@ -103,9 +103,10 @@ def test_confirm_run_writes_the_learned_file_and_never_the_pack(
 
     assert hashlib.sha256(path.read_bytes()).hexdigest() == digest_before
 
-    # D-015: the learned layer lives under runs/, not beside the pack.
+    # D-017: the learned layer lives under packs/, not beside the pack file
+    # (which here is a copy in tmp_path, so the two are distinguishable).
     layer = learned_file(path)
-    assert layer == tmp_path / "runs" / "learned" / "pack.learned.yaml"
+    assert layer == tmp_path / "packs" / "pack.learned.yaml"
     assert layer.exists()
     assert not (tmp_path / "pack.learned.yaml").exists()
 

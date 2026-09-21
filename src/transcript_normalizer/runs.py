@@ -1,8 +1,9 @@
-"""Where a run's outputs go (D-015).
+"""Where things live on disk (D-015, D-016, D-017).
 
-Everything the CLI produces lands under `runs/` in the current directory:
-`runs/<input-stem>/` for one run's files, `runs/learned/` for the layer of
-D-013. Nothing is ever written beside an input or into `fixtures/`.
+Everything the CLI produces lands under `runs/` in the current directory, one
+directory per input. Domain packs and the learned layer that belongs to them
+live under `packs/`, the user's own knowledge directory. Nothing is ever
+written beside an input or into `fixtures/`.
 """
 
 from __future__ import annotations
@@ -10,7 +11,10 @@ from __future__ import annotations
 from pathlib import Path
 
 RUNS_DIR = "runs"
-LEARNED_DIR = "learned"
+
+#: D-017: the user's packs, and the learned layer beside each of them.
+PACKS_DIR = "packs"
+DEFAULT_PACK = "financas-ptbr.yaml"
 
 #: The run's own record. Machine-readable first, then the printed report.
 ANNOTATIONS_FILE = "annotations.json"
@@ -31,6 +35,15 @@ def runs_root() -> Path:
     return Path.cwd() / RUNS_DIR
 
 
+def packs_root() -> Path:
+    return Path.cwd() / PACKS_DIR
+
+
+def default_pack() -> Path:
+    """The pack `--pack` falls back to (D-017)."""
+    return packs_root() / DEFAULT_PACK
+
+
 def run_dir(input_path: str | Path, out: str | Path | None = None) -> Path:
     """`runs/<input-stem>/`, or `out` when the caller names a directory."""
     if out is not None:
@@ -44,7 +57,13 @@ def review_dir(out_dir: str | Path) -> Path:
 
 
 def learned_file(pack_path: str | Path, override: str | Path | None = None) -> Path:
-    """`runs/learned/<pack-name>.learned.yaml`, or `override` when given."""
+    """`packs/<pack-name>.learned.yaml`, or `override` when given.
+
+    D-017 moves this out of `runs/learned/`, where D-015 had put it: what the
+    user confirms belongs with the pack it is about, not with a disposable run.
+    It stays out of `fixtures/` even when the pack is a fixture copy, because
+    the location is fixed rather than taken from the pack's own directory.
+    """
     if override is not None:
         return Path(override)
-    return runs_root() / LEARNED_DIR / f"{Path(pack_path).stem}.learned.yaml"
+    return packs_root() / f"{Path(pack_path).stem}.learned.yaml"
