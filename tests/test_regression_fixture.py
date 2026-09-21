@@ -15,8 +15,8 @@ from transcript_normalizer.pack import fold
 
 from .conftest import GABARITO
 
-MIN_HITS = 152
-MAX_FALSE_POSITIVES = 10
+MIN_HITS = 155
+MAX_FALSE_POSITIVES = 11
 
 
 def key(s: str) -> str:

@@ -72,7 +72,12 @@ Why: 7 cases in 168, and no pt-BR benchmark exists for either tool. Decide on me
 
 Initial thresholds: apply 80, mark 60. Both are to be calibrated against the gabarito, not fixed.
 
+## D-012 Whole-text matching (D-007) is accepted at 155 hits / 11 false positives
+
+Matching over the joined text instead of caption lines found three line-straddling errors (`ser MIG`, `Geração de Dentes`, `9.3 bilhões deais`) and introduced one false positive (`preço dela` → `preço teto`, fuzz 85). New regression bounds: hits >= 155, false positives <= 11, in scope 168. The ten other false positives are identical to exp2.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Whether the confirmation loop of D-011 writes to the pack file directly or to a separate user layer (the layered-dictionary question from the research consolidation).
+- Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
