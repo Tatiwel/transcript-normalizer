@@ -1,4 +1,4 @@
-"""`transcript-normalizer <legenda.txt> --pack <termos.yaml>`."""
+"""`transcript-normalizer <legenda.txt> --pack <pack.yaml>`."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
     parser.add_argument(
-        "--pack", type=Path, required=True, help="domain pack, e.g. termos.yaml"
+        "--pack", type=Path, required=True, help="domain pack, e.g. pack.yaml"
     )
     args = parser.parse_args(argv)
 

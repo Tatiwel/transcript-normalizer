@@ -10,7 +10,7 @@ def norm(s):
     s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
     return re.sub(r'[^a-z0-9$ ]+', ' ', s).strip()
 
-termos = yaml.safe_load(open('fixtures/R2Qgz8tFWVI/termos.yaml'))['termos']
+termos = yaml.safe_load(open('fixtures/R2Qgz8tFWVI/legacy/termos.yaml'))['termos']
 cands = []  # (string_normalizada, termo_canonico)
 for t in termos:
     for s in [t['termo']] + t.get('apelidos', []) + (t.get('variantes', []) if USAR_VARIANTES else []):
@@ -32,7 +32,7 @@ for l in linhas:
             if melhor[0] >= LIMIAR and norm(melhor[1]) not in tn and not any(norm(a) in tn for t in termos if t['termo']==melhor[1] for a in t.get('apelidos',[])):
                 propostas[ts].append((trecho, melhor[1], melhor[0]))
 
-gab = list(csv.DictReader(open('fixtures/R2Qgz8tFWVI/gabarito.csv', encoding='utf-8-sig')))
+gab = list(csv.DictReader(open('fixtures/R2Qgz8tFWVI/legacy/gabarito.csv', encoding='utf-8-sig')))
 escopo = [g for g in gab if g['termo_canonico'] and g['status'] != 'manter']
 fora = [g for g in gab if not g['termo_canonico']]
 manter = [g for g in gab if g['status'] == 'manter']

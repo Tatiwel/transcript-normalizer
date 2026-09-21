@@ -1,4 +1,4 @@
-"""The regression test: the evaluation of exp2, replayed against the gabarito.
+"""The regression test: the evaluation of exp2, replayed against the gold file.
 
 `experiments/exp2_units_and_threshold.py` is the reference behaviour. The only
 deliberate difference is D-007: matching runs over the joined text, so an
@@ -13,19 +13,19 @@ from collections import Counter, defaultdict
 
 from transcript_normalizer.pack import fold
 
-from .conftest import GABARITO
+from .conftest import GOLD
 
 MIN_HITS = 155
 MAX_FALSE_POSITIVES = 11
 
 
 def key(s: str) -> str:
-    """The gabarito compares text loosely: folded, with runs of space collapsed."""
+    """The gold file compares text loosely: folded, with runs of space collapsed."""
     return " ".join(fold(s).split())
 
 
 def rows():
-    with GABARITO.open(encoding="utf-8-sig") as fh:
+    with GOLD.open(encoding="utf-8-sig") as fh:
         return list(csv.DictReader(fh))
 
 
@@ -37,9 +37,9 @@ def evaluate(transcript, annotations):
             by_timestamp[line.timestamp].append(a)
         home[id(a)] = transcript.locate(a.start)[1]
 
-    gabarito = rows()
-    in_scope = [g for g in gabarito if g["termo_canonico"] and g["status"] != "manter"]
-    keep = [g for g in gabarito if g["status"] == "manter"]
+    gold = rows()
+    in_scope = [g for g in gold if g["term"] and g["status"] != "manter"]
+    keep = [g for g in gold if g["status"] == "manter"]
 
     hits, misses = [], []
     per_term = defaultdict(lambda: [0, 0])
@@ -47,22 +47,22 @@ def evaluate(transcript, annotations):
     for g in in_scope:
         found = None
         for a in by_timestamp.get(g["timestamp"], []):
-            if a.term != g["termo_canonico"]:
+            if a.term != g["term"]:
                 continue
-            if key(g["trecho_errado"]) in key(a.original) or key(a.original) in key(
-                g["trecho_errado"]
+            if key(g["wrong"]) in key(a.original) or key(a.original) in key(
+                g["wrong"]
             ):
                 found = a
                 break
-        per_term[g["termo_canonico"]][1] += 1
+        per_term[g["term"]][1] += 1
         if found is None:
             misses.append(g)
         else:
             hits.append((g, found))
-            per_term[g["termo_canonico"]][0] += 1
+            per_term[g["term"]][0] += 1
             used.append(found)
 
-    # False positives: annotations that credit no in-scope gabarito row, minus the
+    # False positives: annotations that credit no in-scope gold row, minus the
     # ones that merely nest inside (or around) an annotation that did. exp2 compared
     # proposals within a caption line; annotations can straddle a break, so the
     # comparison is against every used annotation that shares a line with this one.
@@ -120,7 +120,7 @@ def render(result) -> str:
     out += ["", "misses:"]
     for g in result["misses"]:
         out.append(
-            f"  {g['timestamp']:6s} {g['trecho_errado']!r} -> {g['termo_canonico']}"
+            f"  {g['timestamp']:6s} {g['wrong']!r} -> {g['term']}"
         )
     out += ["", "false positives:"]
     counted = Counter((a.original, a.term) for _, a in result["false_positives"])
@@ -132,7 +132,7 @@ def render(result) -> str:
     return "\n".join(out)
 
 
-def test_regression_against_gabarito(transcript, annotations):
+def test_regression_against_gold(transcript, annotations):
     result = evaluate(transcript, annotations)
     print(render(result))  # pytest shows this only when the test fails
 

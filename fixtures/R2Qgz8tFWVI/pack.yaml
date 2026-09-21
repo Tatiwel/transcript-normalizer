@@ -1,0 +1,99 @@
+# Lista de termos do video R2Qgz8tFWVI. Primeira versao, um video so.
+# Variantes vieram do gabarito. Termo com "?" no gabarito nao entrou.
+version: 0.1.0
+
+terms:
+  - term: CEMIG
+    class: companhia
+    aliases: [Cemig, Cemig D, Cemig GT, CMIG4, CMIG3]
+    variants: [SEMIG, SEMI, SEMIC, SEMIX, CIC, CMIG, semiga, sem amig, esse amigo, ser MIG, semicaiu, SEMigd, "do 100", "me caiu"]
+  - term: CPFL
+    class: companhia
+    variants: [CPFE]
+  - term: Taesa
+    class: companhia
+    aliases: [TAESA, TAEE11]
+    variants: [taa, Taía]
+  - term: Klabin
+    class: companhia
+    variants: [Clabin]
+  - term: Sabesp
+    class: companhia
+    variants: [Sabespe]
+  - term: Copasa
+    class: companhia
+    variants: [Copaz]
+  - term: Gasmig
+    class: companhia
+    variants: [Gas MIG]
+  - term: Nubank
+    class: companhia
+    variants: [no bank]
+  - term: Ártica
+    class: gestora
+    variants: [arte]
+  - term: Geração Dividendos
+    class: canal
+    aliases: [MGD]
+    variants: [Geração de Dentes]
+  - term: EBITDA
+    class: indicador
+    variants: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bicho, bitera]
+    collocations: [dívida líquida sobre EBITDA, margem EBITDA]
+  - term: OPEX
+    class: indicador
+    variants: [Ox, O PX]
+  - term: CAPEX
+    class: indicador
+    variants: [capx, autocapex]
+  - term: IPCA
+    class: indice
+    variants: [PCA]
+  - term: TIR
+    class: indicador
+    variants: [tir, tira]
+  - term: RAP
+    class: sigla setorial
+    variants: [rap]
+  - term: debêntures
+    class: instrumento
+    variants: [debentories, debentor, deementories]
+  - term: dividendo
+    class: indicador
+    variants: [dividend, dividenda]
+  - term: preço teto
+    class: indicador
+    variants: [preço delet]
+  - term: valuation
+    class: estrangeirismo
+    variants: [valation]
+  - term: buy and hold
+    class: estrangeirismo
+    variants: [BU hold]
+  - term: Warren Buffett
+    class: pessoa
+    variants: [Warnbuff]
+  - term: Markowitz
+    class: pessoa
+    variants: [Markovitz, Marcovit, Markovit]
+  - term: tri
+    class: periodo
+    variants: [trad, trio, TR]
+  - term: Engie
+    class: companhia
+    variants: [índia, End]
+  - term: Ward
+    class: ferramenta
+    aliases: [ward.app.br]
+    variants: [Word]
+  - term: Adeus INSS
+    class: serie do canal
+    variants: [ADUS NSS, Deus NSS]
+  - term: Leo
+    class: pessoa
+    variants: [Lu, Léo]
+unit_rules:
+  - pattern: "numero + (B | bit | bi | be)"
+    replacement: "numero bi"
+  - pattern: "bilhões deais"
+    replacement: "bilhões de reais"

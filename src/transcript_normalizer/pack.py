@@ -69,19 +69,19 @@ def _strings(raw: dict, key: str) -> tuple[str, ...]:
 
 
 def load_pack(path: str | Path) -> Pack:
-    """Read a domain pack from YAML. `fixtures/R2Qgz8tFWVI/termos.yaml` is the schema."""
+    """Read a domain pack from YAML. `fixtures/R2Qgz8tFWVI/pack.yaml` is the schema."""
     path = Path(path)
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
     terms: list[Term] = []
     candidates: list[Candidate] = []
-    for raw in data.get("termos") or ():
+    for raw in data.get("terms") or ():
         term = Term(
-            term=nfc(str(raw["termo"])),
-            klass=nfc(str(raw["classe"])) if raw.get("classe") else None,
-            aliases=_strings(raw, "apelidos"),
-            variants=_strings(raw, "variantes"),
-            collocations=_strings(raw, "colocacoes"),
+            term=nfc(str(raw["term"])),
+            klass=nfc(str(raw["class"])) if raw.get("class") else None,
+            aliases=_strings(raw, "aliases"),
+            variants=_strings(raw, "variants"),
+            collocations=_strings(raw, "collocations"),
         )
         terms.append(term)
         # Order matters: it is the order the matcher scans candidates in.
@@ -93,11 +93,11 @@ def load_pack(path: str | Path) -> Pack:
             candidates.append(Candidate(display, fold(display), term.term, origin))
 
     unit_rules = tuple(
-        UnitRule(pattern=str(r.get("padrao", "")), correction=str(r.get("correcao", "")))
-        for r in data.get("regras_de_unidade") or ()
+        UnitRule(pattern=str(r.get("pattern", "")), correction=str(r.get("replacement", "")))
+        for r in data.get("unit_rules") or ()
     )
 
-    version = data.get("versao") or data.get("version")
+    version = data.get("version")
     if version is None:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
         version = f"sha256:{digest}"

@@ -6,13 +6,13 @@ from transcript_normalizer import find_annotations, load_pack, read_caption
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "R2Qgz8tFWVI"
 CAPTION = FIXTURE / "legenda.txt"
-TERMOS = FIXTURE / "termos.yaml"
-GABARITO = FIXTURE / "gabarito.csv"
+PACK = FIXTURE / "pack.yaml"
+GOLD = FIXTURE / "gold.csv"
 
 
 @pytest.fixture(scope="session")
 def pack():
-    return load_pack(TERMOS)
+    return load_pack(PACK)
 
 
 @pytest.fixture(scope="session")
