@@ -9,7 +9,7 @@ import yaml
 
 from transcript_normalizer import find_annotations, load_pack, read_caption
 from transcript_normalizer.cli import main
-from transcript_normalizer.pack import learned_path, load_learned
+from transcript_normalizer.core.pack import learned_path, load_learned
 
 from .conftest import CAPTION, PACK
 

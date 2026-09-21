@@ -7,9 +7,9 @@ import csv
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .matcher import find_annotations, resolve_overlaps
-from .pack import Learned, Pack, learned_path, load_pack, save_learned
-from .standoff import (
+from .core.matcher import find_annotations, resolve_overlaps
+from .core.pack import Learned, Pack, learned_path, load_pack, save_learned
+from .core.standoff import (
     BAND_HIGH,
     BAND_LOW,
     BAND_MEDIUM,
@@ -19,7 +19,7 @@ from .standoff import (
     in_band,
     write_json,
 )
-from .text import Transcript, read_caption
+from .core.text import Transcript, read_caption
 
 #: How many example lines the confirmation loop shows per term.
 EXAMPLES_PER_TERM = 3

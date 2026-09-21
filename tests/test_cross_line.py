@@ -1,6 +1,6 @@
 """D-007: matching runs over the joined text, not caption line by caption line."""
 
-from transcript_normalizer.pack import fold
+from transcript_normalizer.core.pack import fold
 
 
 def line_at(transcript, timestamp):

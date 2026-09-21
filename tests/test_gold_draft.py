@@ -5,7 +5,7 @@ import shutil
 
 from transcript_normalizer import find_annotations, load_pack, read_caption
 from transcript_normalizer.cli import DRAFT_STATUS, GOLD_COLUMNS, main
-from transcript_normalizer.standoff import applied
+from transcript_normalizer.core.standoff import applied
 
 from .conftest import CAPTION, GOLD, PACK
 

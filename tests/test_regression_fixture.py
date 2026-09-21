@@ -11,8 +11,8 @@ updates this test and `docs/DECISIONS.md`.
 import csv
 from collections import Counter, defaultdict
 
-from transcript_normalizer.pack import fold
-from transcript_normalizer.standoff import BAND_LOW, in_band
+from transcript_normalizer.core.pack import fold
+from transcript_normalizer.core.standoff import BAND_LOW, in_band
 
 from .conftest import GOLD
 

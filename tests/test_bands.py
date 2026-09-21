@@ -4,7 +4,7 @@ import pytest
 import yaml
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption
-from transcript_normalizer.matcher import APPLY_THRESHOLD, MARK_THRESHOLD
+from transcript_normalizer.core.matcher import APPLY_THRESHOLD, MARK_THRESHOLD
 
 from .conftest import PACK
 
