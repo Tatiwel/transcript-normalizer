@@ -19,10 +19,13 @@ from pathlib import Path
 
 from ..runs import runs_root
 from .header import Metadata, caption_header, speech_header
-from .srt import srt_to_lines
+from .subtitles import subtitle_to_lines
 
 CAPTION_FILE = "legenda.txt"
-SRT_FILE = "legenda.srt"
+SUBTITLE_STEM = "legenda"
+
+#: What yt-dlp may leave behind, best first. WebVTT is what YouTube serves.
+SUBTITLE_SUFFIXES = (".vtt", ".srt")
 
 DEFAULT_LANG = "pt"
 DEFAULT_MODEL = "medium"
@@ -110,36 +113,53 @@ def summarise(codes: tuple[str, ...]) -> str:
     return f"{', '.join(codes[:12])} ... and {len(codes) - 12} more"
 
 
-def download_caption(url: str, code: str, source: str, target: Path) -> Path:
-    args = [
+def caption_args(url: str, code: str, source: str, target: Path) -> list[str]:
+    """The yt-dlp arguments for a subtitle download, as the platform serves it.
+
+    Deliberately no conversion flag: that hands the job to ffmpeg, and the
+    caption path should not need a system binary. WebVTT is converted in Python
+    by `subtitles.vtt_to_lines`. ffmpeg only comes into it for --whisper.
+    """
+    return [
         "--write-subs" if source == "manual" else "--write-auto-subs",
         "--skip-download",
-        "--convert-subs",
-        "srt",
         "--sub-langs",
         code,
         "--output",
-        str(target / "legenda.%(ext)s"),
+        str(target / f"{SUBTITLE_STEM}.%(ext)s"),
         url,
     ]
-    result = run_ytdlp(args)
+
+
+def download_caption(url: str, code: str, source: str, target: Path) -> Path:
+    result = run_ytdlp(caption_args(url, code, source, target))
     if result.returncode != 0:
         print("could not download the caption:", file=sys.stderr)
         print(result.stderr.strip()[:800], file=sys.stderr)
         raise SystemExit(1)
 
-    found = sorted(target.glob("legenda*.srt"))
-    if not found:
-        print("yt-dlp finished without error but no .srt appeared", file=sys.stderr)
+    found = next(
+        (
+            path
+            for suffix in SUBTITLE_SUFFIXES
+            for path in sorted(target.glob(f"{SUBTITLE_STEM}*{suffix}"))
+        ),
+        None,
+    )
+    if found is None:
+        print(
+            "yt-dlp finished without error but no subtitle file appeared "
+            f"({', '.join(SUBTITLE_SUFFIXES)})",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
-    # yt-dlp writes legenda.<lang>.srt; the fixed name saves the reader from
+    # yt-dlp writes legenda.<lang>.<ext>; the fixed name saves the reader from
     # having to know which language came out. The language stays in the header.
-    srt = found[0]
-    fixed = target / SRT_FILE
-    if srt != fixed:
-        srt.replace(fixed)
-        srt = fixed
-    return srt
+    fixed = target / f"{SUBTITLE_STEM}{found.suffix}"
+    if found != fixed:
+        found.replace(fixed)
+        found = fixed
+    return found
 
 
 def download_audio(url: str, target: Path) -> Path:
@@ -278,14 +298,14 @@ def run(args: argparse.Namespace) -> int:
         return 2
 
     print(f"caption chosen: {code} ({source})")
-    srt = download_caption(args.url, code, source, target)
-    caption.write_text(
-        caption_header(meta, args.url, source, code)
-        + srt_to_lines(srt.read_text(encoding="utf-8"))
-        + "\n",
-        encoding="utf-8",
+    subtitle = download_caption(args.url, code, source, target)
+    body = subtitle_to_lines(
+        subtitle.read_text(encoding="utf-8"), subtitle.suffix
     )
-    print(f"\nsrt:   {srt}")
+    caption.write_text(
+        caption_header(meta, args.url, source, code) + body + "\n", encoding="utf-8"
+    )
+    print(f"\nsubtitle: {subtitle}")
     print(f"text:  {caption}")
     print(f"lines: {len(caption.read_text(encoding='utf-8').splitlines())}")
     return 0

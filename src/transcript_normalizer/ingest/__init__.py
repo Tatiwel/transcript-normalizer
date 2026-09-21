@@ -6,6 +6,13 @@ installable without the ingest extra.
 """
 
 from .header import Metadata, caption_header, speech_header
-from .srt import srt_to_lines
+from .subtitles import srt_to_lines, subtitle_to_lines, vtt_to_lines
 
-__all__ = ["Metadata", "caption_header", "speech_header", "srt_to_lines"]
+__all__ = [
+    "Metadata",
+    "caption_header",
+    "speech_header",
+    "srt_to_lines",
+    "subtitle_to_lines",
+    "vtt_to_lines",
+]

@@ -1,0 +1,21 @@
+# Legenda de video, material bruto para ingestao
+#
+# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.
+# Legenda obtida da plataforma, sem transcricao por IA.
+# Origem da legenda: automatica (pt)
+# Titulo: Video sintetico de teste
+# Canal: Canal de Teste
+# Publicado: 20260101
+# URL: https://example.invalid/synthetic
+# Baixado em: 2026-01-02
+#
+# Cada linha comeca com o timestamp mm:ss. O timestamp e a
+# procedencia de qualquer afirmacao extraida daqui, do mesmo modo
+# que documento e pagina sao a procedencia de um PDF.
+#
+# Legenda automatica erra termo de dominio por semelhanca fonetica.
+# Confira nome proprio e sigla contra outra fonte antes de citar.
+0:03 o que que tá acontecendo com
+0:06 SEMIG? Bateu aí 10:17,
+0:09 o mercado abriu agora & não recuperou.
+1:07 o que que tá acontecendo com

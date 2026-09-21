@@ -303,7 +303,7 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--learned",
         type=Path,
         metavar="PATH",
-        help="learned layer file, instead of runs/learned/<pack-name>.learned.yaml",
+        help="learned layer file, instead of packs/<pack-name>.learned.yaml",
     )
     parser.add_argument(
         "--gold-draft",
