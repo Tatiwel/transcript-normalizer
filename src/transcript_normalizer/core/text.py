@@ -28,6 +28,15 @@ class Line:
 class Transcript:
     text: str
     lines: tuple[Line, ...]
+    header: tuple[str, ...] = ()  # the `#` provenance block, verbatim
+
+    def header_field(self, name: str) -> str:
+        """The value of a `# <name>: ...` header line, or `""`."""
+        prefix = f"# {name}:"
+        for line in self.header:
+            if line.startswith(prefix):
+                return line[len(prefix) :].strip()
+        return ""
 
     def _starts(self) -> list[int]:
         return [line.start for line in self.lines]
@@ -51,11 +60,13 @@ def parse_caption(source: str) -> Transcript:
     """Parse `legenda.txt` contents: `#` header lines are skipped, each line is `m:ss text`."""
     source = unicodedata.normalize("NFC", source)
     lines: list[Line] = []
+    header: list[str] = []
     parts: list[str] = []
     offset = 0
     index = 0
     for raw in source.splitlines():
         if raw.startswith("#"):
+            header.append(raw.rstrip())
             continue
         stripped = raw.strip()
         if not stripped or " " not in stripped:
@@ -68,7 +79,9 @@ def parse_caption(source: str) -> Transcript:
         parts.append(body)
         offset += len(body)
         index += 1
-    return Transcript(text="".join(parts), lines=tuple(lines))
+    return Transcript(
+        text="".join(parts), lines=tuple(lines), header=tuple(header)
+    )
 
 
 def read_caption(path: str | Path) -> Transcript:

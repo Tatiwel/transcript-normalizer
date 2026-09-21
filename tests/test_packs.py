@@ -8,7 +8,7 @@ from transcript_normalizer import load_pack
 from transcript_normalizer.cli import main
 from transcript_normalizer.runs import DEFAULT_PACK, default_pack, learned_file, packs_root
 
-from .conftest import CAPTION, FIXTURE, PACK
+from .conftest import CAPTION, FIXTURE, FIXTURE_VIDEO_ID, PACK
 
 REPO_PACK = FIXTURE.parents[1] / "packs" / DEFAULT_PACK
 
@@ -30,7 +30,7 @@ def test_pack_defaults_to_the_packs_directory(tmp_path, monkeypatch):
     shutil.copy(CAPTION, caption)
 
     assert main([str(caption)]) == 0  # no --pack
-    assert (tmp_path / "runs" / "legenda" / "annotations.json").exists()
+    assert (tmp_path / "runs" / FIXTURE_VIDEO_ID / "annotations.json").exists()
 
 
 def test_a_missing_default_pack_is_an_error_not_a_traceback(tmp_path, monkeypatch, capsys):

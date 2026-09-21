@@ -11,10 +11,9 @@ from transcript_normalizer.runs import (
     REVIEW_DIR,
     TO_CONFIRM_FILE,
     review_dir,
-    run_dir,
 )
 
-from .conftest import CAPTION, PACK
+from .conftest import CAPTION, FIXTURE_VIDEO_ID, PACK, output_dir
 
 
 def staged(tmp_path):
@@ -30,8 +29,9 @@ def test_outputs_go_to_runs_and_not_beside_the_input(tmp_path, monkeypatch):
 
     assert main([str(caption), "--pack", str(PACK), "--gold-draft"]) == 0
 
-    out = run_dir(caption)
-    assert out == tmp_path / "runs" / "legenda"
+    out = output_dir(caption)
+    # D-018: the id comes from the header url, not from the file name.
+    assert out == tmp_path / "runs" / FIXTURE_VIDEO_ID
     assert sorted(p.name for p in out.iterdir()) == [
         ANNOTATIONS_FILE,
         "legenda.txt",  # D-016: the original, kept beside what was rendered from it
@@ -64,4 +64,4 @@ def test_report_file_is_what_was_printed(tmp_path, monkeypatch, capsys):
     main([str(caption), "--pack", str(PACK)])
 
     printed = capsys.readouterr().out
-    assert (run_dir(caption) / REPORT_FILE).read_text(encoding="utf-8") == printed
+    assert (output_dir(caption) / REPORT_FILE).read_text(encoding="utf-8") == printed

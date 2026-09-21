@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from transcript_normalizer import find_annotations, load_pack, read_caption
+from transcript_normalizer.runs import run_dir
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "R2Qgz8tFWVI"
 CAPTION = FIXTURE / "legenda.txt"
@@ -23,3 +24,12 @@ def transcript():
 @pytest.fixture(scope="session")
 def annotations(transcript, pack):
     return find_annotations(transcript, pack)
+
+
+#: The video the fixture caption came from; its header declares the url.
+FIXTURE_VIDEO_ID = "R2Qgz8tFWVI"
+
+
+def output_dir(caption, out=None):
+    """Where a run over `caption` writes, D-018 derivation and all."""
+    return run_dir(caption, out, read_caption(caption).header_field("URL"))

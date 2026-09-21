@@ -110,6 +110,14 @@ packs/ is the user's knowledge directory; fixtures/ packs are frozen test copies
 
 Why: `fixtures/R2Qgz8tFWVI/pack.yaml` is an input to the regression test and has to stay frozen, so it cannot also be the pack people edit as they work.
 
+## D-018 The run id comes from the video, not from the file name
+
+`runs/<id>/` is derived in this order: if the input is already inside a `runs/<id>/`, that directory is the run directory; else if the caption header has a `# URL:` line with a recognizable video id, `runs/<id>/`; else the input's stem. `--out` still overrides all three.
+
+Why: `fetch` names every caption `legenda.txt` (D-016), so deriving the run id from the input stem sent every video to `runs/legenda/` and each run silently overwrote the last. The first rule also makes normalizing a fetched caption write back into the directory it was fetched into, instead of forking a second one.
+
+A recognizable id is the eleven-character platform id, read from the `youtu.be/<id>`, `?v=<id>` and `/shorts|embed|live|v/<id>` shapes. An unrecognized url is treated as no url: the stem is a poor id, but inventing one from an arbitrary url would be worse.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

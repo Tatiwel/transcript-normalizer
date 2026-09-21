@@ -6,9 +6,9 @@ import shutil
 from transcript_normalizer import find_annotations, load_pack, read_caption, resolve_overlaps
 from transcript_normalizer.cli import DRAFT_STATUS, GOLD_COLUMNS, main
 from transcript_normalizer.core.standoff import applied
-from transcript_normalizer.runs import GOLD_DRAFT_FILE, review_dir, run_dir
+from transcript_normalizer.runs import GOLD_DRAFT_FILE, review_dir
 
-from .conftest import CAPTION, GOLD, PACK
+from .conftest import CAPTION, GOLD, PACK, output_dir
 
 
 def read_rows(path, encoding="utf-8-sig"):
@@ -23,7 +23,7 @@ def run(tmp_path, monkeypatch, *extra):
     shutil.copy(CAPTION, caption)
     assert main([str(caption), "--pack", str(PACK), *extra]) == 0
     # D-016: the draft is a review file.
-    return caption, review_dir(run_dir(caption))
+    return caption, review_dir(output_dir(caption))
 
 
 def test_draft_has_the_columns_and_status_of_a_gold_file(tmp_path, monkeypatch):

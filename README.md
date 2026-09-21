@@ -46,6 +46,7 @@ fixtures/      frozen test material; the regression test reads it, nothing write
 experiments/   the throwaway scripts that measured the decisions, kept as record
 runs/          everything a command produces, gitignored (D-015)
   <id>/        annotations.json, report.txt, normalized.txt, the raw caption
+               <id> is the video id from the caption header, else the file stem (D-018)
     review/    what needs a person: gold-draft.csv, to-confirm.txt (D-016)
 ```
 

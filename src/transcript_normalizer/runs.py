@@ -8,9 +8,21 @@ written beside an input or into `fixtures/`.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 RUNS_DIR = "runs"
+
+#: A platform video id, and the url shapes it turns up in (D-018).
+VIDEO_ID = r"[A-Za-z0-9_-]{11}"
+_URL_PATTERNS = tuple(
+    re.compile(pattern + r"(?![A-Za-z0-9_-])")
+    for pattern in (
+        rf"youtu\.be/({VIDEO_ID})",
+        rf"[?&]v=({VIDEO_ID})",
+        rf"/(?:shorts|embed|live|v)/({VIDEO_ID})",
+    )
+)
 
 #: D-017: the user's packs, and the learned layer beside each of them.
 PACKS_DIR = "packs"
@@ -44,10 +56,50 @@ def default_pack() -> Path:
     return packs_root() / DEFAULT_PACK
 
 
-def run_dir(input_path: str | Path, out: str | Path | None = None) -> Path:
-    """`runs/<input-stem>/`, or `out` when the caller names a directory."""
+def video_id_from_url(url: str) -> str:
+    """The video id in a url, or `""` when there is no recognizable one."""
+    for pattern in _URL_PATTERNS:
+        match = pattern.search(url or "")
+        if match:
+            return match.group(1)
+    return ""
+
+
+def run_dir_containing(path: str | Path) -> Path | None:
+    """The `runs/<id>/` a path already lives in, if it lives in one."""
+    root = runs_root()
+    try:
+        relative = Path(path).resolve().relative_to(root.resolve())
+    except (ValueError, OSError):
+        return None
+    if len(relative.parts) < 2:  # directly in runs/, so there is no <id>
+        return None
+    return root / relative.parts[0]
+
+
+def run_dir(
+    input_path: str | Path, out: str | Path | None = None, url: str = ""
+) -> Path:
+    """Where this run writes (D-018).
+
+    `out` wins. Otherwise: a caption already inside `runs/<id>/` keeps that
+    directory, a caption whose header declares a url with a recognizable video
+    id gets `runs/<id>/`, and anything else falls back to the input's stem.
+
+    The stem alone is not enough because `fetch` names every caption
+    `legenda.txt`, so every video would normalize into `runs/legenda/`.
+    """
     if out is not None:
         return Path(out)
+
+    inside = run_dir_containing(input_path)
+    if inside is not None:
+        return inside
+
+    video_id = video_id_from_url(url)
+    if video_id:
+        return runs_root() / video_id
+
     return runs_root() / Path(input_path).stem
 
 

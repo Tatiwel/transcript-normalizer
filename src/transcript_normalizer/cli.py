@@ -239,7 +239,7 @@ def run_normalize(args: argparse.Namespace) -> int:
     transcript = read_caption(args.caption)
     annotations = resolve_overlaps(find_annotations(transcript, pack))
 
-    out_dir = run_dir(args.caption, args.out)
+    out_dir = run_dir(args.caption, args.out, transcript.header_field("URL"))
     out_dir.mkdir(parents=True, exist_ok=True)
 
     written = [write_json(annotations, out_dir / ANNOTATIONS_FILE)]
