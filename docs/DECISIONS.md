@@ -96,6 +96,12 @@ A run writes `annotations.json`, `report.txt` and, when asked, `gold-draft.csv` 
 
 Why: the first version wrote `legenda.annotations.json` next to its input, which meant a run against the fixture dirtied `fixtures/`. Outputs are disposable and regenerable; inputs are not.
 
+## D-016 Rendered outputs
+
+Rendered outputs. runs/<id>/normalized.txt is the original caption with applied annotations substituted, one line per caption line as `m:ss  text`, timestamps preserved. It is a view over the stand-off layer (D-004); the original legenda.txt is kept beside it. runs/<id>/review/ holds files that need the user: gold-draft.csv and to-confirm.txt (the medium band, grouped by term, same text the --confirm prompt shows). A speaker-aware variant normalized.speakers.txt is reserved for when diarization exists.
+
+`annotations.json` and `report.txt` stay at the top of the run directory: they describe the run, they are not something to hand to a person. A rendered file carries no provenance header, which is why the raw caption is copied in beside it.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

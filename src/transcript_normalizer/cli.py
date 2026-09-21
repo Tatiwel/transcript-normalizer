@@ -11,12 +11,14 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import shutil
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from .core.matcher import find_annotations, resolve_overlaps
 from .core.pack import Learned, Pack, load_pack, save_learned
+from .core.render import render_normalized
 from .core.standoff import (
     BAND_HIGH,
     BAND_LOW,
@@ -32,8 +34,11 @@ from .ingest import fetch as ingest_fetch
 from .runs import (
     ANNOTATIONS_FILE,
     GOLD_DRAFT_FILE,
+    NORMALIZED_FILE,
     REPORT_FILE,
+    TO_CONFIRM_FILE,
     learned_file,
+    review_dir,
     run_dir,
 )
 
@@ -49,6 +54,10 @@ DRAFT_STATUS = "draft"
 
 #: What the gold file calls the class of a unit-rule row.
 UNIT_CLASS = "unidade"
+
+#: The question the confirmation loop asks, and the last line of each
+#: review/to-confirm.txt block.
+CONFIRM_PROMPT = "  confirm as variants of {term}? [y]es / [n]o / [s]kip: "
 
 
 def form(annotation: Annotation) -> str:
@@ -139,28 +148,53 @@ def ask(prompt: str) -> str:
         return "s"
 
 
+def confirm_groups(annotations: list[Annotation]) -> list[tuple[str, list[Annotation]]]:
+    """D-011's medium band, grouped by term, busiest first."""
+    by_term: dict[str, list[Annotation]] = defaultdict(list)
+    for a in in_band(annotations, BAND_MEDIUM):
+        by_term[a.term].append(a)
+    return sorted(by_term.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+
+
+def confirm_block(
+    transcript: Transcript, term: str, group: list[Annotation]
+) -> tuple[str, str, Counter]:
+    """What one term looks like in the confirmation loop: (body, prompt, forms)."""
+    forms = Counter(form(a) for a in group)
+    total = sum(forms.values())
+    plural = "occurrence" if total == 1 else "occurrences"
+    body = "\n".join(
+        [
+            f"{term}  ({total} {plural})",
+            f"  variants: {', '.join(f for f, _ in forms.most_common())}",
+            *examples(transcript, group, EXAMPLES_PER_TERM),
+        ]
+    )
+    return body, CONFIRM_PROMPT.format(term=term), forms
+
+
+def to_confirm_text(transcript: Transcript, annotations: list[Annotation]) -> str:
+    """The medium band as `--confirm` would show it, for review/to-confirm.txt."""
+    blocks = []
+    for term, group in confirm_groups(annotations):
+        body, prompt, _ = confirm_block(transcript, term, group)
+        blocks.append(f"{body}\n{prompt.rstrip()}")
+    return "\n\n".join(blocks) + "\n"
+
+
 def confirm_loop(
     transcript: Transcript, annotations: list[Annotation], learned: Learned
 ) -> Learned:
     """D-011's confirmation loop, grouped by term. Writes only to the learned layer."""
-    medium = in_band(annotations, BAND_MEDIUM)
-    if not medium:
+    groups = confirm_groups(annotations)
+    if not groups:
         print("nothing to confirm.")
         return learned
 
-    by_term: dict[str, list[Annotation]] = defaultdict(list)
-    for a in medium:
-        by_term[a.term].append(a)
-
-    for term, group in sorted(by_term.items(), key=lambda kv: (-len(kv[1]), kv[0])):
-        forms = Counter(form(a) for a in group)
-        total = sum(forms.values())
-        plural = "occurrence" if total == 1 else "occurrences"
-        print(f"\n{term}  ({total} {plural})")
-        print(f"  variants: {', '.join(f for f, _ in forms.most_common())}")
-        for line in examples(transcript, group, EXAMPLES_PER_TERM):
-            print(line)
-        answer = ask(f"  confirm as variants of {term}? [y]es / [n]o / [s]kip: ")
+    for term, group in groups:
+        body, prompt, forms = confirm_block(transcript, term, group)
+        print(f"\n{body}")
+        answer = ask(prompt)
         if answer.startswith("y"):
             for observed in forms:
                 learned = learned.confirm(term, observed)
@@ -174,6 +208,20 @@ def confirm_loop(
     return learned
 
 
+def review_path(out_dir: Path, name: str) -> Path:
+    directory = review_dir(out_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / name
+
+
+def keep_original(caption: Path, out_dir: Path) -> Path:
+    """D-016: the raw caption sits next to what was rendered from it."""
+    target = out_dir / caption.name
+    if not (target.exists() and target.samefile(caption)):
+        shutil.copyfile(caption, target)
+    return target
+
+
 def run_normalize(args: argparse.Namespace) -> int:
     learned_at = learned_file(args.pack, args.learned)
     pack = load_pack(args.pack, learned_from=learned_at)
@@ -184,10 +232,25 @@ def run_normalize(args: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     written = [write_json(annotations, out_dir / ANNOTATIONS_FILE)]
+
+    # D-016: rendered views, plus the original kept beside them.
+    normalized = out_dir / NORMALIZED_FILE
+    normalized.write_text(render_normalized(transcript, annotations), encoding="utf-8")
+    written.append(normalized)
+    written.append(keep_original(args.caption, out_dir))
+
+    # D-016: what needs a person goes under review/.
     if args.gold_draft:
         written.append(
-            write_gold_draft(transcript, annotations, pack, out_dir / GOLD_DRAFT_FILE)
+            write_gold_draft(
+                transcript, annotations, pack, review_path(out_dir, GOLD_DRAFT_FILE)
+            )
         )
+    if confirm_groups(annotations):
+        to_confirm = review_path(out_dir, TO_CONFIRM_FILE)
+        to_confirm.write_text(to_confirm_text(transcript, annotations), encoding="utf-8")
+        written.append(to_confirm)
+
     written.append(out_dir / REPORT_FILE)
 
     lines = [
@@ -197,7 +260,7 @@ def run_normalize(args: argparse.Namespace) -> int:
         f"{len(annotations)} annotations, {len(applied(annotations))} applied",
         f"written to {out_dir}{os.sep}",
     ]
-    lines += [f"  {path.name}" for path in written]
+    lines += [f"  {path.relative_to(out_dir)}" for path in written]
     text = "\n".join(lines) + "\n"
 
     (out_dir / REPORT_FILE).write_text(text, encoding="utf-8")

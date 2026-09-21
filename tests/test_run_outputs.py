@@ -6,7 +6,11 @@ from transcript_normalizer.cli import main
 from transcript_normalizer.runs import (
     ANNOTATIONS_FILE,
     GOLD_DRAFT_FILE,
+    NORMALIZED_FILE,
     REPORT_FILE,
+    REVIEW_DIR,
+    TO_CONFIRM_FILE,
+    review_dir,
     run_dir,
 )
 
@@ -30,8 +34,14 @@ def test_outputs_go_to_runs_and_not_beside_the_input(tmp_path, monkeypatch):
     assert out == tmp_path / "runs" / "legenda"
     assert sorted(p.name for p in out.iterdir()) == [
         ANNOTATIONS_FILE,
-        GOLD_DRAFT_FILE,
+        "legenda.txt",  # D-016: the original, kept beside what was rendered from it
+        NORMALIZED_FILE,
         REPORT_FILE,
+        REVIEW_DIR,
+    ]
+    assert sorted(p.name for p in review_dir(out).iterdir()) == [
+        GOLD_DRAFT_FILE,
+        TO_CONFIRM_FILE,
     ]
     # Nothing landed next to the caption.
     assert [p.name for p in caption.parent.iterdir()] == ["legenda.txt"]
