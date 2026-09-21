@@ -16,8 +16,8 @@ from transcript_normalizer.standoff import BAND_LOW, in_band
 
 from .conftest import GOLD
 
-MIN_HITS = 155
-MAX_FALSE_POSITIVES = 11
+MIN_HITS = 156
+MAX_FALSE_POSITIVES = 9
 
 
 def key(s: str) -> str:

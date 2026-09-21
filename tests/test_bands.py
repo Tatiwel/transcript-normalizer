@@ -40,10 +40,13 @@ def test_unlisted_near_miss_is_medium(pack_without_semiga):
     hits = [
         a
         for a in annotate(pack_without_semiga, 'Pô, semiga é horrível')
-        if a.term == "CEMIG" and a.original == "semiga"
+        if a.original == "semiga"
     ]
     assert len(hits) == 1
     a = hits[0]
+    # Unlisted, so it is reached fuzzily. Since D-014 the nearest string is
+    # `SEMigd`, which belongs to Cemig D; the band is what this test is about.
+    assert a.term == "Cemig D"
     assert a.rule == "term:fuzzy"
     assert a.band == "medium"
     assert a.applied is True

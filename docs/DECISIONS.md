@@ -82,7 +82,14 @@ User decisions from the confirmation loop are written to `<pack>.learned.yaml` n
 
 Why: the pack is curated and shareable; the learned layer is personal and unreviewed. Mixing them would ship unreviewed variants to other users and gives rejections nowhere to live.
 
+## D-014 `SEMigd` belongs to `Cemig D`, not to CEMIG
+
+`SEMigd` was listed as a variant of CEMIG while the gold file has it at 5:13 as `Cemig D`. It is now a variant of a `Cemig D` term entry of its own (class `companhia`); `Cemig D` stays an alias of CEMIG as well. A curation fix to the fixture pack, not a change to the matcher.
+
+Effect, measured: the 5:13 row becomes a hit and the two `SEMigd` → CEMIG false positives disappear. New regression bounds: hits >= 156, false positives <= 9, in scope 168. Nothing else in the per-term table moves, and the remaining nine false positives are the ones D-012 already recorded.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
+- Low band lower threshold: 60 produces 528 marks on the fixture; consider 70.

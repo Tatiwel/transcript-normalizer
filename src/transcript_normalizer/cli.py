@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import argparse
+import csv
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from .matcher import find_annotations, resolve_overlaps
-from .pack import Learned, learned_path, load_pack, save_learned
+from .pack import Learned, Pack, learned_path, load_pack, save_learned
 from .standoff import (
     BAND_HIGH,
     BAND_LOW,
     BAND_MEDIUM,
     RULE_UNIT,
     Annotation,
+    applied,
     in_band,
     write_json,
 )
@@ -21,6 +23,13 @@ from .text import Transcript, read_caption
 
 #: How many example lines the confirmation loop shows per term.
 EXAMPLES_PER_TERM = 3
+
+#: The six columns of a gold file, and the status a draft row carries.
+GOLD_COLUMNS = ("timestamp", "wrong", "correct", "term", "class", "status")
+DRAFT_STATUS = "draft"
+
+#: What the gold file calls the class of a unit-rule row.
+UNIT_CLASS = "unidade"
 
 
 def annotations_path(caption: Path) -> Path:
@@ -84,6 +93,29 @@ def examples(transcript: Transcript, annotations: list[Annotation], limit: int) 
     return out
 
 
+def write_gold_draft(
+    transcript: Transcript, annotations: list[Annotation], pack: Pack, path: Path
+) -> Path:
+    """The applied annotations as a gold.csv draft, for hand-checking a new fixture."""
+    klass = {t.term: (t.klass or "") for t in pack.terms}
+    rows = sorted(applied(annotations), key=lambda a: (a.start, a.end))
+    with path.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(GOLD_COLUMNS)
+        for a in rows:
+            writer.writerow(
+                [
+                    transcript.locate(a.start)[1],
+                    form(a),
+                    a.replacement,
+                    a.term,
+                    UNIT_CLASS if a.rule == RULE_UNIT else klass.get(a.term, ""),
+                    DRAFT_STATUS,
+                ]
+            )
+    return path
+
+
 def ask(prompt: str) -> str:
     """One answer from the user. End of input counts as `skip`."""
     try:
@@ -136,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
     parser.add_argument("--pack", type=Path, required=True, help="domain pack, e.g. pack.yaml")
     parser.add_argument(
+        "--gold-draft",
+        type=Path,
+        metavar="PATH.CSV",
+        help="write the applied annotations as a gold.csv draft, status `draft`",
+    )
+    parser.add_argument(
         "--confirm",
         action="store_true",
         help="review the medium band and record the answers in <pack>.learned.yaml (D-013)",
@@ -152,6 +190,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{args.caption}: {len(transcript.lines)} caption lines, pack {pack.version}")
     print(report(annotations))
     print(f"\n{len(annotations)} annotations written to {out_path}")
+
+    if args.gold_draft:
+        draft = write_gold_draft(transcript, annotations, pack, args.gold_draft)
+        print(f"{len(applied(annotations))} draft gold rows written to {draft}")
 
     if args.confirm:
         learned = confirm_loop(transcript, annotations, pack.learned)

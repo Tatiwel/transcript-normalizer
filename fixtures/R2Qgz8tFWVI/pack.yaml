@@ -6,7 +6,10 @@ terms:
   - term: CEMIG
     class: companhia
     aliases: [Cemig, Cemig D, Cemig GT, CMIG4, CMIG3]
-    variants: [SEMIG, SEMI, SEMIC, SEMIX, CIC, CMIG, semiga, sem amig, esse amigo, ser MIG, semicaiu, SEMigd, "do 100", "me caiu"]
+    variants: [SEMIG, SEMI, SEMIC, SEMIX, CIC, CMIG, semiga, sem amig, esse amigo, ser MIG, semicaiu, "do 100", "me caiu"]
+  - term: Cemig D
+    class: companhia
+    variants: [SEMigd]
   - term: CPFL
     class: companhia
     variants: [CPFE]
