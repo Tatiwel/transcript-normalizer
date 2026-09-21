@@ -12,6 +12,7 @@ import csv
 from collections import Counter, defaultdict
 
 from transcript_normalizer.pack import fold
+from transcript_normalizer.standoff import BAND_LOW, in_band
 
 from .conftest import GOLD
 
@@ -30,6 +31,9 @@ def rows():
 
 
 def evaluate(transcript, annotations):
+    # D-011: only the applied bands count. Low marks are passive.
+    annotations = [a for a in annotations if a.applied]
+
     by_timestamp = defaultdict(list)  # every line an annotation touches
     home = {}  # annotation -> the line it starts on
     for a in annotations:
@@ -126,7 +130,7 @@ def render(result) -> str:
     counted = Counter((a.original, a.term) for _, a in result["false_positives"])
     for (original, term), n in counted.most_common():
         out.append(f"  {n:3d}x {original!r} -> {term}")
-    out += ["", "lines that must stay untouched:"]
+    out += ["", "lines that must stay untouched (applied annotations only):"]
     for timestamp, touched in result["touched_keep"].items():
         out.append(f"  {timestamp} {touched}")
     return "\n".join(out)
@@ -141,7 +145,15 @@ def test_regression_against_gold(transcript, annotations):
     assert len(result["false_positives"]) <= MAX_FALSE_POSITIVES
 
 
-def test_lines_marked_manter_receive_no_annotations(transcript, annotations):
+def test_lines_marked_manter_have_no_applied_annotation(transcript, annotations):
     result = evaluate(transcript, annotations)
     print(render(result))
     assert result["touched_keep"] == {"7:30": [], "10:27": []}
+
+
+def test_the_fixture_produces_low_band_marks(annotations):
+    """D-011's low band is reachable on real material, not just in theory."""
+    low = in_band(annotations, BAND_LOW)
+    assert low
+    assert all(not a.applied for a in low)
+    assert all(a.rule == "term:fuzzy" and 60 <= a.score < 80 for a in low)

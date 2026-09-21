@@ -1,19 +1,26 @@
 """Domain-term normalization for ASR transcripts and auto-captions."""
 
-from .matcher import find_annotations, resolve_overlaps
-from .pack import Pack, load_pack
-from .standoff import Annotation, to_json, write_json
+from .matcher import band_for, find_annotations, resolve_overlaps
+from .pack import Learned, Pack, learned_path, load_learned, load_pack, save_learned
+from .standoff import Annotation, applied, in_band, to_json, write_json
 from .text import Transcript, parse_caption, read_caption
 
 __all__ = [
     "Annotation",
+    "Learned",
     "Pack",
     "Transcript",
+    "applied",
+    "band_for",
     "find_annotations",
+    "in_band",
+    "learned_path",
+    "load_learned",
     "load_pack",
     "parse_caption",
     "read_caption",
     "resolve_overlaps",
+    "save_learned",
     "to_json",
     "write_json",
 ]

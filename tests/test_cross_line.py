@@ -13,10 +13,12 @@ def test_ser_mig_is_one_annotation_across_two_caption_lines(transcript, annotati
     assert before.text.endswith("que tem que ser")
     assert after.text.startswith("MIG,")
 
+    # Low-band marks straddle the break too; only the applied one is the correction.
     crossing = [
         a
         for a in annotations
-        if [l.timestamp for l in transcript.spans(a.start, a.end)] == ["24:48", "24:51"]
+        if a.applied
+        and [l.timestamp for l in transcript.spans(a.start, a.end)] == ["24:48", "24:51"]
     ]
     assert len(crossing) == 1, [(a.original, a.term) for a in crossing]
 

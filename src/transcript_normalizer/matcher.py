@@ -14,11 +14,13 @@ from rapidfuzz import fuzz
 
 from .pack import Pack, fold
 from .rules import find_unit_hits
-from .standoff import RULE_UNIT, Annotation, term_rule
+from .standoff import BAND_HIGH, BAND_LOW, BAND_MEDIUM, RULE_UNIT, Annotation, term_rule
 from .text import Transcript
 
-#: D-011, apply band. D-005 calls the same number the fuzzy threshold.
+# D-011's two thresholds live here and nowhere else. Apply at or above 80 (which
+# is also D-005's fuzzy threshold); between 60 and 80, mark but do not apply.
 APPLY_THRESHOLD = 80
+MARK_THRESHOLD = 60
 
 #: D-005: fuzzy similarity needs 6+ characters on both sides and similar lengths.
 MIN_FUZZY_LEN = 6
@@ -55,6 +57,13 @@ def tokenize(text: str) -> list[Token]:
     return tokens
 
 
+def band_for(rule: str, score: float) -> str:
+    """D-011: which confidence band a proposal falls in."""
+    if rule != term_rule("fuzzy"):
+        return BAND_HIGH  # a unit rule, a listed variant or an alias
+    return BAND_MEDIUM if score >= APPLY_THRESHOLD else BAND_LOW
+
+
 def _score(span: str, candidate: str) -> int:
     """D-005: fuzzy only for long, similarly sized strings; otherwise exact equality."""
     if (
@@ -67,17 +76,21 @@ def _score(span: str, candidate: str) -> int:
 
 
 def find_annotations(
-    transcript: Transcript, pack: Pack, threshold: int = APPLY_THRESHOLD
+    transcript: Transcript, pack: Pack, threshold: int = MARK_THRESHOLD
 ) -> list[Annotation]:
     """Every stand-off annotation the pack proposes for the transcript.
 
-    Overlapping proposals are all returned; `resolve_overlaps` picks between them.
+    The search runs down to D-011's mark threshold, so low-band proposals are
+    returned too; `Annotation.applied` says which ones count. Overlapping
+    proposals are all returned; `resolve_overlaps` picks between them.
     """
     text = transcript.text
     annotations: list[Annotation] = []
 
     # D-006: the unit layer runs before the dictionary.
     for hit in find_unit_hits(text):
+        if pack.is_rejected(fold(hit.original), hit.term):
+            continue
         annotations.append(
             Annotation(
                 start=hit.start,
@@ -86,6 +99,7 @@ def find_annotations(
                 replacement=hit.replacement,
                 term=hit.term,
                 rule=RULE_UNIT,
+                band=BAND_HIGH,
                 score=100,
                 pack_version=pack.version,
             )
@@ -119,6 +133,9 @@ def find_annotations(
                 continue
             if any(a in folded_span for a in folded_aliases[term]):
                 continue
+            # D-013: a pair the user has turned down is never proposed again.
+            if pack.is_rejected(folded_span, term):
+                continue
             origin = origins[(term, candidate)]
             rule = term_rule(origin if folded_span == candidate else "fuzzy")
             annotations.append(
@@ -129,6 +146,7 @@ def find_annotations(
                     replacement=term,
                     term=term,
                     rule=rule,
+                    band=band_for(rule, score),
                     score=int(score),
                     pack_version=pack.version,
                 )
@@ -137,9 +155,13 @@ def find_annotations(
 
 
 def resolve_overlaps(annotations: list[Annotation]) -> list[Annotation]:
-    """Keep one annotation per stretch of text: best score first, then longest span."""
+    """Keep one annotation per stretch of text.
+
+    Applied bands win over low marks, then the best score, then the longest span.
+    """
     ordered = sorted(
-        annotations, key=lambda a: (-a.score, -(a.end - a.start), a.start, a.rule)
+        annotations,
+        key=lambda a: (not a.applied, -a.score, -(a.end - a.start), a.start, a.rule),
     )
     kept: list[Annotation] = []
     for a in ordered:
