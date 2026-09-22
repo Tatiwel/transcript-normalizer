@@ -70,10 +70,15 @@ def test_to_confirm_is_the_text_the_prompt_shows(tmp_path, monkeypatch, capsys):
     main([str(caption), "--pack", str(PACK)])
 
     text = (review_dir(output_dir(caption)) / TO_CONFIRM_FILE).read_text(encoding="utf-8")
-    assert "confirm as variants of CEMIG? [y]es / [n]o / [s]kip:" in text
-    assert "variants: dos 10, mês caiu, nesse ramo, e caiu" in text
-    # One block per term in the medium band, in the order the loop would ask.
-    assert text.count("[y]es / [n]o / [s]kip:") == 4
+    # D-019: the term is named once, then one question per variant.
+    assert "CEMIG  (5 occurrences)" in text
+    assert text.count("CEMIG  (5 occurrences)") == 1
+    assert "  dos 10  (2 occurrences)" in text
+    assert "dos 10 -> CEMIG? [y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no:" in text
+    # Every variant of every term in the medium band gets asked about.
+    assert text.count("[a]ll-yes / [r]est-no:") == 8
+    # And each variant carries its own example lines.
+    assert "    0:37  Neste mês caiu 7% e desde o início do" in text
 
 
 def test_render_is_a_pure_view(transcript, annotations):

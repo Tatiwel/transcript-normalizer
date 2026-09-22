@@ -118,6 +118,12 @@ Why: `fetch` names every caption `legenda.txt` (D-016), so deriving the run id f
 
 A recognizable id is the eleven-character platform id, read from the `youtu.be/<id>`, `?v=<id>` and `/shorts|embed|live|v/<id>` shapes. An unrecognized url is treated as no url: the stem is a poor id, but inventing one from an arbitrary url would be worse.
 
+## D-019 Confirmation is per variant, not per term group
+
+Confirmation is per variant, not per term group. In a real run (wxgFO_fyfXg) the group `ser mais, dos 10, sem mig, que caiu, esse mig -> CEMIG` was accepted with one `y`; only two of the five were CEMIG. A term-level answer cannot express a mixed group. The prompt shows the term once, then asks for each variant separately, with that variant's own example lines (up to 3), `[y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no`. `a` and `r` apply to the remaining variants of the current term only.
+
+`review/to-confirm.txt` keeps the grouped view and lists each variant under its term with its own examples and its own question, so the file still shows what the loop will ask.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -88,6 +88,71 @@ def test_a_rejected_pair_is_never_proposed_again(tmp_path, transcript):
     assert not [a for a in after if a.original == "preço dela"]
 
 
+def confirm_run(tmp_path, monkeypatch, answers):
+    """A --confirm run in tmp_path, driven by `answers`, one per line."""
+    monkeypatch.chdir(tmp_path)
+    path = pack_copy(tmp_path)
+    caption = tmp_path / "legenda.txt"
+    shutil.copy(CAPTION, caption)
+    monkeypatch.setattr("sys.stdin", io.StringIO("".join(f"{a}\n" for a in answers)))
+    assert main([str(caption), "--pack", str(path), "--confirm"]) == 0
+    return load_learned(learned_file(path))
+
+
+def confirmed_pairs(learned):
+    return sorted(
+        (term, c.variant) for term, cs in learned.confirmed.items() for c in cs
+    )
+
+
+def rejected_pairs(learned):
+    return sorted((r.term, r.text) for r in learned.rejected)
+
+
+# The busiest medium-band group on the fixture, in the order the loop asks:
+# a mixed group, which is the whole point of D-019.
+CEMIG_VARIANTS = ["dos 10", "e caiu", "mês caiu", "nesse ramo"]
+
+
+def test_a_mixed_group_is_answered_one_variant_at_a_time(tmp_path, monkeypatch):
+    # yes, no, yes, skip -- then end of input, so no later term is touched.
+    learned = confirm_run(tmp_path, monkeypatch, ["y", "n", "y", "s"])
+
+    assert confirmed_pairs(learned) == [("CEMIG", "dos 10"), ("CEMIG", "mês caiu")]
+    assert rejected_pairs(learned) == [("CEMIG", "e caiu")]
+
+
+def test_all_yes_stops_at_the_end_of_its_term(tmp_path, monkeypatch):
+    # `a` on CEMIG's first variant takes all four; the next term asks again.
+    learned = confirm_run(tmp_path, monkeypatch, ["a", "n"])
+
+    assert confirmed_pairs(learned) == [("CEMIG", v) for v in CEMIG_VARIANTS]
+    # Only the one variant the `n` answered, not the whole of preço teto.
+    assert rejected_pairs(learned) == [("preço teto", "preço dela")]
+
+
+def test_rest_no_takes_the_current_variant_and_the_ones_after_it(tmp_path, monkeypatch):
+    learned = confirm_run(tmp_path, monkeypatch, ["y", "r"])
+
+    assert confirmed_pairs(learned) == [("CEMIG", "dos 10")]
+    assert rejected_pairs(learned) == [
+        ("CEMIG", v) for v in CEMIG_VARIANTS if v != "dos 10"
+    ]
+
+
+def test_each_variant_is_asked_with_its_own_examples(tmp_path, monkeypatch, capsys):
+    confirm_run(tmp_path, monkeypatch, ["s"])
+    out = capsys.readouterr().out
+
+    heading = out.index("CEMIG  (5 occurrences)")
+    for variant in CEMIG_VARIANTS:
+        assert f"  {variant}  (" in out
+        assert f"{variant} -> CEMIG? [y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no:" in out
+    # The term is named once, above its variants.
+    assert out.count("CEMIG  (5 occurrences)") == 1
+    assert out.index("    0:37  Neste mês caiu") > heading
+
+
 def test_confirm_run_writes_the_learned_file_and_never_the_pack(
     tmp_path, monkeypatch, capsys
 ):

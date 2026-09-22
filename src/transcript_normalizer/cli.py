@@ -46,8 +46,8 @@ from .runs import (
 PROG = "transcript-normalizer"
 COMMANDS = ("normalize", "fetch")
 
-#: How many example lines the confirmation loop shows per term.
-EXAMPLES_PER_TERM = 3
+#: How many example lines the confirmation loop shows per variant (D-019).
+EXAMPLES_PER_VARIANT = 3
 
 #: The six columns of a gold file, and the status a draft row carries.
 GOLD_COLUMNS = ("timestamp", "wrong", "correct", "term", "class", "status")
@@ -56,9 +56,12 @@ DRAFT_STATUS = "draft"
 #: What the gold file calls the class of a unit-rule row.
 UNIT_CLASS = "unidade"
 
-#: The question the confirmation loop asks, and the last line of each
-#: review/to-confirm.txt block.
-CONFIRM_PROMPT = "  confirm as variants of {term}? [y]es / [n]o / [s]kip: "
+#: D-019: one question per variant, not per term group. `a` and `r` answer the
+#: current variant and every variant of the current term after it.
+CONFIRM_PROMPT = (
+    "    {variant} -> {term}? [y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no: "
+)
+BULK_ANSWERS = {"a": "y", "r": "n"}
 
 
 def form(annotation: Annotation) -> str:
@@ -157,55 +160,87 @@ def confirm_groups(annotations: list[Annotation]) -> list[tuple[str, list[Annota
     return sorted(by_term.items(), key=lambda kv: (-len(kv[1]), kv[0]))
 
 
-def confirm_block(
-    transcript: Transcript, term: str, group: list[Annotation]
-) -> tuple[str, str, Counter]:
-    """What one term looks like in the confirmation loop: (body, prompt, forms)."""
-    forms = Counter(form(a) for a in group)
-    total = sum(forms.values())
-    plural = "occurrence" if total == 1 else "occurrences"
+def variant_groups(group: list[Annotation]) -> list[tuple[str, list[Annotation]]]:
+    """One entry per observed form, busiest first, then alphabetically (D-019)."""
+    by_form: dict[str, list[Annotation]] = defaultdict(list)
+    for a in group:
+        by_form[form(a)].append(a)
+    return sorted(by_form.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+
+
+def occurrences(count: int) -> str:
+    return f"{count} occurrence" if count == 1 else f"{count} occurrences"
+
+
+def term_heading(term: str, group: list[Annotation]) -> str:
+    """The term is named once; the questions below it are per variant."""
+    return f"{term}  ({occurrences(len(group))})"
+
+
+def variant_block(
+    transcript: Transcript, term: str, variant: str, found: list[Annotation]
+) -> tuple[str, str]:
+    """One variant of one term: (body, prompt), with that variant's own examples."""
     body = "\n".join(
         [
-            f"{term}  ({total} {plural})",
-            f"  variants: {', '.join(f for f, _ in forms.most_common())}",
-            *examples(transcript, group, EXAMPLES_PER_TERM),
+            f"  {variant}  ({occurrences(len(found))})",
+            *examples(transcript, found, EXAMPLES_PER_VARIANT),
         ]
     )
-    return body, CONFIRM_PROMPT.format(term=term), forms
+    return body, CONFIRM_PROMPT.format(variant=variant, term=term)
 
 
 def to_confirm_text(transcript: Transcript, annotations: list[Annotation]) -> str:
-    """The medium band as `--confirm` would show it, for review/to-confirm.txt."""
+    """The medium band as `--confirm` would show it, for review/to-confirm.txt.
+
+    Still grouped by term, but every variant is listed with its own examples and
+    its own question, because that is what the loop asks (D-019).
+    """
     blocks = []
     for term, group in confirm_groups(annotations):
-        body, prompt, _ = confirm_block(transcript, term, group)
-        blocks.append(f"{body}\n{prompt.rstrip()}")
+        lines = [term_heading(term, group)]
+        for variant, found in variant_groups(group):
+            body, prompt = variant_block(transcript, term, variant, found)
+            lines.append(body)
+            lines.append(prompt.rstrip())
+        blocks.append("\n".join(lines))
     return "\n\n".join(blocks) + "\n"
 
 
 def confirm_loop(
     transcript: Transcript, annotations: list[Annotation], learned: Learned
 ) -> Learned:
-    """D-011's confirmation loop, grouped by term. Writes only to the learned layer."""
+    """D-011's confirmation loop, one question per variant (D-019).
+
+    A term-level answer cannot express a mixed group, so the term is shown once
+    and each of its variants is asked about separately. `a` and `r` answer the
+    current variant and the rest of that term's variants; they do not carry to
+    the next term.
+    """
     groups = confirm_groups(annotations)
     if not groups:
         print("nothing to confirm.")
         return learned
 
     for term, group in groups:
-        body, prompt, forms = confirm_block(transcript, term, group)
-        print(f"\n{body}")
-        answer = ask(prompt)
-        if answer.startswith("y"):
-            for observed in forms:
-                learned = learned.confirm(term, observed)
-            print(f"  confirmed {len(forms)} variant(s) of {term}.")
-        elif answer.startswith("n"):
-            for observed in forms:
-                learned = learned.reject(observed, term)
-            print(f"  rejected {len(forms)} proposal(s) for {term}.")
-        else:
-            print("  skipped.")
+        print(f"\n{term_heading(term, group)}")
+        bulk = None
+        for variant, found in variant_groups(group):
+            body, prompt = variant_block(transcript, term, variant, found)
+            print(body)
+
+            answer = bulk if bulk else ask(prompt)
+            bulk = BULK_ANSWERS.get(answer[:1], bulk)
+            answer = BULK_ANSWERS.get(answer[:1], answer)
+
+            if answer.startswith("y"):
+                learned = learned.confirm(term, variant)
+                print(f"    confirmed: {variant} -> {term}")
+            elif answer.startswith("n"):
+                learned = learned.reject(variant, term)
+                print(f"    rejected: {variant} -> {term}")
+            else:
+                print("    skipped.")
     return learned
 
 
