@@ -172,9 +172,14 @@ This replaces the two gold conventions of the first version of the evaluator, un
 
 Measured: R2Qgz8tFWVI does not move (167 in scope, 147 hits, 16 false positives), since it already scored the two alike. wxgFO_fyfXg goes to 225 in scope with 107 hits and 57 false positives: the frozen pack finds none of its conferido rows. Against pack 0.2.0 the same fixture goes from 149 to 188 hits, the 39 conferido rows that pack now finds.
 
+## D-027 Rejection by containment
+
+A rejected pair (text, term) suppresses any proposal for that term whose normalized span contains the rejected text as whole words. Measured: rejecting `divide → dividendo` did not suppress `divide a → dividendo` at 15:54 in wxgFO_fyfXg, violating a manter row.
+
+Whole words means `divide` rules out `divide a` and `ele divide a` but not `dividida` or `subdivide`, and a rejection for one term says nothing about another. Measured with the user's learned layer and pack 0.2.0 on wxgFO_fyfXg: the manter row goes clean, false positives go from 18 to 17, and no hit is lost. The regression bounds do not move, since the fixtures are scored with no learned layer. This closes the open question on rejection by exact text.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
-- Rejection is by exact normalized text: rejecting `divide` did not suppress `divide a`.
 - Low band lower threshold, 60 vs 70. Marks after overlap resolution, frozen fixture packs: R2Qgz8tFWVI 500 at 60, 115 at 70; wxgFO_fyfXg 579 at 60, 91 at 70. `scripts/measure.py` prints them. (This replaces the earlier note of 528 at 60, measured before D-020 and D-024.)

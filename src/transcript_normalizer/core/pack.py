@@ -244,8 +244,19 @@ class Pack:
         return None
 
     def is_rejected(self, folded_text: str, term: str) -> bool:
-        """D-013: a pair the user turned down is never proposed again."""
-        return (folded_text, term) in self.rejected
+        """D-013, D-027: a pair the user turned down is never proposed again.
+
+        Containment, by whole words: rejecting `divide -> dividendo` also rules
+        out `divide a -> dividendo`, but not `dividida -> dividendo`, and it
+        says nothing about another term.
+        """
+        span = f" {_words(folded_text)} "
+        return any(t == term and f" {text} " in span for text, t in self.rejected)
+
+
+def _words(folded: str) -> str:
+    """Folded text with its words separated by exactly one space."""
+    return " ".join(folded.split())
 
 
 def _strings(raw: dict, key: str) -> tuple[str, ...]:
@@ -327,6 +338,6 @@ def load_pack(
         unit_rules=unit_rules,
         version=str(version),
         candidates=tuple(candidates),
-        rejected=frozenset((fold(r.text), r.term) for r in learned.rejected),
+        rejected=frozenset((_words(fold(r.text)), r.term) for r in learned.rejected),
         learned=learned,
     )
