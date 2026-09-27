@@ -159,7 +159,7 @@ terms:
     variants: [CELIC]
   - term: dividend yield
     class: indicador
-    variants: [dividend y, dividendo y build]
+    variants: [dividend y, dividend y build]
   - term: Charlie Munger
     class: pessoa
     variants: [Charlie Mander]
