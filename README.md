@@ -57,6 +57,9 @@ runs/          everything a command produces, gitignored (D-015)
 Experimental, but the engine is a package with a regression test.
 
 - `fixtures/R2Qgz8tFWVI/`: one Brazilian Portuguese finance video (31 min). `legenda.txt` is the raw platform caption, `gold.csv` is a hand-checked gold list of 168 domain-term errors plus 2 lines that must not be touched, `pack.yaml` is the first domain pack.
+- `fixtures/wxgFO_fyfXg/`: a second video from the same channel (40 min, CEMIG vs CPFL), with a 228-row gold file whose statuses separate corrections the tool made (`certo`), legitimate other names of a term (`alias`), and errors a person had to add (`conferido`). The meanings are in `src/transcript_normalizer/evaluate.py`.
+
+`uv run python scripts/measure.py` prints every fixture's numbers side by side; the regression test holds each one to its own bounds.
 - `experiments/`: throwaway scripts that measured how far naive approaches go against that fixture. Results are in `docs/DECISIONS.md`.
 
 Measured on the fixture, with RapidFuzz plus a hand-curated variant list, a unit rule, and a disciplined threshold: 156 of 168 hits, 9 false positives in ~1000 caption lines, zero changes to the lines that had to stay untouched.

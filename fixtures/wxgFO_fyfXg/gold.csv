@@ -1,0 +1,229 @@
+﻿timestamp,wrong,correct,term,class,status
+0:03,SEMIG,CEMIG,CEMIG,companhia,certo
+0:13,Taa,Taesa,Taesa,companhia,certo
+0:16,CMIG,CEMIG,CEMIG,companhia,certo
+0:16,Transfão Paulista,Transmissão Paulista,Transmissão Paulista,companhia,conferido
+0:31,SEMIG,CEMIG,CEMIG,companhia,certo
+0:34,CPFE,CPFE,CPFL,companhia,alias
+0:36,na moça,na bolsa,,fala comum,conferido
+1:06,Semig,CEMIG,CEMIG,companhia,certo
+1:23,SEMIG,CEMIG,CEMIG,companhia,certo
+1:33,SEMIG,CEMIG,CEMIG,companhia,certo
+1:39,SEMIG,CEMIG,CEMIG,companhia,certo
+1:41,SEMIG,CEMIG,CEMIG,companhia,certo
+1:49,SEMIG,CEMIG,CEMIG,companhia,certo
+2:08,SEMIG,CEMIG,CEMIG,companhia,certo
+2:37,freeoat,free float,free float,conceito,conferido
+3:03,SEMIG,CEMIG,CEMIG,companhia,certo
+3:42,CPFS,CPFL Serviços,CPFL,companhia,conferido
+4:30,ebítica,EBITDA,EBITDA,indicador,certo
+4:59,bilhões deais,bilhões de reais,reais,unidade,certo
+4:59,bit,EBITDA,EBITDA,indicador,certo
+5:05,SEMIG,CEMIG,CEMIG,companhia,certo
+5:18,SEMIG,CEMIG,CEMIG,companhia,certo
+5:20,SEMIG,CEMIG,CEMIG,companhia,certo
+5:32,SEMIC,CEMIG,CEMIG,companhia,certo
+5:35,bilhões deais,bilhões de reais,reais,unidade,certo
+5:36,bit,EBITDA,EBITDA,indicador,certo
+5:38,sem mig,CEMIG,CEMIG,companhia,certo
+5:44,EB,EBITDA,EBITDA,indicador,conferido
+5:48,8.8 B,8.8 bi,bilhão,unidade,certo
+5:53,3.6 B,3.6 bi,bilhão,unidade,certo
+5:56,1 B,1 bi,bilhão,unidade,certo
+6:03,marketha,market share,market share,conceito,conferido
+8:30,anel,ANEEL,ANEEL,organizacao,conferido
+9:54,ANEL,ANEEL,ANEEL,organizacao,conferido
+9:58,CPF,CPFL,CPFL,companhia,conferido
+10:51,deck,DEC,DEC,sigla,conferido
+11:51,FEAC,FEC,FEC,sigla,conferido
+11:53,deck,DEC,DEC,sigla,conferido
+13:23,R,RI,RI,sigla,conferido
+13:40,deck,DEC,DEC,sigla,conferido
+15:42,rápid,RAP,RAP,sigla,conferido
+15:44,rápid,RAP,RAP,sigla,conferido
+15:54,divide a,divide a,,,manter
+15:54,rápido,RAP,RAP,sigla,conferido
+15:57,TESM,TESB,TESB,companhia,conferido
+15:57,Etaú,ETAU,ETAU,companhia,conferido
+15:59,ESA,ISA,ISA,companhia,conferido
+16:48,Anel,ANEEL,ANEEL,organizacao,conferido
+16:51,rá,RAP,RAP,sigla,conferido
+16:53,ROY,ROI,ROI,indicador,conferido
+17:01,Roy,ROI,ROI,indicador,conferido
+17:06,transção paulista,Transmissão Paulista,Transmissão Paulista,companhia,conferido
+17:08,Ta,Taesa,Taesa,companhia,conferido
+17:21,Rid,ROI,ROI,indicador,conferido
+17:27,Anel,ANEEL,ANEEL,organizacao,conferido
+18:05,bilhões deais,bilhões de reais,reais,unidade,certo
+18:09,SEMIG,CEMIG,CEMIG,companhia,certo
+18:11,SEMIG,CEMIG,CEMIG,companhia,certo
+18:25,Enterprise Velho,Enterprise Value,Enterprise Value,indicador,conferido
+18:26,Enterprise Velho,Enterprise Value,Enterprise Value,indicador,conferido
+18:31,CPFE,CPFE,CPFL,companhia,alias
+18:31,CPFE,CPFE,CPFL,companhia,alias
+18:31,48 B,48 bi,bilhão,unidade,certo
+18:32,31 B,31 bi,bilhão,unidade,certo
+18:39,31 B,31 bi,bilhão,unidade,certo
+18:44,Enterprise Valuey,Enterprise Value,Enterprise Value,indicador,conferido
+18:55,SEMIG,CEMIG,CEMIG,companhia,certo
+18:59,SEMIG,CEMIG,CEMIG,companhia,certo
+19:07,TI,TIR,TIR,indicador,conferido
+19:20,Ield,yield,yield,indicador,conferido
+19:40,Iild,yield,yield,indicador,conferido
+20:03,Roy,ROE,ROE,indicador,conferido
+20:06,SEMIG,CEMIG,CEMIG,companhia,certo
+20:06,CMIG,CEMIG,CEMIG,companhia,certo
+20:09,CPFE,CPFE,CPFL,companhia,alias
+20:11,ROY,ROE,ROE,indicador,conferido
+20:11,ROK,ROIC,ROIC,indicador,conferido
+20:14,CPFE,CPFE,CPFL,companhia,alias
+20:18,CMIG,CEMIG,CEMIG,companhia,certo
+20:21,SEMIG,CEMIG,CEMIG,companhia,certo
+20:21,CPFS,CPFL,CPFL,companhia,conferido
+20:36,SEMIG,CEMIG,CEMIG,companhia,certo
+20:39,CPFE,CPFE,CPFL,companhia,alias
+20:39,SEMIG,CEMIG,CEMIG,companhia,certo
+20:48,ROY,ROE,ROE,indicador,conferido
+20:59,CPFE,CPFE,CPFL,companhia,alias
+21:02,SEMIG,CEMIG,CEMIG,companhia,certo
+21:06,valoristo,valuation,valuation,conceito,conferido
+21:37,Gepardo,Guepardo,Guepardo,organizacao,conferido
+22:10,SEMIG,CEMIG,CEMIG,companhia,certo
+22:10,CEMIG 4,CEMIG 4,CMIG4,companhia,alias
+22:14,SEMIG,CEMIG,CEMIG,companhia,certo
+22:14,CMIG,CEMIG,CEMIG,companhia,certo
+22:14,CEMIG 4,CEMIG 4,CMIG4,companhia,alias
+22:14,CEMIG 3,CEMIG 3,CMIG3,companhia,alias
+22:17,CPFE,CPFE,CPFL,companhia,alias
+22:17,tagon,tag along,tag along,conceito,conferido
+22:20,tagona,tag along,tag along,conceito,conferido
+22:20,tagon,tag along,tag along,conceito,conferido
+22:24,semig,CEMIG,CEMIG,companhia,certo
+22:30,CPFe,CPFE,CPFL,companhia,alias
+22:53,CPFE,CPFE,CPFL,companhia,alias
+23:01,SEMIG,CEMIG,CEMIG,companhia,certo
+23:16,sem,CEMIG,CEMIG,companhia,conferido
+23:29,SEMIG,CEMIG,CEMIG,companhia,certo
+23:34,SEMIG,CEMIG,CEMIG,companhia,certo
+23:40,SEMIG,CEMIG,CEMIG,companhia,certo
+23:42,beita,EBITDA,EBITDA,indicador,conferido
+23:46,CPFE,CPFE,CPFL,companhia,alias
+23:46,beit,EBITDA,EBITDA,indicador,conferido
+23:59,SEMIG,CEMIG,CEMIG,companhia,certo
+24:00,SEMIG,CEMIG,CEMIG,companhia,certo
+24:06,SEMIG,CEMIG,CEMIG,companhia,certo
+24:06,NSS,Adeus INSS,Adeus INSS,organizacao,conferido
+24:19,SEMIG,CEMIG,CEMIG,companhia,certo
+25:09,Word,Ward,Ward,ferramenta,certo
+25:10,valueixationo,valuation,valuation,conceito,conferido
+25:13,Word,Ward,Ward,ferramenta,certo
+25:24,Word,Ward,Ward,ferramenta,certo
+25:24,Word,Ward,Ward,ferramenta,certo
+25:45,SEMIG,CEMIG,CEMIG,companhia,certo
+25:50,valueixo,valuation,valuation,conceito,conferido
+26:03,ROI,ROE,ROE,indicador,conferido
+26:10,Roy,ROE,ROE,indicador,conferido
+26:13,ROY,ROE,ROE,indicador,conferido
+26:15,ROY,ROE,ROE,indicador,conferido
+26:28,Word,Ward,Ward,ferramenta,certo
+27:52,valation,valuation,valuation,conceito,certo
+27:57,Waren Buff,Warren Buffett,Warren Buffett,pessoa,certo
+28:02,valche,valuation,valuation,conceito,conferido
+28:31,semi,CEMIG,CEMIG,companhia,certo
+28:41,CELIC,Selic,Selic,indicador,conferido
+29:15,SEMIX,CEMIG,CEMIG,companhia,certo
+29:17,SEMIG,CEMIG,CEMIG,companhia,certo
+29:24,SEMIG,CEMIG,CEMIG,companhia,certo
+29:29,SEMIG,CEMIG,CEMIG,companhia,certo
+29:33,SEMIG,CEMIG,CEMIG,companhia,certo
+29:36,SEMIG,CEMIG,CEMIG,companhia,certo
+29:39,tegong,tag along,tag along,conceito,conferido
+30:29,presteto,preço teto,preço teto,indicador,certo
+30:29,Word,Ward,Ward,ferramenta,certo
+30:31,Word,Ward,Ward,ferramenta,certo
+30:42,Word,Ward,Ward,ferramenta,certo
+30:44,Word,Ward,Ward,ferramenta,certo
+30:51,SEMIG,CEMIG,CEMIG,companhia,certo
+30:56,Word,Ward,Ward,ferramenta,certo
+30:56,preços tetos,preços tetos,preço teto,indicador,alias
+31:19,CPFE,CPFE,CPFL,companhia,alias
+31:23,presteto,preço teto,preço teto,indicador,certo
+31:35,preços teto,preços teto,preço teto,indicador,alias
+32:12,preços tetos,preços tetos,preço teto,indicador,alias
+32:12,Word,Ward,Ward,ferramenta,certo
+32:23,pr teto,preço teto,preço teto,indicador,certo
+32:28,CPFE,CPFE,CPFL,companhia,alias
+32:28,CPFE,CPFE,CPFL,companhia,alias
+32:30,Word,Ward,Ward,ferramenta,certo
+32:32,preç teto,preço teto,preço teto,indicador,certo
+33:17,dividend,dividendo,dividendo,indicador,certo
+33:17,dividendo y,dividend yield,dividend yield,indicador,conferido
+33:25,dividend,dividendo,dividendo,indicador,certo
+33:25,dividendo y build,dividend yield,dividend yield,indicador,conferido
+33:46,valation,valuation,valuation,conceito,certo
+33:50,SEMIG,CEMIG,CEMIG,companhia,certo
+33:51,SEMIG,CEMIG,CEMIG,companhia,certo
+33:56,SEMIG,CEMIG,CEMIG,companhia,certo
+34:26,4.191 B,4.191 bi,bilhão,unidade,certo
+34:30,valo,valuation,valuation,conceito,conferido
+34:35,bilhões deais,bilhões de reais,reais,unidade,certo
+34:43,SEMIG,CEMIG,CEMIG,companhia,certo
+34:46,CPFE,CPFE,CPFL,companhia,alias
+34:50,CPFE,CPFE,CPFL,companhia,alias
+34:52,SEMIG,CEMIG,CEMIG,companhia,certo
+35:39,SEMIG,CEMIG,CEMIG,companhia,certo
+35:41,Semig,CEMIG,CEMIG,companhia,certo
+35:41,Roy,ROE,ROE,indicador,conferido
+35:43,SEMIG,CEMIG,CEMIG,companhia,certo
+35:59,esse mig,CEMIG,CEMIG,companhia,certo
+36:11,CPFe,CPFE,CPFL,companhia,alias
+36:15,CPFE,CPFE,CPFL,companhia,alias
+36:19,CPFE,CPFE,CPFL,companhia,alias
+36:24,SEMIG,CEMIG,CEMIG,companhia,certo
+36:32,sem,CEMIG,CEMIG,companhia,conferido
+36:34,Roy,ROE,ROE,indicador,conferido
+36:35,Roy,ROE,ROE,indicador,conferido
+36:39,Charlie Mander,Charlie Munger,Charlie Munger,pessoa,conferido
+36:41,Warn Buffet,Warren Buffett,Warren Buffett,pessoa,certo
+36:44,Roy,ROE,ROE,indicador,conferido
+36:52,CPFE,CPFE,CPFL,companhia,alias
+36:54,CPFE,CPFE,CPFL,companhia,alias
+37:03,CPFE,CPFE,CPFL,companhia,alias
+37:05,SEMIG,CEMIG,CEMIG,companhia,certo
+37:09,SEMIG,CEMIG,CEMIG,companhia,certo
+37:18,SEMIG,CEMIG,CEMIG,companhia,certo
+37:18,CPFE,CPFE,CPFL,companhia,alias
+37:44,CPFE,CPFE,CPFL,companhia,alias
+37:49,SEMIG,CEMIG,CEMIG,companhia,certo
+38:00,36 B,36 bi,bilhão,unidade,certo
+38:07,SEMIG,CEMIG,CEMIG,companhia,certo
+38:07,SEMIG,CEMIG,CEMIG,companhia,certo
+38:07,CEMIG 4,CEMIG 4,CMIG4,companhia,alias
+38:09,SEMIG,CEMIG,CEMIG,companhia,certo
+38:09,CEMIG 3,CEMIG 3,CMIG3,companhia,alias
+38:16,semig,CEMIG,CEMIG,companhia,certo
+38:27,CMIG,CEMIG,CEMIG,companhia,certo
+38:28,CMIG,CEMIG,CEMIG,companhia,certo
+38:30,Semig,CEMIG,CEMIG,companhia,certo
+38:36,CMIG,CEMIG,CEMIG,companhia,certo
+38:38,SEMIG,CEMIG,CEMIG,companhia,certo
+38:50,CPFE,CPFE,CPFL,companhia,alias
+38:53,CPFE,CPFE,CPFL,companhia,alias
+38:53,SEMIG,CEMIG,CEMIG,companhia,certo
+38:58,CPFe,CPFE,CPFL,companhia,alias
+39:00,preçeto,preço teto,preço teto,indicador,certo
+39:08,wiel,yield,yield,indicador,conferido
+39:10,CPFE,CPFE,CPFL,companhia,alias
+39:22,Wield,yield,yield,indicador,conferido
+39:29,CPFE,CPFE,CPFL,companhia,alias
+39:32,dividend,dividendo,dividendo,indicador,certo
+39:32,dividendo y,dividend yield,dividend yield,indicador,conferido
+39:34,SEMIG,CEMIG,CEMIG,companhia,certo
+39:42,CPFE,CPFE,CPFL,companhia,alias
+39:44,CPFE,CPFE,CPFL,companhia,alias
+39:46,SEMIG,CEMIG,CEMIG,companhia,certo
+39:50,CPFE,CPFE,CPFL,companhia,alias
+39:54,CPFE,CPFE,CPFL,companhia,alias
+40:01,SEMIG,CEMIG,CEMIG,companhia,certo
+40:01,CPFE,CPFE,CPFL,companhia,alias
+40:09,valorist,valuation,valuation,conceito,conferido
