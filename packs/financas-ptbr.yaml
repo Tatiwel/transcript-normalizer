@@ -1,18 +1,19 @@
-# Lista de termos do video R2Qgz8tFWVI. Primeira versao, um video so.
-# Variantes vieram do gabarito. Termo com "?" no gabarito nao entrou.
-version: 0.1.0
+# Termos de financas, pt-BR.
+# 0.1.0 veio do gabarito de R2Qgz8tFWVI. Termo com "?" no gabarito nao entrou.
+# 0.2.0 acrescenta os termos de wxgFO_fyfXg (linhas conferido e alias do gold).
+version: 0.2.0
 
 terms:
   - term: CEMIG
     class: companhia
-    aliases: [Cemig, Cemig D, Cemig GT, CMIG4, CMIG3]
+    aliases: [Cemig, CMIG4, CMIG3, CEMIG 4, CEMIG 3]
     variants: [SEMIG, SEMI, SEMIC, SEMIX, CIC, CMIG, semiga, sem amig, esse amigo, ser MIG, semicaiu, "do 100", "me caiu"]
   - term: Cemig D
     class: companhia
     variants: [SEMigd]
   - term: CPFL
     class: companhia
-    variants: [CPFE]
+    aliases: [CPFL Energia, CPFE3, CPFE]
   - term: Taesa
     class: companhia
     aliases: [TAESA, TAEE11]
@@ -57,6 +58,7 @@ terms:
     variants: [tir, tira]
   - term: RAP
     class: sigla
+    aliases: [receita anual permitida]
     variants: [rap]
   - term: debêntures
     class: conceito
@@ -95,6 +97,73 @@ terms:
   - term: Leo
     class: pessoa
     variants: [Lu, Léo]
+  # 0.2.0
+  - term: bilhão
+    class: unidade
+    aliases: [bi, bilhões]
+    variants: [B, bit, be]
+  - term: Transmissão Paulista
+    class: companhia
+    variants: [Transfão Paulista, transção paulista]
+  - term: free float
+    class: conceito
+    variants: [freeoat]
+  - term: market share
+    class: conceito
+    variants: [marketha]
+  - term: ANEEL
+    class: organizacao
+    aliases: [Aneel, agência nacional de energia elétrica]
+    variants: [anel]
+  - term: DEC
+    class: sigla
+    variants: [deck]
+  - term: FEC
+    class: sigla
+    variants: [FEAC]
+  - term: RI
+    class: sigla
+    aliases: [relação com investidores, relações com investidores]
+    variants: [R]
+  - term: TESB
+    class: companhia
+    variants: [TESM]
+  - term: ETAU
+    class: companhia
+    variants: [Etaú]
+  - term: ISA
+    class: companhia
+    variants: [ESA]
+  - term: ROI
+    class: indicador
+    variants: [ROY, Rid]
+  - term: Enterprise Value
+    class: indicador
+    variants: [Enterprise Velho, Enterprise Valuey]
+  - term: yield
+    class: indicador
+    variants: [Ield, Iild, wiel, Wield]
+  - term: ROE
+    class: indicador
+    variants: [Roy, ROI]
+  - term: ROIC
+    class: indicador
+    variants: [ROK]
+  - term: Guepardo
+    class: organizacao
+    variants: [Gepardo]
+  - term: tag along
+    class: conceito
+    variants: [tagon, tagona, tegong]
+  - term: Selic
+    class: indicador
+    variants: [CELIC]
+  - term: dividend yield
+    class: indicador
+    variants: [dividendo y, dividendo y build]
+  - term: Charlie Munger
+    class: pessoa
+    variants: [Charlie Mander]
 unit_rules:
   - pattern: "numero + (B | bit | bi | be)"
     replacement: "numero bi"

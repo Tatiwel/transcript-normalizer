@@ -89,11 +89,11 @@
 21:06,valoristo,valuation,valuation,conceito,conferido
 21:37,Gepardo,Guepardo,Guepardo,organizacao,conferido
 22:10,SEMIG,CEMIG,CEMIG,companhia,certo
-22:10,CEMIG 4,CEMIG 4,CMIG4,companhia,alias
+22:10,CEMIG 4,CEMIG 4,CEMIG,companhia,alias
 22:14,SEMIG,CEMIG,CEMIG,companhia,certo
 22:14,CMIG,CEMIG,CEMIG,companhia,certo
-22:14,CEMIG 4,CEMIG 4,CMIG4,companhia,alias
-22:14,CEMIG 3,CEMIG 3,CMIG3,companhia,alias
+22:14,CEMIG 4,CEMIG 4,CEMIG,companhia,alias
+22:14,CEMIG 3,CEMIG 3,CEMIG,companhia,alias
 22:17,CPFE,CPFE,CPFL,companhia,alias
 22:17,tagon,tag along,tag along,conceito,conferido
 22:20,tagona,tag along,tag along,conceito,conferido
@@ -198,9 +198,9 @@
 38:00,36 B,36 bi,bilhão,unidade,certo
 38:07,SEMIG,CEMIG,CEMIG,companhia,certo
 38:07,SEMIG,CEMIG,CEMIG,companhia,certo
-38:07,CEMIG 4,CEMIG 4,CMIG4,companhia,alias
+38:07,CEMIG 4,CEMIG 4,CEMIG,companhia,alias
 38:09,SEMIG,CEMIG,CEMIG,companhia,certo
-38:09,CEMIG 3,CEMIG 3,CMIG3,companhia,alias
+38:09,CEMIG 3,CEMIG 3,CEMIG,companhia,alias
 38:16,semig,CEMIG,CEMIG,companhia,certo
 38:27,CMIG,CEMIG,CEMIG,companhia,certo
 38:28,CMIG,CEMIG,CEMIG,companhia,certo

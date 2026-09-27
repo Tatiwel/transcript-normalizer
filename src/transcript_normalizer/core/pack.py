@@ -235,6 +235,14 @@ class Pack:
     rejected: frozenset[tuple[str, str]] = frozenset()  # (folded text, term)
     learned: Learned = field(default_factory=Learned)
 
+    def term_named(self, name: str) -> Term | None:
+        """The pack term called `name`, by its own name or one of its aliases."""
+        target = fold(name)
+        for t in self.terms:
+            if fold(t.term) == target or target in {fold(a) for a in t.aliases}:
+                return t
+        return None
+
     def is_rejected(self, folded_text: str, term: str) -> bool:
         """D-013: a pair the user turned down is never proposed again."""
         return (folded_text, term) in self.rejected

@@ -168,10 +168,14 @@ def evaluate(
     # identical rows. Known effect: R2Qgz8tFWVI's gold lists `10:59 Ox -> OPEX`
     # twice for one `Ox` in the caption, and both count. Matching one-to-one
     # would score that fixture 155, not 156; it does not move wxgFO_fyfXg.
-    def find(row: dict, pool: list[Annotation]) -> Annotation | None:
+    def find(row: dict, pool: list[Annotation], any_term: bool = False) -> Annotation | None:
         allowed = {id(a) for a in pool}
         for a in on_line.get(row["timestamp"], ()):
-            if id(a) in allowed and a.term == row["term"] and covers(row["wrong"], a):
+            if (
+                id(a) in allowed
+                and (any_term or a.term == row["term"])
+                and covers(row["wrong"], a)
+            ):
                 return a
         return None
 
@@ -198,7 +202,10 @@ def evaluate(
         result.per_term[row["term"]][1] += 1
 
         if status == ALIAS:
-            substitution = find(row, corrections)
+            # Any correction here rewrites what the speaker said, whatever term
+            # it corrects to: `CEMIG 4` fuzzily corrected to `Cemig D` is still
+            # a substitution of an alias.
+            substitution = find(row, corrections, any_term=True)
             if substitution is not None:
                 result.aliases_substituted.append((row, substitution))
                 substituting.add(id(substitution))

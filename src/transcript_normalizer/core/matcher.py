@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from rapidfuzz import fuzz
 
 from .pack import Pack, fold
-from .rules import find_unit_hits
+from .rules import RULE_TOKENS, find_unit_hits
 from .standoff import (
     BAND_HIGH,
     BAND_LOW,
@@ -95,9 +95,19 @@ def find_annotations(
     text = transcript.text
     annotations: list[Annotation] = []
 
-    # D-006: the unit layer runs before the dictionary.
+    # D-006: the unit layer runs before the dictionary. Its output belongs to the
+    # pack term that names the unit, when the pack has one (`bi` -> `bilhão`),
+    # and that term's rule-owned words are not matched on their own below.
+    owned: set[tuple[str, str]] = set()
+    for rule_term, tokens in RULE_TOKENS.items():
+        unit = pack.term_named(rule_term)
+        if unit is not None:
+            owned |= {(unit.term, fold(token)) for token in tokens}
+
     for hit in find_unit_hits(text):
-        if pack.is_rejected(fold(hit.original), hit.term):
+        unit = pack.term_named(hit.term)
+        term = unit.term if unit is not None else hit.term
+        if pack.is_rejected(fold(hit.original), term):
             continue
         annotations.append(
             Annotation(
@@ -105,7 +115,7 @@ def find_annotations(
                 end=hit.end,
                 original=hit.original,
                 replacement=hit.replacement,
-                term=hit.term,
+                term=term,
                 rule=RULE_UNIT,
                 band=BAND_HIGH,
                 score=100,
@@ -119,6 +129,12 @@ def find_annotations(
     folded_term = {t.term: fold(t.term) for t in pack.terms}
     folded_aliases = {t.term: tuple(fold(a) for a in t.aliases) for t in pack.terms}
 
+    candidates = [
+        c
+        for c in pack.candidates
+        if not (c.origin == "variant" and (c.term, c.folded) in owned)
+    ]
+
     tokens = tokenize(text)
     for n in NGRAM_SIZES:
         for i in range(len(tokens) - n + 1):
@@ -130,7 +146,7 @@ def find_annotations(
             score, term, candidate = max(
                 (
                     (_score(folded_span, c.folded), c.term, c.folded)
-                    for c in pack.candidates
+                    for c in candidates
                 ),
                 default=(0, None, None),
             )

@@ -6,6 +6,7 @@ import pytest
 
 from transcript_normalizer import load_pack
 from transcript_normalizer.cli import main
+from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.runs import DEFAULT_PACK, default_pack, learned_file, packs_root
 
 from .conftest import CAPTION, FIXTURE, FIXTURE_VIDEO_ID, PACK
@@ -14,10 +15,11 @@ REPO_PACK = FIXTURE.parents[1] / "packs" / DEFAULT_PACK
 
 
 def test_the_repo_ships_a_usable_default_pack():
-    pack = load_pack(REPO_PACK)
+    pack = load_pack(REPO_PACK, learned=Learned())
     assert pack.terms
     assert pack.unit_rules
-    assert {t.term for t in pack.terms} == {t.term for t in load_pack(PACK).terms}
+    # packs/ grows from the frozen fixture copy (D-017); nothing is dropped.
+    assert {t.term for t in pack.terms} >= {t.term for t in load_pack(PACK, learned=Learned()).terms}
 
 
 def test_pack_defaults_to_the_packs_directory(tmp_path, monkeypatch):
