@@ -130,6 +130,14 @@ Two kinds of annotation. `correction`: the caption misrecognized the term; the s
 
 An alias annotation comes only from an exact match against an alias; a fuzzy match near one is still a guess that the text is garbled, so it stays a correction. It is high band and its `replacement` is the original text. In `annotations.json` the `kind` field carries the difference, and the report lists aliases under "recognized (not changed)". The prompt shows the answer as `a[l]ias`, since `a` is taken by all-yes. A given text is either a confirmed variant or an alias of a term, never both: recording one removes the other.
 
+## D-021 Eight classes, a closed list
+
+Eight classes, closed list: companhia (has ticker and balance sheet), indicador (a number per company or asset), conceito (idea, method, strategy), unidade, pessoa, organizacao (not a listed company: regulator, fund manager, channel, series), ferramenta, sigla (sector or regulatory abbreviation). Migration: indice→indicador; instrumento, tributario, estrangeirismo→conceito; periodo→unidade; gestora, canal, serie do canal→organizacao; sigla setorial→sigla. Class is a label for consumers; it does not affect matching.
+
+Applied to `packs/financas-ptbr.yaml`, both fixture packs and `fixtures/R2Qgz8tFWVI/gold.csv`; `fixtures/wxgFO_fyfXg/gold.csv` already used the eight, and the legacy copy is left as it was. The loader refuses a class that is not on the list. Two cases the migration did not name: `operacao` (emissão, diluição; three gold rows) became `conceito`, the nearest of the eight and where `instrumento` went; `numero` appears only on out-of-scope rows with no term, where the class column is a free note like `fala comum`, so it stays. One in-scope gold row has no class at all (18:38 `aoonista` -> acionista) and is left blank: a blank means unlabelled, not a ninth class.
+
+The eight `CPFE -> CPFL` rows of `fixtures/R2Qgz8tFWVI/gold.csv` are now status `alias` with `correct` equal to `wrong`, the same speaker habit as wxgFO_fyfXg. Measured: that fixture moves from 156 hits / 9 false positives to 148 / 17. The frozen pack still lists CPFE as a variant, so all eight are substituted, and each counts as a miss and as a false positive. New bounds: hits >= 148, false positives <= 17, in scope 168.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -59,7 +59,7 @@ def test_a_65_score_match_is_low_and_not_applied(tmp_path):
     # mark band. Nothing on the fixture lands on exactly 65.
     pack_file = tmp_path / "pack.yaml"
     pack_file.write_text(
-        "version: test\nterms:\n  - term: custo de capikkkkkkk\n    class: teste\n", "utf-8"
+        "version: test\nterms:\n  - term: custo de capikkkkkkk\n    class: conceito\n", "utf-8"
     )
     pack = load_pack(pack_file)
 

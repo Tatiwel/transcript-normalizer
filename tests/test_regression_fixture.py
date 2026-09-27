@@ -32,8 +32,9 @@ class Bounds:
 
 
 BOUNDS = {
-    # D-014.
-    "R2Qgz8tFWVI": Bounds(in_scope=168, min_hits=156, max_false_positives=9),
+    # D-021: its 8 `CPFE -> CPFL` rows are aliases now, and the frozen pack
+    # still lists CPFE as a variant, so all 8 are substituted (was 156 / 9, D-014).
+    "R2Qgz8tFWVI": Bounds(in_scope=168, min_hits=148, max_false_positives=17),
     # Measured when the fixture was added, with the frozen 0.1.0 pack and no
     # learned layer. The touched `manter` row is 15:54 `divide a` -> dividendo.
     "wxgFO_fyfXg": Bounds(

@@ -33,10 +33,10 @@ terms:
     class: companhia
     variants: [no bank]
   - term: Ártica
-    class: gestora
+    class: organizacao
     variants: [arte]
   - term: Geração Dividendos
-    class: canal
+    class: organizacao
     aliases: [MGD]
     variants: [Geração de Dentes]
   - term: EBITDA
@@ -50,16 +50,16 @@ terms:
     class: indicador
     variants: [capx, autocapex]
   - term: IPCA
-    class: indice
+    class: indicador
     variants: [PCA]
   - term: TIR
     class: indicador
     variants: [tir, tira]
   - term: RAP
-    class: sigla setorial
+    class: sigla
     variants: [rap]
   - term: debêntures
-    class: instrumento
+    class: conceito
     variants: [debentories, debentor, deementories]
   - term: dividendo
     class: indicador
@@ -68,10 +68,10 @@ terms:
     class: indicador
     variants: [preço delet]
   - term: valuation
-    class: estrangeirismo
+    class: conceito
     variants: [valation]
   - term: buy and hold
-    class: estrangeirismo
+    class: conceito
     variants: [BU hold]
   - term: Warren Buffett
     class: pessoa
@@ -80,7 +80,7 @@ terms:
     class: pessoa
     variants: [Markovitz, Marcovit, Markovit]
   - term: tri
-    class: periodo
+    class: unidade
     variants: [trad, trio, TR]
   - term: Engie
     class: companhia
@@ -90,7 +90,7 @@ terms:
     aliases: [ward.app.br]
     variants: [Word]
   - term: Adeus INSS
-    class: serie do canal
+    class: organizacao
     variants: [ADUS NSS, Deus NSS]
   - term: Leo
     class: pessoa

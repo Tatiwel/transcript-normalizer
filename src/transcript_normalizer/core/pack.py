@@ -21,6 +21,19 @@ LEARNED_VERSION = 1
 SOURCE_PACK = "pack"
 SOURCE_LEARNED = "learned"
 
+#: D-021: the closed list of term classes. A label for consumers; matching
+#: never reads it.
+CLASSES = (
+    "companhia",  # has a ticker and a balance sheet
+    "indicador",  # a number per company or asset
+    "conceito",  # an idea, method or strategy
+    "unidade",
+    "pessoa",
+    "organizacao",  # not a listed company: regulator, fund manager, channel, series
+    "ferramenta",
+    "sigla",  # a sector or regulatory abbreviation
+)
+
 
 def nfc(s: str) -> str:
     """Display form: NFC, nothing else. The original is never lost."""
@@ -265,9 +278,15 @@ def load_pack(
             for a in learned.aliases.get(name, ())
             if fold(a.alias) not in known
         )
+        klass = nfc(str(raw["class"])) if raw.get("class") else None
+        if klass is not None and klass not in CLASSES:
+            raise ValueError(
+                f"{path}: term {name!r} has class {klass!r}, which is not one of "
+                f"D-021's {', '.join(CLASSES)}"
+            )
         term = Term(
             term=name,
-            klass=nfc(str(raw["class"])) if raw.get("class") else None,
+            klass=klass,
             aliases=pack_aliases + learned_aliases,
             variants=pack_variants + learned_variants,
             collocations=_strings(raw, "collocations"),
