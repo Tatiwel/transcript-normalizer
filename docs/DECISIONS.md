@@ -158,10 +158,15 @@ The tokenizer marks each token followed by `.`, `?`, `!` or `;`, and no n-gram r
 
 Measured: R2Qgz8tFWVI loses the false positive `preço. Então` -> preço teto (17 -> 16) and no hit. wxgFO_fyfXg loses one hit, 36:41 `Warn Buffet` -> Warren Buffett (103 -> 102). That hit was credited only to the span `Warn Buffet. Tem`; the caption line ends `do Warn Buffet.`, and nothing in the frozen pack reaches `Warn Buffet` without crossing the full stop. Its bound moves to hits >= 102. The first fixture's bounds stay as they were, since it lost no hit.
 
+## D-025 Aliases and learned variants match exactly
+
+Fuzzy matching runs only against the canonical term and the curated pack variants. Aliases and learned variants match by exact normalized equality only. Measured: alias `bilhões` fuzzy-matched `milhões` at 85.7, medium band, applied: 24 false positives on wxgFO_fyfXg and millions rewritten as billions in normalized.txt for any user of the default pack. Aliases are legitimate spellings, not misrecognitions; fuzzy is for finding misrecognitions. This also closes open question (a): learned confirmations no longer widen fuzzy reach.
+
+Measured after: wxgFO_fyfXg against pack 0.2.0 drops from 53 to 32 false positives with no hit lost; neither fixture moves against its frozen pack. The hazard is not fully closed, because the canonical term is still fuzzy. `milhões` scores 61.5 against `bilhão` and is only a low-band mark now (neither applied nor rendered), but `milhão` scores 83 against it, medium band, and is still applied: three times on wxgFO_fyfXg. Both are held as strict expected failures in `tests/test_exact_only.py`, so the suite goes red if either is fixed without being promoted to a real test.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
-- Fuzzy matching also runs against learned variants, so each confirmation widens reach: a cascade. Useful on wxgFO_fyfXg, risky in general. (`Warn Buffet. Tem` was reached this way, from the confirmed variant `Warn Buffet`.)
 - Rejection is by exact normalized text: rejecting `divide` did not suppress `divide a`.
 - Low band lower threshold, 60 vs 70. Marks after overlap resolution, frozen fixture packs: R2Qgz8tFWVI 500 at 60, 115 at 70; wxgFO_fyfXg 579 at 60, 91 at 70. `scripts/measure.py` prints them. (This replaces the earlier note of 528 at 60, measured before D-020 and D-024.)

@@ -12,7 +12,7 @@ from dataclasses import dataclass, replace
 
 from rapidfuzz import fuzz
 
-from .pack import Pack, fold
+from .pack import SOURCE_LEARNED, Candidate, Pack, fold
 from .rules import RULE_TOKENS, find_unit_hits
 from .standoff import (
     BAND_HIGH,
@@ -86,10 +86,21 @@ def band_for(rule: str, score: float) -> str:
     return BAND_MEDIUM if score >= APPLY_THRESHOLD else BAND_LOW
 
 
-def _score(span: str, candidate: str) -> int:
+def fuzzy_allowed(candidate: Candidate) -> bool:
+    """D-025: fuzzy runs against the canonical term and curated pack variants only.
+
+    Aliases are legitimate spellings, not misrecognitions, and learned variants
+    are unreviewed; both match by exact normalized equality. Otherwise the alias
+    `bilhões` reaches `milhões`, and every confirmation widens fuzzy reach.
+    """
+    return candidate.origin != "alias" and candidate.source != SOURCE_LEARNED
+
+
+def _score(span: str, candidate: str, fuzzy: bool = True) -> int:
     """D-005: fuzzy only for long, similarly sized strings; otherwise exact equality."""
     if (
-        len(span) >= MIN_FUZZY_LEN
+        fuzzy
+        and len(span) >= MIN_FUZZY_LEN
         and len(candidate) >= MIN_FUZZY_LEN
         and abs(len(span) - len(candidate)) <= MAX_LEN_DIFF
     ):
@@ -149,6 +160,8 @@ def find_annotations(
         if not (c.origin == "variant" and (c.term, c.folded) in owned)
     ]
 
+    scored = [(c, fuzzy_allowed(c)) for c in candidates]
+
     tokens = tokenize(text)
     for n in NGRAM_SIZES:
         for i in range(len(tokens) - n + 1):
@@ -161,8 +174,8 @@ def find_annotations(
                 continue
             score, term, candidate = max(
                 (
-                    (_score(folded_span, c.folded), c.term, c.folded)
-                    for c in candidates
+                    (_score(folded_span, c.folded, fuzzy), c.term, c.folded)
+                    for c, fuzzy in scored
                 ),
                 default=(0, None, None),
             )
