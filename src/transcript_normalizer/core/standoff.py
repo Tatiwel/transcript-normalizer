@@ -1,4 +1,4 @@
-"""Stand-off annotations (D-004) and the confidence bands of D-011.
+"""Stand-off annotations (D-004), the confidence bands of D-011 and the kinds of D-020.
 
 The transcript is never modified. A normalization is a separate layer of offsets
 into the original text. Nothing in this package returns a corrected transcript.
@@ -19,6 +19,11 @@ BAND_LOW = "low"
 
 APPLIED_BANDS = (BAND_HIGH, BAND_MEDIUM)
 
+#: D-020's two kinds. A correction replaces its span in normalized.txt; an alias
+#: names the term the speaker meant and leaves the words as they were said.
+KIND_CORRECTION = "correction"
+KIND_ALIAS = "alias"
+
 
 def term_rule(origin: str) -> str:
     """`variant` | `alias` | `fuzzy` -> the `rule` field of an annotation."""
@@ -36,6 +41,15 @@ class Annotation:
     band: str  # "high" | "medium" | "low"
     score: int
     pack_version: str
+    kind: str = KIND_CORRECTION  # "correction" | "alias"
+
+    @property
+    def is_correction(self) -> bool:
+        return self.kind == KIND_CORRECTION
+
+    @property
+    def is_alias(self) -> bool:
+        return self.kind == KIND_ALIAS
 
     @property
     def applied(self) -> bool:
@@ -50,6 +64,7 @@ class Annotation:
             "replacement": self.replacement,
             "term": self.term,
             "rule": self.rule,
+            "kind": self.kind,
             "band": self.band,
             "score": self.score,
             "applied": self.applied,
@@ -59,6 +74,14 @@ class Annotation:
 
 def applied(annotations: list[Annotation]) -> list[Annotation]:
     return [a for a in annotations if a.applied]
+
+
+def corrections(annotations: list[Annotation]) -> list[Annotation]:
+    return [a for a in annotations if a.is_correction]
+
+
+def aliases(annotations: list[Annotation]) -> list[Annotation]:
+    return [a for a in annotations if a.is_alias]
 
 
 def in_band(annotations: list[Annotation], band: str) -> list[Annotation]:

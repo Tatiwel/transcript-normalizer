@@ -147,7 +147,7 @@ def test_each_variant_is_asked_with_its_own_examples(tmp_path, monkeypatch, caps
     heading = out.index("CEMIG  (5 occurrences)")
     for variant in CEMIG_VARIANTS:
         assert f"  {variant}  (" in out
-        assert f"{variant} -> CEMIG? [y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no:" in out
+        assert f"{variant} -> CEMIG? [y]es / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no:" in out
     # The term is named once, above its variants.
     assert out.count("CEMIG  (5 occurrences)") == 1
     assert out.index("    0:37  Neste mês caiu") > heading

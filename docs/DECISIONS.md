@@ -124,6 +124,12 @@ Confirmation is per variant, not per term group. In a real run (wxgFO_fyfXg) the
 
 `review/to-confirm.txt` keeps the grouped view and lists each variant under its term with its own examples and its own question, so the file still shows what the loop will ask.
 
+## D-020 Two kinds of annotation: correction and alias
+
+Two kinds of annotation. `correction`: the caption misrecognized the term; the span is substituted in normalized.txt. `alias`: the text is a legitimate other name of the term (ticker CPFE for CPFL, plural `preços teto`, spoken `CEMIG 4` for CMIG4); the span is annotated with the term but never substituted. Pack `aliases` produce alias annotations; pack `variants` produce corrections. Inflection is alias, not variant. The learned layer gains an `aliases` section beside `confirmed` and `rejected`; --confirm gains the answer `[l]ias` = 'it is this term, but the speaker said it that way'. Measured on wxgFO_fyfXg: 42 of 228 gold rows are aliases; substituting them rewrites what the speaker said.
+
+An alias annotation comes only from an exact match against an alias; a fuzzy match near one is still a guess that the text is garbled, so it stays a correction. It is high band and its `replacement` is the original text. In `annotations.json` the `kind` field carries the difference, and the report lists aliases under "recognized (not changed)". The prompt shows the answer as `a[l]ias`, since `a` is taken by all-yes. A given text is either a confirmed variant or an alias of a term, never both: recording one removes the other.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

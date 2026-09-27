@@ -53,6 +53,7 @@ class Term:
     variants: tuple[str, ...] = ()
     collocations: tuple[str, ...] = ()
     learned_variants: tuple[str, ...] = ()  # the subset of `variants` that came from D-013
+    learned_aliases: tuple[str, ...] = ()  # the subset of `aliases` that came from D-020
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,14 @@ class Confirmation:
 
 
 @dataclass(frozen=True)
+class LearnedAlias:
+    """D-020: the user said this is the term, spoken the way the speaker said it."""
+
+    alias: str
+    decided: str  # ISO date
+
+
+@dataclass(frozen=True)
 class Rejection:
     text: str
     term: str
@@ -84,18 +93,39 @@ class Learned:
     confirmed: dict[str, tuple[Confirmation, ...]] = field(default_factory=dict)
     rejected: tuple[Rejection, ...] = ()
     version: int = LEARNED_VERSION
+    aliases: dict[str, tuple[LearnedAlias, ...]] = field(default_factory=dict)
 
     def is_empty(self) -> bool:
-        return not self.confirmed and not self.rejected
+        return not self.confirmed and not self.rejected and not self.aliases
 
     def confirm(self, term: str, variant: str, decided: str | None = None) -> "Learned":
+        """A variant: substituted from now on. Replaces an alias entry for the same text."""
         decided = decided or date.today().isoformat()
         existing = self.confirmed.get(term, ())
         if any(fold(c.variant) == fold(variant) for c in existing):
             return self
         merged = dict(self.confirmed)
         merged[term] = existing + (Confirmation(nfc(variant), decided),)
-        return replace(self, confirmed=merged)
+        return replace(self, confirmed=merged, aliases=_without(self.aliases, term, variant))
+
+    def alias(self, term: str, text: str, decided: str | None = None) -> "Learned":
+        """An alias (D-020): recognized from now on, never substituted.
+
+        Replaces a confirmed variant for the same text, since a text is one or
+        the other for a given term.
+        """
+        decided = decided or date.today().isoformat()
+        existing = self.aliases.get(term, ())
+        if any(fold(a.alias) == fold(text) for a in existing):
+            return self
+        merged = dict(self.aliases)
+        merged[term] = existing + (LearnedAlias(nfc(text), decided),)
+        confirmed = {
+            t: tuple(c for c in cs if not (t == term and fold(c.variant) == fold(text)))
+            for t, cs in self.confirmed.items()
+        }
+        confirmed = {t: cs for t, cs in confirmed.items() if cs}
+        return replace(self, aliases=merged, confirmed=confirmed)
 
     def reject(self, text: str, term: str, decided: str | None = None) -> "Learned":
         decided = decided or date.today().isoformat()
@@ -110,11 +140,25 @@ class Learned:
                 term: [{"variant": c.variant, "date": c.decided} for c in confirmations]
                 for term, confirmations in self.confirmed.items()
             },
+            "aliases": {
+                term: [{"alias": a.alias, "date": a.decided} for a in entries]
+                for term, entries in self.aliases.items()
+            },
             "rejected": [
                 {"text": r.text, "term": r.term, "date": r.decided} for r in self.rejected
             ],
         }
         return yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
+
+
+def _without(
+    aliases: dict[str, tuple[LearnedAlias, ...]], term: str, text: str
+) -> dict[str, tuple[LearnedAlias, ...]]:
+    kept = {
+        t: tuple(a for a in entries if not (t == term and fold(a.alias) == fold(text)))
+        for t, entries in aliases.items()
+    }
+    return {t: entries for t, entries in kept.items() if entries}
 
 
 def load_learned(path: str | Path) -> Learned:
@@ -135,6 +179,16 @@ def load_learned(path: str | Path) -> Learned:
                 items.append(Confirmation(nfc(str(entry)), ""))
         confirmed[nfc(str(term))] = tuple(items)
 
+    aliases: dict[str, tuple[LearnedAlias, ...]] = {}
+    for term, entries in (data.get("aliases") or {}).items():
+        items = []
+        for entry in entries or ():
+            if isinstance(entry, dict):
+                items.append(LearnedAlias(nfc(str(entry["alias"])), str(entry.get("date", ""))))
+            else:
+                items.append(LearnedAlias(nfc(str(entry)), ""))
+        aliases[nfc(str(term))] = tuple(items)
+
     rejected = tuple(
         Rejection(
             nfc(str(entry["text"])), nfc(str(entry["term"])), str(entry.get("date", ""))
@@ -145,6 +199,7 @@ def load_learned(path: str | Path) -> Learned:
         confirmed=confirmed,
         rejected=rejected,
         version=int(data.get("version", LEARNED_VERSION)),
+        aliases=aliases,
     )
 
 
@@ -184,8 +239,9 @@ def load_pack(
     """Read a domain pack from YAML, merging the learned layer of D-013.
 
     `fixtures/R2Qgz8tFWVI/pack.yaml` is the schema. The learned layer is read
-    from `runs/learned/<pack-name>.learned.yaml` (D-015); `learned_from` names a
-    different file and `learned` supplies the layer directly.
+    from `packs/<pack-name>.learned.yaml` (D-017); `learned_from` names a
+    different file and `learned` supplies the layer directly. Its confirmed
+    variants become corrections and its aliases become alias annotations (D-020).
     """
     path = Path(path)
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -197,27 +253,35 @@ def load_pack(
     for raw in data.get("terms") or ():
         name = nfc(str(raw["term"]))
         pack_variants = _strings(raw, "variants")
-        known = {fold(v) for v in pack_variants}
+        pack_aliases = _strings(raw, "aliases")
+        known = {fold(v) for v in pack_variants} | {fold(a) for a in pack_aliases}
         learned_variants = tuple(
             c.variant
             for c in learned.confirmed.get(name, ())
             if fold(c.variant) not in known
         )
+        learned_aliases = tuple(
+            a.alias
+            for a in learned.aliases.get(name, ())
+            if fold(a.alias) not in known
+        )
         term = Term(
             term=name,
             klass=nfc(str(raw["class"])) if raw.get("class") else None,
-            aliases=_strings(raw, "aliases"),
+            aliases=pack_aliases + learned_aliases,
             variants=pack_variants + learned_variants,
             collocations=_strings(raw, "collocations"),
             learned_variants=learned_variants,
+            learned_aliases=learned_aliases,
         )
         terms.append(term)
         # Order matters: it is the order the matcher scans candidates in.
         for display, origin, source in (
             [(term.term, "term", SOURCE_PACK)]
-            + [(a, "alias", SOURCE_PACK) for a in term.aliases]
+            + [(a, "alias", SOURCE_PACK) for a in pack_aliases]
             + [(v, "variant", SOURCE_PACK) for v in pack_variants]
             + [(v, "variant", SOURCE_LEARNED) for v in learned_variants]
+            + [(a, "alias", SOURCE_LEARNED) for a in learned_aliases]
         ):
             candidates.append(Candidate(display, fold(display), term.term, origin, source))
 

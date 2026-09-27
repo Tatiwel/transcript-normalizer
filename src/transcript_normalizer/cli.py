@@ -57,9 +57,11 @@ DRAFT_STATUS = "draft"
 UNIT_CLASS = "unidade"
 
 #: D-019: one question per variant, not per term group. `a` and `r` answer the
-#: current variant and every variant of the current term after it.
+#: current variant and every variant of the current term after it. D-020 adds
+#: `l`: it is this term, but the speaker said it that way.
 CONFIRM_PROMPT = (
-    "    {variant} -> {term}? [y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no: "
+    "    {variant} -> {term}? "
+    "[y]es / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no: "
 )
 BULK_ANSWERS = {"a": "y", "r": "n"}
 
@@ -89,9 +91,12 @@ def _lines(groups: dict[str, Counter]) -> list[str]:
 def report(annotations: list[Annotation]) -> str:
     """High band by term, then the unit rules, then D-011's medium band to confirm."""
     high = [a for a in annotations if a.band == BAND_HIGH]
+    fixed = [a for a in high if a.is_correction]
     sections = [
-        ("terms", group_by_term([a for a in high if a.rule != RULE_UNIT])),
-        ("unit rules", group_by_term([a for a in high if a.rule == RULE_UNIT])),
+        ("terms", group_by_term([a for a in fixed if a.rule != RULE_UNIT])),
+        ("unit rules", group_by_term([a for a in fixed if a.rule == RULE_UNIT])),
+        # D-020: another name of the term, as the speaker said it.
+        ("recognized (not changed)", group_by_term([a for a in high if a.is_alias])),
         ("to confirm", group_by_term(in_band(annotations, BAND_MEDIUM))),
     ]
 
@@ -135,7 +140,7 @@ def write_gold_draft(
                 [
                     transcript.locate(a.start)[1],
                     form(a),
-                    a.replacement,
+                    form(a) if a.is_alias else a.replacement,  # D-020: left as said
                     a.term,
                     UNIT_CLASS if a.rule == RULE_UNIT else klass.get(a.term, ""),
                     DRAFT_STATUS,
@@ -215,7 +220,8 @@ def confirm_loop(
     A term-level answer cannot express a mixed group, so the term is shown once
     and each of its variants is asked about separately. `a` and `r` answer the
     current variant and the rest of that term's variants; they do not carry to
-    the next term.
+    the next term. `l` records the variant as an alias of the term (D-020): it
+    will be recognized from then on and never substituted.
     """
     groups = confirm_groups(annotations)
     if not groups:
@@ -239,6 +245,9 @@ def confirm_loop(
             elif answer.startswith("n"):
                 learned = learned.reject(variant, term)
                 print(f"    rejected: {variant} -> {term}")
+            elif answer.startswith("l"):
+                learned = learned.alias(term, variant)
+                print(f"    alias: {variant} is {term}, left as said")
             else:
                 print("    skipped.")
     return learned

@@ -59,13 +59,13 @@ def covers(wrong: str, annotation: Annotation) -> bool:
 
 
 def is_correction(annotation: Annotation) -> bool:
-    """An annotation that substitutes its span in normalized.txt."""
-    return True
+    """An annotation that substitutes its span in normalized.txt (D-020)."""
+    return annotation.is_correction
 
 
 def is_alias(annotation: Annotation) -> bool:
-    """An annotation that names the term without substituting its span."""
-    return False
+    """An annotation that names the term without substituting its span (D-020)."""
+    return annotation.is_alias
 
 
 @dataclass(frozen=True)

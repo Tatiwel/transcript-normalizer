@@ -14,7 +14,15 @@ from rapidfuzz import fuzz
 
 from .pack import Pack, fold
 from .rules import find_unit_hits
-from .standoff import BAND_HIGH, BAND_LOW, BAND_MEDIUM, RULE_UNIT, Annotation, term_rule
+from .standoff import (
+    BAND_HIGH,
+    BAND_LOW,
+    BAND_MEDIUM,
+    KIND_ALIAS,
+    RULE_UNIT,
+    Annotation,
+    term_rule,
+)
 from .text import Transcript
 
 # D-011's two thresholds live here and nowhere else. Apply at or above 80 (which
@@ -128,21 +136,41 @@ def find_annotations(
             )
             if score < threshold:
                 continue
+            # D-013: a pair the user has turned down is never proposed again.
+            if pack.is_rejected(folded_span, term):
+                continue
+            origin = origins[(term, candidate)]
+            original = text[window[0].start : window[-1].end]
+
+            # D-020: exactly another name of the term. Recognized, never substituted.
+            if origin == "alias" and folded_span == candidate:
+                annotations.append(
+                    Annotation(
+                        start=window[0].start,
+                        end=window[-1].end,
+                        original=original,
+                        replacement=original,
+                        term=term,
+                        rule=term_rule("alias"),
+                        band=BAND_HIGH,
+                        score=int(score),
+                        pack_version=pack.version,
+                        kind=KIND_ALIAS,
+                    )
+                )
+                continue
+
             # The term (or one of its aliases) is already spelled out here: nothing to correct.
             if folded_term[term] in folded_span:
                 continue
             if any(a in folded_span for a in folded_aliases[term]):
                 continue
-            # D-013: a pair the user has turned down is never proposed again.
-            if pack.is_rejected(folded_span, term):
-                continue
-            origin = origins[(term, candidate)]
             rule = term_rule(origin if folded_span == candidate else "fuzzy")
             annotations.append(
                 Annotation(
                     start=window[0].start,
                     end=window[-1].end,
-                    original=text[window[0].start : window[-1].end],
+                    original=original,
                     replacement=term,
                     term=term,
                     rule=rule,
