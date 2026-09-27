@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from transcript_normalizer.core.matcher import MARK_THRESHOLD, find_annotations, resolve_overlaps
 from transcript_normalizer.core.pack import Learned, load_pack
+from transcript_normalizer.core.standoff import BAND_LOW, in_band
 from transcript_normalizer.evaluate import Fixture, evaluate_fixture, fixtures
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,12 +52,32 @@ def pack_effect() -> str:
     return table(rows)
 
 
+def low_band(found: list[Fixture], thresholds=(MARK_THRESHOLD, 70)) -> str:
+    """How many low-band marks each fixture gets at each lower threshold.
+
+    Counted as the CLI reports them, after overlap resolution: the number a run
+    prints as "low-confidence marks, not applied".
+    """
+    head = f"{'fixture':12s}  " + "  ".join(f"low at {t}" for t in thresholds)
+    out = [head, "-" * len(head)]
+    for f in found:
+        transcript, pack = f.load_transcript(), f.load_pack()
+        counts = [
+            len(in_band(resolve_overlaps(find_annotations(transcript, pack, threshold=t)), BAND_LOW))
+            for t in thresholds
+        ]
+        out.append(f"{f.name:12s}  " + "  ".join(f"{c:>{len(f'low at {t}')}d}" for c, t in zip(counts, thresholds)))
+    return "\n".join(out)
+
+
 def main() -> None:
     found = fixtures(ROOT / "fixtures")
     print("Per fixture, frozen fixture pack, no learned layer\n")
     print(table([(f"{f.name} ({f.convention})", evaluate_fixture(f).counts()) for f in found]))
     print("\n\nNon-blocking: wxgFO_fyfXg against packs/financas-ptbr.yaml, no learned layer\n")
     print(pack_effect())
+    print("\n\nLow band, lower threshold 60 vs 70 (frozen fixture packs)\n")
+    print(low_band(found))
 
 
 if __name__ == "__main__":

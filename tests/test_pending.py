@@ -8,12 +8,13 @@ from transcript_normalizer.runs import PENDING_FILE, needs_review_dir
 
 from .conftest import CAPTION, PACK, output_dir
 
-# The fixture's medium band, in the order the loop asks: 8 variants, 4 terms.
+# The fixture's medium band, in the order the loop asks: 7 variants, 4 terms.
+# (D-024 took `preço. Então` out of it, which also moved preço teto last.)
 MEDIUM = [
     ("CEMIG", "dos 10"), ("CEMIG", "e caiu"), ("CEMIG", "mês caiu"), ("CEMIG", "nesse ramo"),
-    ("preço teto", "preço dela"), ("preço teto", "preço. Então"),
     ("EBITDA", "de eBit"),
     ("dividendo", "dividido"),
+    ("preço teto", "preço dela"),
 ]
 
 

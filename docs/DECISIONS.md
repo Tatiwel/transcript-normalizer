@@ -150,8 +150,18 @@ Files that need the user live in runs/<id>/needs-review/: corrections.csv (was r
 
 This supersedes the `review/` directory of D-016. `--gold-draft` is renamed `--corrections`; the old flag still works for one release, hidden from `--help`, and says so on stderr. corrections.csv keeps its alias rows, with `correct` equal to `wrong`, because a gold file needs them. pending.txt is written with every variant `[never asked]` when the report is produced, then rewritten after a `--confirm` loop from its answers: a variant that got `y`, `n` or `l` leaves it, one that got `s` (or that the input ran out before) stays as `[skipped]`, and the file is removed when nothing is left, so a stale list never outlives its answers.
 
+## D-024 Word n-grams stop at strong punctuation
+
+Word n-grams do not cross strong punctuation (. ? ! ;). Measured: `Warn Buffet. Tem` was proposed as one variant of Warren Buffett in wxgFO_fyfXg.
+
+The tokenizer marks each token followed by `.`, `?`, `!` or `;`, and no n-gram runs across the mark. A `.` inside a token is a decimal point (`6.7`) and does not count, a comma does not count, and a caption break is not punctuation, so D-007's `ser` / `MIG` still joins. The unit rules are regexes over the text and are unaffected.
+
+Measured: R2Qgz8tFWVI loses the false positive `preço. Então` -> preço teto (17 -> 16) and no hit. wxgFO_fyfXg loses one hit, 36:41 `Warn Buffet` -> Warren Buffett (103 -> 102). That hit was credited only to the span `Warn Buffet. Tem`; the caption line ends `do Warn Buffet.`, and nothing in the frozen pack reaches `Warn Buffet` without crossing the full stop. Its bound moves to hits >= 102. The first fixture's bounds stay as they were, since it lost no hit.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
-- Low band lower threshold: 60 produces 528 marks on the fixture; consider 70.
+- Fuzzy matching also runs against learned variants, so each confirmation widens reach: a cascade. Useful on wxgFO_fyfXg, risky in general. (`Warn Buffet. Tem` was reached this way, from the confirmed variant `Warn Buffet`.)
+- Rejection is by exact normalized text: rejecting `divide` did not suppress `divide a`.
+- Low band lower threshold, 60 vs 70. Marks after overlap resolution, frozen fixture packs: R2Qgz8tFWVI 500 at 60, 115 at 70; wxgFO_fyfXg 579 at 60, 91 at 70. `scripts/measure.py` prints them. (This replaces the earlier note of 528 at 60, measured before D-020 and D-024.)

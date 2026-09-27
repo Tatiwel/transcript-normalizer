@@ -8,7 +8,7 @@ instead of line by line (D-007).
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from rapidfuzz import fuzz
 
@@ -41,12 +41,18 @@ _TOKEN = re.compile(r"[\wÀ-ÿ$%,.]+")
 _WORDY = re.compile(r"\w")
 _EDGE = ".,"
 
+#: D-024: strong punctuation. A word n-gram never runs across one. A `.` inside
+#: a token (`6.7`) is a decimal point, not an end of sentence.
+STRONG_PUNCTUATION = ".?!;"
+
 
 @dataclass(frozen=True)
 class Token:
     text: str
     start: int
     end: int
+    #: Strong punctuation stands between this token and the next (D-024).
+    closes_sentence: bool = False
 
 
 def tokenize(text: str) -> list[Token]:
@@ -62,7 +68,15 @@ def tokenize(text: str) -> list[Token]:
             raw, end = raw[:-1], end - 1
         if raw:
             tokens.append(Token(raw, start, end))
-    return tokens
+
+    # D-024: look at what separates each token from the next. A `.` stripped
+    # off a token's edge above lands here, which is exactly the sentence end.
+    marked = []
+    for i, token in enumerate(tokens):
+        following = tokens[i + 1].start if i + 1 < len(tokens) else len(text)
+        gap = text[token.end : following]
+        marked.append(replace(token, closes_sentence=any(c in STRONG_PUNCTUATION for c in gap)))
+    return marked
 
 
 def band_for(rule: str, score: float) -> str:
@@ -139,6 +153,8 @@ def find_annotations(
     for n in NGRAM_SIZES:
         for i in range(len(tokens) - n + 1):
             window = tokens[i : i + n]
+            if any(t.closes_sentence for t in window[:-1]):
+                continue  # D-024: `Warn Buffet. Tem` is two sentences, not one term
             span = " ".join(t.text for t in window)
             folded_span = fold(span)
             if len(folded_span) < 2:

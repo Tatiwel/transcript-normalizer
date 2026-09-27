@@ -37,8 +37,10 @@ BOUNDS = {
     "R2Qgz8tFWVI": Bounds(in_scope=168, min_hits=148, max_false_positives=17),
     # Measured when the fixture was added, with the frozen 0.1.0 pack and no
     # learned layer. The touched `manter` row is 15:54 `divide a` -> dividendo.
+    # D-024 costs one hit, 36:41 `Warn Buffet`, which only the span
+    # `Warn Buffet. Tem` across the full stop had ever reached (was 103).
     "wxgFO_fyfXg": Bounds(
-        in_scope=226, min_hits=103, max_false_positives=57, max_manter_touched=1
+        in_scope=226, min_hits=102, max_false_positives=57, max_manter_touched=1
     ),
 }
 

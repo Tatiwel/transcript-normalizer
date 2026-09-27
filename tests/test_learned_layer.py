@@ -127,8 +127,9 @@ def test_all_yes_stops_at_the_end_of_its_term(tmp_path, monkeypatch):
     learned = confirm_run(tmp_path, monkeypatch, ["a", "n"])
 
     assert confirmed_pairs(learned) == [("CEMIG", v) for v in CEMIG_VARIANTS]
-    # Only the one variant the `n` answered, not the whole of preço teto.
-    assert rejected_pairs(learned) == [("preço teto", "preço dela")]
+    # Only the one variant the `n` answered: the next term's, not CEMIG's.
+    # (Since D-024 that term is EBITDA; preço teto dropped to one occurrence.)
+    assert rejected_pairs(learned) == [("EBITDA", "de eBit")]
 
 
 def test_rest_no_takes_the_current_variant_and_the_ones_after_it(tmp_path, monkeypatch):
