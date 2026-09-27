@@ -109,14 +109,16 @@ def rejected_pairs(learned):
     return sorted((r.term, r.text) for r in learned.rejected)
 
 
-# The busiest medium-band group on the fixture, in the order the loop asks:
-# a mixed group, which is the whole point of D-019.
+# A mixed medium-band group on the fixture, in the order the loop asks it:
+# the whole point of D-019. Since D-030 it is the second group; the first is
+# dividendo's two variants, which these tests skip past.
 CEMIG_VARIANTS = ["dos 10", "e caiu", "mês caiu", "nesse ramo"]
+SKIP_DIVIDENDO = ["s", "s"]
 
 
 def test_a_mixed_group_is_answered_one_variant_at_a_time(tmp_path, monkeypatch):
     # yes, no, yes, skip -- then end of input, so no later term is touched.
-    learned = confirm_run(tmp_path, monkeypatch, ["y", "n", "y", "s"])
+    learned = confirm_run(tmp_path, monkeypatch, [*SKIP_DIVIDENDO, "y", "n", "y", "s"])
 
     assert confirmed_pairs(learned) == [("CEMIG", "dos 10"), ("CEMIG", "mês caiu")]
     assert rejected_pairs(learned) == [("CEMIG", "e caiu")]
@@ -124,7 +126,7 @@ def test_a_mixed_group_is_answered_one_variant_at_a_time(tmp_path, monkeypatch):
 
 def test_all_yes_stops_at_the_end_of_its_term(tmp_path, monkeypatch):
     # `a` on CEMIG's first variant takes all four; the next term asks again.
-    learned = confirm_run(tmp_path, monkeypatch, ["a", "n"])
+    learned = confirm_run(tmp_path, monkeypatch, [*SKIP_DIVIDENDO, "a", "n"])
 
     assert confirmed_pairs(learned) == [("CEMIG", v) for v in CEMIG_VARIANTS]
     # Only the one variant the `n` answered: the next term's, not CEMIG's.
@@ -133,7 +135,7 @@ def test_all_yes_stops_at_the_end_of_its_term(tmp_path, monkeypatch):
 
 
 def test_rest_no_takes_the_current_variant_and_the_ones_after_it(tmp_path, monkeypatch):
-    learned = confirm_run(tmp_path, monkeypatch, ["y", "r"])
+    learned = confirm_run(tmp_path, monkeypatch, [*SKIP_DIVIDENDO, "y", "r"])
 
     assert confirmed_pairs(learned) == [("CEMIG", "dos 10")]
     assert rejected_pairs(learned) == [

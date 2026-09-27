@@ -32,17 +32,15 @@ class Bounds:
 
 
 BOUNDS = {
-    # Commit 7: the duplicated `10:59 Ox` gold row is gone, and with it the one
-    # hit that row inflated. (D-021 was 168 in scope, 148 / 17; D-024 then
-    # measured 16 false positives.)
-    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=147, max_false_positives=16),
-    # Commit 7: the five `SEMIG 4` / `CMIG 3` rows record the caption's text and
-    # are SEMIG -> CEMIG corrections now (was 102 hits after D-024). D-026 takes
-    # 15:57 `Etaú -> ETAU` out of scope, a case- and accent-only difference
-    # (was 226); the frozen pack finds none of the conferido rows, so hits stay.
-    # The touched `manter` row is 15:54 `divide a` -> dividendo.
+    # D-030 (whole-word guard): +3 hits (`autocapex`, `Sabespe`, `segundo
+    # trio`) and +10 false positives: the plural `dividendos` fuzzily corrected
+    # to dividendo (8x) and the variant `tira` -> TIR (2x), both of which the
+    # old substring guard happened to block. Was 147 / 16 after commit 7.
+    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=26),
+    # D-030: no hit, +13 false positives (`dividendos` 9x, `valuations` 3x,
+    # `tira` 1x). Was 107 / 57. The touched `manter` row is 15:54 `divide a`.
     "wxgFO_fyfXg": Bounds(
-        in_scope=225, min_hits=107, max_false_positives=57, max_manter_touched=1
+        in_scope=225, min_hits=107, max_false_positives=70, max_manter_touched=1
     ),
 }
 

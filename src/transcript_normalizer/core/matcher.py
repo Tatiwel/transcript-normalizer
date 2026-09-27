@@ -91,6 +91,11 @@ def band_for(rule: str, score: float) -> str:
 UNIT_CLASS = "unidade"
 
 
+def contains_words(span: str, part: str) -> bool:
+    """Whether folded `part` occurs in folded `span` as whole words (D-027, D-030)."""
+    return f" {' '.join(part.split())} " in f" {' '.join(span.split())} "
+
+
 def fuzzy_allowed(candidate: Candidate, unit_terms: frozenset[str] = frozenset()) -> bool:
     """D-025: fuzzy runs against the canonical term and curated pack variants only.
 
@@ -219,10 +224,11 @@ def find_annotations(
                 )
                 continue
 
-            # The term (or one of its aliases) is already spelled out here: nothing to correct.
-            if folded_term[term] in folded_span:
+            # The term (or one of its aliases) is already spelled out here: nothing to
+            # correct. D-030: as whole words, so `deck` is not `dec` spelled out.
+            if contains_words(folded_span, folded_term[term]):
                 continue
-            if any(a in folded_span for a in folded_aliases[term]):
+            if any(contains_words(folded_span, a) for a in folded_aliases[term]):
                 continue
             rule = term_rule(origin if folded_span == candidate else "fuzzy")
             annotations.append(

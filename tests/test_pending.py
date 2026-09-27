@@ -8,12 +8,13 @@ from transcript_normalizer.runs import PENDING_FILE, needs_review_dir
 
 from .conftest import CAPTION, PACK, output_dir
 
-# The fixture's medium band, in the order the loop asks: 7 variants, 4 terms.
-# (D-024 took `preço. Então` out of it, which also moved preço teto last.)
+# The fixture's medium band, in the order the loop asks: 8 variants, 4 terms.
+# (D-024 took `preço. Então` out of it; D-030 let the plural `dividendos` in,
+# which made dividendo the busiest term.)
 MEDIUM = [
+    ("dividendo", "dividendos"), ("dividendo", "dividido"),
     ("CEMIG", "dos 10"), ("CEMIG", "e caiu"), ("CEMIG", "mês caiu"), ("CEMIG", "nesse ramo"),
     ("EBITDA", "de eBit"),
-    ("dividendo", "dividido"),
     ("preço teto", "preço dela"),
 ]
 
@@ -50,17 +51,17 @@ def test_without_confirm_everything_is_never_asked(tmp_path, monkeypatch):
 
 
 def test_answered_variants_leave_and_skipped_ones_say_so(tmp_path, monkeypatch):
-    # yes, no, skip on CEMIG's first three; end of input skips the other five.
+    # yes, no on dividendo's two, skip on the next; end of input skips the rest.
     path = run(tmp_path, monkeypatch, "--confirm", answers=["y", "n", "s"])
     left = tagged(path.read_text(encoding="utf-8"))
 
-    assert "dos 10" not in left and "e caiu" not in left
+    assert "dividendos" not in left and "dividido" not in left
     assert left == {variant: SKIPPED for _, variant in MEDIUM[2:]}
 
 
 def test_an_alias_answer_is_an_answer(tmp_path, monkeypatch):
     path = run(tmp_path, monkeypatch, "--confirm", answers=["l"])
-    assert "dos 10" not in tagged(path.read_text(encoding="utf-8"))
+    assert "dividendos" not in tagged(path.read_text(encoding="utf-8"))
 
 
 def test_nothing_pending_leaves_no_file_behind(tmp_path, monkeypatch):
