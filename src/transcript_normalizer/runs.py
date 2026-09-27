@@ -1,4 +1,4 @@
-"""Where things live on disk (D-015, D-016, D-017).
+"""Where things live on disk (D-015, D-016, D-017, D-022, D-023).
 
 Everything the CLI produces lands under `runs/` in the current directory, one
 directory per input. Domain packs and the learned layer that belongs to them
@@ -37,10 +37,14 @@ NORMALIZED_FILE = "normalized.txt"
 #: Reserved for when diarization exists; nothing writes it yet.
 NORMALIZED_SPEAKERS_FILE = "normalized.speakers.txt"
 
-#: Everything that needs a person goes in one place.
-REVIEW_DIR = "review"
-GOLD_DRAFT_FILE = "gold-draft.csv"
-TO_CONFIRM_FILE = "to-confirm.txt"
+#: D-023: everything that needs a person goes in one place.
+NEEDS_REVIEW_DIR = "needs-review"
+CORRECTIONS_FILE = "corrections.csv"  # was review/gold-draft.csv
+PENDING_FILE = "pending.txt"  # was review/to-confirm.txt
+
+#: D-022: what `fetch` knows about the video, beside its caption.
+META_FILE = "meta.yaml"
+CAPTION_FILE = "legenda.txt"
 
 
 def runs_root() -> Path:
@@ -103,9 +107,9 @@ def run_dir(
     return runs_root() / Path(input_path).stem
 
 
-def review_dir(out_dir: str | Path) -> Path:
-    """`<run>/review/`: the files that need a person to look at them (D-016)."""
-    return Path(out_dir) / REVIEW_DIR
+def needs_review_dir(out_dir: str | Path) -> Path:
+    """`<run>/needs-review/`: the files that need a person to look at them (D-023)."""
+    return Path(out_dir) / NEEDS_REVIEW_DIR
 
 
 def learned_file(pack_path: str | Path, override: str | Path | None = None) -> Path:

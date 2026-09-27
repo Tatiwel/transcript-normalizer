@@ -20,37 +20,40 @@ The tool never asks "does this word exist?". It asks "does this stretch of text 
 ## Usage
 
 ```
-transcript-normalizer <legenda.txt> --pack <pack.yaml> [--gold-draft] [--confirm]
 transcript-normalizer fetch <url> [--whisper]
+transcript-normalizer <legenda.txt> [--pack <pack.yaml>] [--corrections] [--confirm]
+transcript-normalizer list
 ```
 
-`fetch` downloads the platform's own caption with yt-dlp, or transcribes the audio locally with faster-whisper when there is no caption, and writes `runs/<video-id>/legenda.txt`. It needs the optional extra: `uv sync --extra ingest`. WebVTT is converted in Python, so the caption path needs no ffmpeg; only `--whisper` does. Speech recognition is not the same as asking an AI provider to transcribe: it maps audio to text and does not fill a gap with something plausible.
+`fetch` downloads the platform's own caption with yt-dlp, or transcribes the audio locally with faster-whisper when there is no caption, and writes `runs/<video-id>/legenda.txt` and `meta.yaml`. It needs the optional extra: `uv sync --extra ingest`. WebVTT is converted in Python, so the caption path needs no ffmpeg; only `--whisper` does. Speech recognition is not the same as asking an AI provider to transcribe: it maps audio to text and does not fill a gap with something plausible.
 
-Every output goes under `runs/` in the current directory, never beside the input:
+Normalizing reads `packs/financas-ptbr.yaml` unless `--pack` names another. Every output goes under `runs/<id>/` in the current directory, never beside the input:
 
-- `runs/<input-stem>/annotations.json` — the stand-off layer, every proposal with its band.
-- `runs/<input-stem>/report.txt` — the same text the command prints.
-- `runs/<input-stem>/gold-draft.csv` — with `--gold-draft`, the applied annotations as the starting point for a new gold file.
-- `runs/learned/<pack-name>.learned.yaml` — with `--confirm`, what you confirmed and what you turned down.
+- `annotations.json` — the stand-off layer: every proposal with its band and its kind, `correction` or `alias` (D-020).
+- `normalized.txt` — the caption with the corrections substituted; aliases are left as they were said.
+- `legenda.txt` — the raw caption, kept beside what was rendered from it.
+- `report.txt` — the same text the command prints.
+- `meta.yaml` — title, channel, url, publication date and when it was fetched, from `fetch`.
+- `needs-review/corrections.csv` — with `--corrections`, the applied annotations as the starting point for a new gold file.
+- `needs-review/pending.txt` — every medium-band variant still unanswered, tagged `[never asked]` or `[skipped]`.
 
-`--out DIR` writes a run somewhere else, `--learned PATH` points at a different learned layer. `runs/` is gitignored. The pack file is never written to.
+`--confirm` asks about each medium-band variant in turn and records the answers in `packs/<pack-name>.learned.yaml`. `transcript-normalizer list` prints the id, date and title of every run. `--out DIR` writes a run somewhere else, `--learned PATH` points at a different learned layer. The pack file is never written to.
 
 ## Where things are
 
 ```
 src/transcript_normalizer/
-  core/        the engine: pack, rules, text, matcher, stand-off, render
-  ingest/      fetching captions; optional, needs the `ingest` extra
-packs/         your domain packs, and the learned layer beside them (D-017)
-fixtures/      frozen test material; the regression test reads it, nothing writes it
-experiments/   the throwaway scripts that measured the decisions, kept as record
-runs/          everything a command produces, gitignored (D-015)
-  <id>/        annotations.json, report.txt, normalized.txt, the raw caption
-               <id> is the video id from the caption header, else the file stem (D-018)
-    review/    what needs a person: gold-draft.csv, to-confirm.txt (D-016)
+  core/          the engine: pack, rules, text, matcher, stand-off, render
+  ingest/        fetching captions; optional, needs the `ingest` extra
+packs/           your domain packs, and the learned layer beside each (D-017)
+fixtures/        frozen test material; the regression test reads it, nothing writes it
+experiments/     the throwaway scripts that measured the decisions, kept as record
+runs/            everything a command produces, gitignored (D-015)
+  <video-id>/    annotations.json, normalized.txt, legenda.txt, report.txt, meta.yaml (D-022)
+    needs-review/  what needs a person: corrections.csv, pending.txt (D-023)
 ```
 
-`packs/` is yours to edit; the pack under `fixtures/` is a frozen copy that the regression test depends on. `runs/` and `packs/*.learned.yaml` are disposable and gitignored.
+The run id is the video id, read from the caption header when the input did not come from `fetch`; a caption with no recognizable url falls back to its file stem (D-018). `packs/` is yours to edit; the pack under `fixtures/` is a frozen copy that the regression test depends on. `runs/` and `packs/*.learned.yaml` are disposable and gitignored.
 
 ## Status
 

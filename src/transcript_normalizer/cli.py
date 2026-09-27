@@ -2,6 +2,7 @@
 
     transcript-normalizer [normalize] <legenda.txt> --pack <pack.yaml>
     transcript-normalizer fetch <url>
+    transcript-normalizer list
 
 `normalize` is the default, so a caption file may be given straight away.
 """
@@ -30,21 +31,23 @@ from .core.standoff import (
     write_json,
 )
 from .core.text import Transcript, read_caption
+from .catalog import list_runs
 from .ingest import fetch as ingest_fetch
 from .runs import (
     ANNOTATIONS_FILE,
-    GOLD_DRAFT_FILE,
+    CORRECTIONS_FILE,
     NORMALIZED_FILE,
+    PENDING_FILE,
     REPORT_FILE,
-    TO_CONFIRM_FILE,
     default_pack,
     learned_file,
-    review_dir,
+    needs_review_dir,
     run_dir,
+    runs_root,
 )
 
 PROG = "transcript-normalizer"
-COMMANDS = ("normalize", "fetch")
+COMMANDS = ("normalize", "fetch", "list")
 
 #: How many example lines the confirmation loop shows per variant (D-019).
 EXAMPLES_PER_VARIANT = 3
@@ -64,6 +67,10 @@ CONFIRM_PROMPT = (
     "[y]es / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no: "
 )
 BULK_ANSWERS = {"a": "y", "r": "n"}
+
+#: D-023: why a variant is still in needs-review/pending.txt.
+NEVER_ASKED = "[never asked]"
+SKIPPED = "[skipped]"
 
 
 def form(annotation: Annotation) -> str:
@@ -126,10 +133,13 @@ def examples(transcript: Transcript, annotations: list[Annotation], limit: int) 
     return out
 
 
-def write_gold_draft(
+def write_corrections(
     transcript: Transcript, annotations: list[Annotation], pack: Pack, path: Path
 ) -> Path:
-    """The applied annotations as a gold.csv draft, for hand-checking a new fixture."""
+    """needs-review/corrections.csv (D-023): the applied annotations as a gold.csv
+    draft, same columns, status `draft`, for hand-checking a new fixture. Alias
+    rows are in it too, with `correct` equal to `wrong`, since a gold file needs
+    them."""
     klass = {t.term: (t.klass or "") for t in pack.terms}
     rows = sorted(applied(annotations), key=lambda a: (a.start, a.end))
     with path.open("w", encoding="utf-8-sig", newline="") as fh:
@@ -195,26 +205,60 @@ def variant_block(
     return body, CONFIRM_PROMPT.format(variant=variant, term=term)
 
 
-def to_confirm_text(transcript: Transcript, annotations: list[Annotation]) -> str:
-    """The medium band as `--confirm` would show it, for review/to-confirm.txt.
+def pending_text(
+    transcript: Transcript,
+    annotations: list[Annotation],
+    outcomes: dict[tuple[str, str], str] | None = None,
+) -> tuple[str, int]:
+    """needs-review/pending.txt (D-023): every unanswered variant, grouped by term.
 
-    Still grouped by term, but every variant is listed with its own examples and
-    its own question, because that is what the loop asks (D-019).
+    Each variant keeps its own example lines (D-019) and says why it is still
+    here: `[never asked]` when the run had no --confirm, `[skipped]` when the
+    user answered `s`. A variant that got any other answer is not pending.
+    Returns the text and how many variants it lists.
     """
-    blocks = []
+    blocks, count = [], 0
     for term, group in confirm_groups(annotations):
-        lines = [term_heading(term, group)]
+        lines = []
         for variant, found in variant_groups(group):
-            body, prompt = variant_block(transcript, term, variant, found)
-            lines.append(body)
-            lines.append(prompt.rstrip())
-        blocks.append("\n".join(lines))
-    return "\n\n".join(blocks) + "\n"
+            if outcomes is None:
+                tag = NEVER_ASKED
+            elif outcomes.get((term, variant), "s").startswith("s"):
+                tag = SKIPPED
+            else:
+                continue
+            body, _ = variant_block(transcript, term, variant, found)
+            head, *examples_ = body.split("\n")
+            lines.append(f"{head}  {tag}")
+            lines.extend(examples_)
+            count += 1
+        if lines:
+            blocks.append("\n".join([term_heading(term, group), *lines]))
+    return ("\n\n".join(blocks) + "\n" if blocks else ""), count
+
+
+def write_pending(
+    out_dir: Path,
+    transcript: Transcript,
+    annotations: list[Annotation],
+    outcomes: dict[tuple[str, str], str] | None = None,
+) -> tuple[Path, int]:
+    """Write pending.txt, or remove a stale one when nothing is left pending."""
+    path = needs_review_dir(out_dir) / PENDING_FILE
+    text, count = pending_text(transcript, annotations, outcomes)
+    if count:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    elif path.exists():
+        path.unlink()
+        if not any(path.parent.iterdir()):
+            path.parent.rmdir()
+    return path, count
 
 
 def confirm_loop(
     transcript: Transcript, annotations: list[Annotation], learned: Learned
-) -> Learned:
+) -> tuple[Learned, dict[tuple[str, str], str]]:
     """D-011's confirmation loop, one question per variant (D-019).
 
     A term-level answer cannot express a mixed group, so the term is shown once
@@ -222,11 +266,14 @@ def confirm_loop(
     current variant and the rest of that term's variants; they do not carry to
     the next term. `l` records the variant as an alias of the term (D-020): it
     will be recognized from then on and never substituted.
+
+    Returns the updated layer and the answer given to each (term, variant).
     """
+    outcomes: dict[tuple[str, str], str] = {}
     groups = confirm_groups(annotations)
     if not groups:
         print("nothing to confirm.")
-        return learned
+        return learned, outcomes
 
     for term, group in groups:
         print(f"\n{term_heading(term, group)}")
@@ -241,20 +288,24 @@ def confirm_loop(
 
             if answer.startswith("y"):
                 learned = learned.confirm(term, variant)
+                outcomes[(term, variant)] = "y"
                 print(f"    confirmed: {variant} -> {term}")
             elif answer.startswith("n"):
                 learned = learned.reject(variant, term)
+                outcomes[(term, variant)] = "n"
                 print(f"    rejected: {variant} -> {term}")
             elif answer.startswith("l"):
                 learned = learned.alias(term, variant)
+                outcomes[(term, variant)] = "l"
                 print(f"    alias: {variant} is {term}, left as said")
             else:
+                outcomes[(term, variant)] = "s"
                 print("    skipped.")
-    return learned
+    return learned, outcomes
 
 
 def review_path(out_dir: Path, name: str) -> Path:
-    directory = review_dir(out_dir)
+    directory = needs_review_dir(out_dir)
     directory.mkdir(parents=True, exist_ok=True)
     return directory / name
 
@@ -294,17 +345,18 @@ def run_normalize(args: argparse.Namespace) -> int:
     written.append(normalized)
     written.append(keep_original(args.caption, out_dir))
 
-    # D-016: what needs a person goes under review/.
-    if args.gold_draft:
+    # D-023: what needs a person goes under needs-review/.
+    if args.corrections:
         written.append(
-            write_gold_draft(
-                transcript, annotations, pack, review_path(out_dir, GOLD_DRAFT_FILE)
+            write_corrections(
+                transcript, annotations, pack, review_path(out_dir, CORRECTIONS_FILE)
             )
         )
-    if confirm_groups(annotations):
-        to_confirm = review_path(out_dir, TO_CONFIRM_FILE)
-        to_confirm.write_text(to_confirm_text(transcript, annotations), encoding="utf-8")
-        written.append(to_confirm)
+    # As things stand before any --confirm: everything in the medium band is
+    # pending and nothing has been asked. The loop below rewrites it.
+    pending, count = write_pending(out_dir, transcript, annotations)
+    if count:
+        written.append(pending)
 
     written.append(out_dir / REPORT_FILE)
 
@@ -321,11 +373,31 @@ def run_normalize(args: argparse.Namespace) -> int:
     (out_dir / REPORT_FILE).write_text(text, encoding="utf-8")
     print(text, end="")
 
+    if args.gold_draft_used:
+        print("--gold-draft is now --corrections (D-023)", file=sys.stderr)
+
     if args.confirm:
-        learned = confirm_loop(transcript, annotations, pack.learned)
+        learned, outcomes = confirm_loop(transcript, annotations, pack.learned)
         if not learned.is_empty():
-            # D-013 and D-015: the learned layer under runs/, never pack.yaml.
+            # D-013 and D-017: the learned layer under packs/, never pack.yaml.
             print(f"\nlearned layer written to {save_learned(learned, learned_at)}")
+        pending, count = write_pending(out_dir, transcript, annotations, outcomes)
+        if count:
+            print(f"{count} variant(s) still pending in {pending}")
+        else:
+            print("nothing left pending.")
+    return 0
+
+
+def run_list(args: argparse.Namespace) -> int:
+    """D-022: id, date and title of every run."""
+    runs = list_runs()
+    if not runs:
+        print(f"no runs under {runs_root()}")
+        return 0
+    width = max(len(r.id) for r in runs)
+    for r in runs:
+        print(f"{r.id:{width}s}  {r.date or '-':10s}  {r.title}")
     return 0
 
 
@@ -341,7 +413,7 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--out",
         type=Path,
         metavar="DIR",
-        help="write into DIR instead of runs/<input-stem>/",
+        help="write into DIR instead of runs/<id>/",
     )
     parser.add_argument(
         "--learned",
@@ -350,9 +422,14 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         help="learned layer file, instead of packs/<pack-name>.learned.yaml",
     )
     parser.add_argument(
-        "--gold-draft",
+        "--corrections",
         action="store_true",
-        help="also write gold-draft.csv, the applied annotations with status `draft`",
+        help="also write needs-review/corrections.csv, the applied annotations "
+        "as a gold draft with status `draft`",
+    )
+    # D-023: the old name, kept hidden for one release.
+    parser.add_argument(
+        "--gold-draft", dest="gold_draft_used", action="store_true", help=argparse.SUPPRESS
     )
     parser.add_argument(
         "--confirm",
@@ -386,6 +463,14 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_fetch.add_arguments(fetch)
     fetch.set_defaults(run=ingest_fetch.run)
 
+    listing = commands.add_parser(
+        "list",
+        help="print id, date and title for every run",
+        description="List every run under runs/: the video id, its publication "
+        "date and its title (D-022).",
+    )
+    listing.set_defaults(run=run_list)
+
     return parser
 
 
@@ -395,4 +480,6 @@ def main(argv: list[str] | None = None) -> int:
     if argv and argv[0] not in COMMANDS and not argv[0].startswith("-"):
         argv.insert(0, "normalize")
     args = build_parser().parse_args(argv)
+    if getattr(args, "gold_draft_used", False):
+        args.corrections = True
     return args.run(args)

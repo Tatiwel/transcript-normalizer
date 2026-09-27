@@ -17,12 +17,18 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ..catalog import write_meta
 from ..runs import runs_root
 from .header import Metadata, caption_header, speech_header
 from .subtitles import subtitle_to_lines
 
 CAPTION_FILE = "legenda.txt"
 SUBTITLE_STEM = "legenda"
+
+
+def save_meta(target: Path, meta: Metadata, url: str) -> Path:
+    """D-022: runs/<id>/meta.yaml, so `list` does not have to parse the header."""
+    return write_meta(target, meta.title, meta.channel, url, meta.published)
 
 #: What yt-dlp may leave behind, best first. WebVTT is what YouTube serves.
 SUBTITLE_SUFFIXES = (".vtt", ".srt")
@@ -277,6 +283,7 @@ def run(args: argparse.Namespace) -> int:
             encoding="utf-8",
         )
         print(f"text: {caption}")
+        print(f"meta: {save_meta(target, meta, args.url)}")
         print(
             "\nThe audio can be deleted once you have checked the text. "
             "It is not knowledge."
@@ -307,5 +314,6 @@ def run(args: argparse.Namespace) -> int:
     )
     print(f"\nsubtitle: {subtitle}")
     print(f"text:  {caption}")
+    print(f"meta:  {save_meta(target, meta, args.url)}")
     print(f"lines: {len(caption.read_text(encoding='utf-8').splitlines())}")
     return 0

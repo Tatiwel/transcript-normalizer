@@ -1,4 +1,4 @@
-"""`--gold-draft`: the applied annotations as the starting point for a new gold file."""
+"""`--corrections` (D-023): the applied annotations as a new gold file's starting point."""
 
 import csv
 import shutil
@@ -6,7 +6,7 @@ import shutil
 from transcript_normalizer import find_annotations, load_pack, read_caption, resolve_overlaps
 from transcript_normalizer.cli import DRAFT_STATUS, GOLD_COLUMNS, main
 from transcript_normalizer.core.standoff import applied
-from transcript_normalizer.runs import GOLD_DRAFT_FILE, review_dir
+from transcript_normalizer.runs import CORRECTIONS_FILE, needs_review_dir
 
 from .conftest import CAPTION, GOLD, PACK, output_dir
 
@@ -22,26 +22,26 @@ def run(tmp_path, monkeypatch, *extra):
     caption = tmp_path / "legenda.txt"
     shutil.copy(CAPTION, caption)
     assert main([str(caption), "--pack", str(PACK), *extra]) == 0
-    # D-016: the draft is a review file.
-    return caption, review_dir(output_dir(caption))
+    # D-023: the draft is a file that needs a person.
+    return caption, needs_review_dir(output_dir(caption))
 
 
 def test_draft_has_the_columns_and_status_of_a_gold_file(tmp_path, monkeypatch):
-    _, out = run(tmp_path, monkeypatch, "--gold-draft")
+    _, out = run(tmp_path, monkeypatch, "--corrections")
 
-    rows = read_rows(out / GOLD_DRAFT_FILE)
+    rows = read_rows(out / CORRECTIONS_FILE)
     assert list(rows[0].keys()) == list(GOLD_COLUMNS)
     assert list(rows[0].keys()) == list(read_rows(GOLD)[0].keys())
     assert {r["status"] for r in rows} == {DRAFT_STATUS}
 
 
 def test_draft_holds_exactly_the_applied_annotations(tmp_path, monkeypatch):
-    caption, out = run(tmp_path, monkeypatch, "--gold-draft")
+    caption, out = run(tmp_path, monkeypatch, "--corrections")
 
     transcript = read_caption(caption)
     pack = load_pack(PACK)
     expected = applied(resolve_overlaps(find_annotations(transcript, pack)))
-    rows = read_rows(out / GOLD_DRAFT_FILE)
+    rows = read_rows(out / CORRECTIONS_FILE)
     assert len(rows) == len(expected)
 
     klass = {t.term: (t.klass or "") for t in pack.terms}
@@ -54,9 +54,9 @@ def test_draft_holds_exactly_the_applied_annotations(tmp_path, monkeypatch):
 
 
 def test_draft_carries_the_cross_line_and_unit_rows(tmp_path, monkeypatch):
-    _, out = run(tmp_path, monkeypatch, "--gold-draft")
+    _, out = run(tmp_path, monkeypatch, "--corrections")
 
-    rows = read_rows(out / GOLD_DRAFT_FILE)
+    rows = read_rows(out / CORRECTIONS_FILE)
     # D-007's cross-line hit is credited to the line it starts on.
     assert {"timestamp": "24:48", "wrong": "ser MIG", "correct": "CEMIG",
             "term": "CEMIG", "class": "companhia", "status": "draft"} in rows
@@ -66,5 +66,21 @@ def test_draft_carries_the_cross_line_and_unit_rows(tmp_path, monkeypatch):
 
 def test_no_draft_is_written_without_the_flag(tmp_path, monkeypatch):
     _, out = run(tmp_path, monkeypatch)
-    assert not (out / GOLD_DRAFT_FILE).exists()
+    assert not (out / CORRECTIONS_FILE).exists()
     assert not list(tmp_path.rglob("*.csv"))
+
+
+def test_the_old_flag_still_works_for_one_release(tmp_path, monkeypatch, capsys):
+    _, out = run(tmp_path, monkeypatch, "--gold-draft")
+    assert (out / CORRECTIONS_FILE).exists()
+    assert "--gold-draft is now --corrections" in capsys.readouterr().err
+
+
+def test_the_old_flag_is_not_advertised(capsys):
+    import pytest
+
+    with pytest.raises(SystemExit):
+        main(["normalize", "--help"])
+    help_text = capsys.readouterr().out
+    assert "--corrections" in help_text
+    assert "--gold-draft" not in help_text

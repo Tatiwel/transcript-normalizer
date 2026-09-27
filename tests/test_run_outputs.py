@@ -5,12 +5,12 @@ import shutil
 from transcript_normalizer.cli import main
 from transcript_normalizer.runs import (
     ANNOTATIONS_FILE,
-    GOLD_DRAFT_FILE,
+    CORRECTIONS_FILE,
+    NEEDS_REVIEW_DIR,
     NORMALIZED_FILE,
+    PENDING_FILE,
     REPORT_FILE,
-    REVIEW_DIR,
-    TO_CONFIRM_FILE,
-    review_dir,
+    needs_review_dir,
 )
 
 from .conftest import CAPTION, FIXTURE_VIDEO_ID, PACK, output_dir
@@ -27,7 +27,7 @@ def test_outputs_go_to_runs_and_not_beside_the_input(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     caption = staged(tmp_path)
 
-    assert main([str(caption), "--pack", str(PACK), "--gold-draft"]) == 0
+    assert main([str(caption), "--pack", str(PACK), "--corrections"]) == 0
 
     out = output_dir(caption)
     # D-018: the id comes from the header url, not from the file name.
@@ -35,13 +35,13 @@ def test_outputs_go_to_runs_and_not_beside_the_input(tmp_path, monkeypatch):
     assert sorted(p.name for p in out.iterdir()) == [
         ANNOTATIONS_FILE,
         "legenda.txt",  # D-016: the original, kept beside what was rendered from it
+        NEEDS_REVIEW_DIR,
         NORMALIZED_FILE,
         REPORT_FILE,
-        REVIEW_DIR,
     ]
-    assert sorted(p.name for p in review_dir(out).iterdir()) == [
-        GOLD_DRAFT_FILE,
-        TO_CONFIRM_FILE,
+    assert sorted(p.name for p in needs_review_dir(out).iterdir()) == [
+        CORRECTIONS_FILE,
+        PENDING_FILE,
     ]
     # Nothing landed next to the caption.
     assert [p.name for p in caption.parent.iterdir()] == ["legenda.txt"]

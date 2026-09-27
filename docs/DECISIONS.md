@@ -138,6 +138,18 @@ Applied to `packs/financas-ptbr.yaml`, both fixture packs and `fixtures/R2Qgz8tF
 
 The eight `CPFE -> CPFL` rows of `fixtures/R2Qgz8tFWVI/gold.csv` are now status `alias` with `correct` equal to `wrong`, the same speaker habit as wxgFO_fyfXg. Measured: that fixture moves from 156 hits / 9 false positives to 148 / 17. The frozen pack still lists CPFE as a variant, so all eight are substituted, and each counts as a miss and as a false positive. New bounds: hits >= 148, false positives <= 17, in scope 168.
 
+## D-022 One run directory per video, described by meta.yaml
+
+Run directory is runs/<video-id>/ (unique, stable, filesystem-safe). fetch writes runs/<id>/meta.yaml with title, channel, url, published, fetched_at. `transcript-normalizer list` prints id, date, title for every run.
+
+The id is derived as D-018 says; for a caption with no recognizable url the fallback is still the file stem. `published` is stored as an ISO date (`2026-08-25`, not the platform's `20260825`) and `fetched_at` as a timestamp with its offset. The date `list` prints is the video's publication date, since that is what tells one episode of a channel from another. A run without meta.yaml, from before this decision or from normalizing a local file, is described from the provenance header of its caption; a directory holding neither is not a run and is not listed.
+
+## D-023 Files that need the user live in needs-review/
+
+Files that need the user live in runs/<id>/needs-review/: corrections.csv (was review/gold-draft.csv; same columns; status draft) and pending.txt (was to-confirm.txt), which lists each unanswered variant grouped by term, tagged [never asked] when the run had no --confirm and [skipped] when the user answered s.
+
+This supersedes the `review/` directory of D-016. `--gold-draft` is renamed `--corrections`; the old flag still works for one release, hidden from `--help`, and says so on stderr. corrections.csv keeps its alias rows, with `correct` equal to `wrong`, because a gold file needs them. pending.txt is written with every variant `[never asked]` when the report is produced, then rewritten after a `--confirm` loop from its answers: a variant that got `y`, `n` or `l` leaves it, one that got `s` (or that the input ran out before) stays as `[skipped]`, and the file is removed when nothing is left, so a stale list never outlives its answers.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
