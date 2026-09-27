@@ -26,9 +26,10 @@ from .standoff import (
 from .text import Transcript
 
 # D-011's two thresholds live here and nowhere else. Apply at or above 80 (which
-# is also D-005's fuzzy threshold); between 60 and 80, mark but do not apply.
+# is also D-005's fuzzy threshold); between 70 and 80, mark but do not apply.
+# D-029 raised the mark threshold from D-011's initial 60.
 APPLY_THRESHOLD = 80
-MARK_THRESHOLD = 60
+MARK_THRESHOLD = 70
 
 #: D-005: fuzzy similarity needs 6+ characters on both sides and similar lengths.
 MIN_FUZZY_LEN = 6
@@ -86,14 +87,26 @@ def band_for(rule: str, score: float) -> str:
     return BAND_MEDIUM if score >= APPLY_THRESHOLD else BAND_LOW
 
 
-def fuzzy_allowed(candidate: Candidate) -> bool:
+#: D-028: the class whose terms never enter fuzzy matching.
+UNIT_CLASS = "unidade"
+
+
+def fuzzy_allowed(candidate: Candidate, unit_terms: frozenset[str] = frozenset()) -> bool:
     """D-025: fuzzy runs against the canonical term and curated pack variants only.
 
     Aliases are legitimate spellings, not misrecognitions, and learned variants
     are unreviewed; both match by exact normalized equality. Otherwise the alias
     `bilhões` reaches `milhões`, and every confirmation widens fuzzy reach.
+
+    D-028: nothing of a `unidade` term is fuzzy, not even its canonical name.
+    `milhão` and `bilhão` are both real words one letter apart, and no threshold
+    separates them; units are matched by the rules of D-006 and exactly.
     """
-    return candidate.origin != "alias" and candidate.source != SOURCE_LEARNED
+    return (
+        candidate.origin != "alias"
+        and candidate.source != SOURCE_LEARNED
+        and candidate.term not in unit_terms
+    )
 
 
 def _score(span: str, candidate: str, fuzzy: bool = True) -> int:
@@ -160,7 +173,8 @@ def find_annotations(
         if not (c.origin == "variant" and (c.term, c.folded) in owned)
     ]
 
-    scored = [(c, fuzzy_allowed(c)) for c in candidates]
+    unit_terms = frozenset(t.term for t in pack.terms if t.klass == UNIT_CLASS)
+    scored = [(c, fuzzy_allowed(c, unit_terms)) for c in candidates]
 
     tokens = tokenize(text)
     for n in NGRAM_SIZES:

@@ -178,8 +178,19 @@ A rejected pair (text, term) suppresses any proposal for that term whose normali
 
 Whole words means `divide` rules out `divide a` and `ele divide a` but not `dividida` or `subdivide`, and a rejection for one term says nothing about another. Measured with the user's learned layer and pack 0.2.0 on wxgFO_fyfXg: the manter row goes clean, false positives go from 18 to 17, and no hit is lost. The regression bounds do not move, since the fixtures are scored with no learned layer. This closes the open question on rejection by exact text.
 
+## D-028 Unit terms never enter fuzzy matching
+
+Terms of class unidade never enter fuzzy matching. They are matched by the unit rules (D-006) and by exact normalized equality of the term, its aliases and its variants. Measured: with fuzzy on, the canonical `bilhão` matched `milhão` at 83 (applied, 3 rewrites of millions as billions on wxgFO_fyfXg) and the alias `bilhões` matched `milhões` at 85.7. One-letter differences between real words cannot be separated by a threshold.
+
+This supersedes D-021's "it does not affect matching" for one class: `unidade` is the only class the matcher reads. Measured after: wxgFO_fyfXg against pack 0.2.0 goes from 32 to 29 false positives with no hit lost, and `milhões` is not even marked; neither fixture moves against its frozen pack.
+
+## D-029 Low band lower threshold is 70
+
+Low band lower threshold is 70. Measured at 60: 499 and 579 passive marks per fixture; at 70: 113 and 91. Marks are never applied, so the threshold only governs noise in annotations.json.
+
+This supersedes the initial mark threshold of D-011 (60); the apply threshold stays 80. Counted after overlap resolution with the frozen packs, R2Qgz8tFWVI then wxgFO_fyfXg. No bound moves, since marks are never applied.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
-- Low band lower threshold, 60 vs 70. Marks after overlap resolution, frozen fixture packs: R2Qgz8tFWVI 500 at 60, 115 at 70; wxgFO_fyfXg 579 at 60, 91 at 70. `scripts/measure.py` prints them. (This replaces the earlier note of 528 at 60, measured before D-020 and D-024.)

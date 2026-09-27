@@ -5,6 +5,7 @@ import yaml
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption
 from transcript_normalizer.core.matcher import APPLY_THRESHOLD, MARK_THRESHOLD
+from transcript_normalizer.core.pack import Learned
 
 from .conftest import PACK
 
@@ -25,8 +26,8 @@ def annotate(pack, line):
     return find_annotations(parse_caption(f"0:01 {line}"), pack)
 
 
-def test_thresholds_are_the_two_numbers_of_d011():
-    assert (MARK_THRESHOLD, APPLY_THRESHOLD) == (60, 80)
+def test_thresholds_are_d011s_apply_and_d029s_mark():
+    assert (MARK_THRESHOLD, APPLY_THRESHOLD) == (70, 80)
 
 
 def test_listed_variant_is_high(pack_without_semiga):
@@ -53,21 +54,31 @@ def test_unlisted_near_miss_is_medium(pack_without_semiga):
     assert a.score >= APPLY_THRESHOLD
 
 
-def test_a_65_score_match_is_low_and_not_applied(tmp_path):
-    # Deliberately synthetic: two 20-character strings sharing a 13-character
-    # subsequence score 200 * 13 / 40 = 65 exactly, which is inside D-011's
-    # mark band. Nothing on the fixture lands on exactly 65.
+def synthetic(tmp_path, stem):
+    # Deliberately synthetic: two 20-character strings, `stem` plus five or
+    # seven letters the other one never uses, so the score is 200 * len(stem) / 40.
     pack_file = tmp_path / "pack.yaml"
+    pad = "k" * (20 - len(stem))
     pack_file.write_text(
-        "version: test\nterms:\n  - term: custo de capikkkkkkk\n    class: conceito\n", "utf-8"
+        f"version: test\nterms:\n  - term: {stem}{pad}\n    class: conceito\n", "utf-8"
     )
-    pack = load_pack(pack_file)
+    return load_pack(pack_file, learned=Learned()), stem + "b" * (20 - len(stem))
 
-    hits = annotate(pack, "o custo de capibbbbbbb subiu")
+
+def test_a_75_score_match_is_low_and_not_applied(tmp_path):
+    """15 shared characters of 20: 75, inside the mark band of D-029."""
+    pack, span = synthetic(tmp_path, "custo de capita")
+    hits = annotate(pack, f"o {span} subiu")
     assert len(hits) == 1
     a = hits[0]
-    assert a.original == "custo de capibbbbbbb"
-    assert a.score == 65
+    assert a.original == span
+    assert a.score == 75
     assert a.rule == "term:fuzzy"
     assert a.band == "low"
     assert a.applied is False
+
+
+def test_a_65_score_match_is_below_the_mark_and_not_annotated(tmp_path):
+    """13 shared characters of 20: 65, low band under D-011's 60, nothing under D-029."""
+    pack, span = synthetic(tmp_path, "custo de capi")
+    assert annotate(pack, f"o {span} subiu") == []

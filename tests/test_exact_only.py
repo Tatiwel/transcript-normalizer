@@ -33,22 +33,19 @@ def test_milhoes_is_never_applied_or_rendered_as_bilhao(v2):
     assert rendered["0:01"] == "o lucro foi de 300 milhões no trimestre"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="D-025 keeps fuzzy against the canonical term: `milhões` still scores "
-    "61.5 against `bilhão` and is marked in the low band (not applied)",
-)
 def test_milhoes_is_never_annotated_as_bilhao(v2):
+    """D-028: not even as a passive mark."""
     assert as_bilhao(v2, MILHOES) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="D-025 keeps fuzzy against the canonical term: `milhão` scores 83 "
-    "against `bilhão`, medium band, and is applied (3x on wxgFO_fyfXg)",
-)
-def test_milhao_is_never_rewritten_as_bilhao(v2):
-    assert not [a for a in as_bilhao(v2, "0:01 foi 1 milhão só") if a.applied]
+def test_milhao_is_never_annotated_as_bilhao(v2):
+    """D-028: the canonical `bilhão` matched `milhão` at 83, applied, 3x on wxgFO_fyfXg."""
+    assert as_bilhao(v2, "0:01 foi 1 milhão só") == []
+
+
+def test_units_are_still_found_exactly_and_by_their_rule(v2):
+    found = {(a.original, a.term) for a in as_bilhao(v2, "0:01 são 2 bilhões, ou 31 bit") if a.applied}
+    assert found == {("bilhões", "bilhão"), ("31 bit", "bilhão")}
 
 
 def test_an_alias_still_matches_exactly(v2):

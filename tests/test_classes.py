@@ -44,7 +44,8 @@ def test_an_unlisted_class_is_refused(tmp_path):
         load_pack(path, learned=Learned())
 
 
-def test_class_does_not_affect_matching(tmp_path):
+def test_class_does_not_affect_matching_except_for_units(tmp_path):
+    """D-021, with D-028's one exception: a `unidade` term is never fuzzy."""
     def run(klass):
         path = tmp_path / f"{klass}.yaml"
         path.write_text(
@@ -55,3 +56,12 @@ def test_class_does_not_affect_matching(tmp_path):
         return [(a.original, a.term, a.rule, a.band) for a in found]
 
     assert run("companhia") == run("sigla") != []
+
+    def fuzzy(klass):
+        path = tmp_path / f"f{klass}.yaml"
+        path.write_text(f"terms:\n  - term: bilhão\n    class: {klass}\n", encoding="utf-8")
+        found = find_annotations(parse_caption("0:01 foi 1 milhão só"), load_pack(path, learned=Learned()))
+        return [a.original for a in found]
+
+    assert "milhão" in fuzzy("conceito")  # any other class: a fuzzy near-miss
+    assert fuzzy("unidade") == []

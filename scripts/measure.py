@@ -52,7 +52,7 @@ def pack_effect() -> str:
     return table(rows)
 
 
-def low_band(found: list[Fixture], thresholds=(MARK_THRESHOLD, 70)) -> str:
+def low_band(found: list[Fixture], thresholds=(60, MARK_THRESHOLD)) -> str:
     """How many low-band marks each fixture gets at each lower threshold.
 
     Counted as the CLI reports them, after overlap resolution: the number a run
@@ -76,7 +76,7 @@ def main() -> None:
     print(table([(f.name, evaluate_fixture(f).counts()) for f in found]))
     print("\n\nNon-blocking: wxgFO_fyfXg against packs/financas-ptbr.yaml, no learned layer\n")
     print(pack_effect())
-    print("\n\nLow band, lower threshold 60 vs 70 (frozen fixture packs)\n")
+    print("\n\nLow band, lower threshold 60 vs 70 (D-029 chose 70; frozen fixture packs)\n")
     print(low_band(found))
 
 

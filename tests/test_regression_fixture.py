@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from transcript_normalizer.core.matcher import find_annotations
+from transcript_normalizer.core.matcher import APPLY_THRESHOLD, MARK_THRESHOLD, find_annotations
 from transcript_normalizer.core.standoff import BAND_LOW, in_band
 from transcript_normalizer.evaluate import evaluate, fixtures, render
 
@@ -87,4 +87,4 @@ def test_the_fixture_produces_low_band_marks(scored):
     low = in_band(annotations, BAND_LOW)
     assert low
     assert all(not a.applied for a in low)
-    assert all(a.rule == "term:fuzzy" and 60 <= a.score < 80 for a in low)
+    assert all(a.rule == "term:fuzzy" and MARK_THRESHOLD <= a.score < APPLY_THRESHOLD for a in low)
