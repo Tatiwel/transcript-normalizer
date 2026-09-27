@@ -73,7 +73,7 @@ def low_band(found: list[Fixture], thresholds=(MARK_THRESHOLD, 70)) -> str:
 def main() -> None:
     found = fixtures(ROOT / "fixtures")
     print("Per fixture, frozen fixture pack, no learned layer\n")
-    print(table([(f"{f.name} ({f.convention})", evaluate_fixture(f).counts()) for f in found]))
+    print(table([(f.name, evaluate_fixture(f).counts()) for f in found]))
     print("\n\nNon-blocking: wxgFO_fyfXg against packs/financas-ptbr.yaml, no learned layer\n")
     print(pack_effect())
     print("\n\nLow band, lower threshold 60 vs 70 (frozen fixture packs)\n")

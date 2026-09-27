@@ -1,26 +1,20 @@
-"""Scoring annotations against a hand-checked gold file.
+"""Scoring annotations against a hand-checked gold file (D-026).
 
 A fixture is a directory holding `legenda.txt`, `pack.yaml` and `gold.csv`. Each
-gold row names a stretch of a caption line (`wrong`), the term it belongs to,
-and a status that says what the tool was supposed to do with it:
+gold row names a stretch of a caption line (`wrong`), the text it should become
+(`correct`) and the term it belongs to. One rule scores every fixture:
 
-- `certo`: the tool proposed this correction and it was right. A hit when an
-  applied correction for this term covers this text on this line.
-- `alias`: the text is a legitimate other name of the term (ticker, plural,
-  spoken form). A hit when an alias annotation for this term covers it and no
-  correction substitutes it. A substitution here is a false positive.
-- `conferido`: the tool missed it and a person wrote the row. Always a miss:
-  it measures pack coverage. If the tool now finds it, that annotation is not a
-  false positive, and the row is reported as found.
-- `manter`: the tool must produce no applied annotation on this text.
-- `so_caixa`: ignored (D-008).
+- a row whose normalized `correct` differs from its `wrong` expects that
+  correction: a hit when an applied correction for this term covers this text
+  on this line, a miss otherwise;
+- an `alias` row expects an alias annotation for this term and no substitution
+  of its text; a substitution there, to any term, is a false positive;
+- a `manter` row expects no applied annotation on its text, whatever the term;
+- a row with an empty term is out of scope, and so is `so_caixa` or any other
+  row whose `correct` differs from `wrong` only by case or accent (D-008).
 
-Rows with an empty term are out of scope, except `manter`, which guards its text
-whatever the term.
-
-That is gold convention `v2`. `R2Qgz8tFWVI` was written before these meanings
-existed and uses `v1`, where `conferido` only meant "checked by hand" and is
-scored exactly like `certo`; 11 of its 156 hits are such rows.
+`certo` and `conferido` record who wrote the row: the tool proposed it and a
+person checked it, or a person added it. Scoring does not tell them apart.
 """
 
 from __future__ import annotations
@@ -40,12 +34,6 @@ CONFERIDO = "conferido"
 MANTER = "manter"
 SO_CAIXA = "so_caixa"
 STATUSES = (CERTO, ALIAS, CONFERIDO, MANTER, SO_CAIXA)
-
-V1 = "v1"
-V2 = "v2"
-
-#: Fixtures whose gold predates the v2 meanings. Every other fixture is v2.
-GOLD_CONVENTION = {"R2Qgz8tFWVI": V1}
 
 
 def key(text: str) -> str:
@@ -88,10 +76,6 @@ class Fixture:
     def gold(self) -> Path:
         return self.directory / "gold.csv"
 
-    @property
-    def convention(self) -> str:
-        return GOLD_CONVENTION.get(self.name, V2)
-
     def load_pack(self) -> Pack:
         """The frozen fixture pack, with no learned layer: the numbers must not
         depend on anyone's personal confirmations (D-013, D-017)."""
@@ -130,7 +114,6 @@ class Result:
     false_positives: list[tuple[str, Annotation]] = field(default_factory=list)
     aliases_recognized: list[tuple[dict, Annotation]] = field(default_factory=list)
     aliases_substituted: list[tuple[dict, Annotation]] = field(default_factory=list)
-    conferido_found: list[tuple[dict, Annotation]] = field(default_factory=list)
     unlisted_aliases: list[Annotation] = field(default_factory=list)
     per_term: dict[str, list[int]] = field(default_factory=lambda: defaultdict(lambda: [0, 0]))
     touched_keep: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
@@ -146,13 +129,17 @@ class Result:
         }
 
 
+def expects_correction(row: dict) -> bool:
+    """D-026, with D-008: `correct` differs from `wrong` by more than case or accent."""
+    return key(row["correct"]) != key(row["wrong"])
+
+
 def evaluate(
     transcript: Transcript,
     annotations: list[Annotation],
     gold: list[dict],
-    convention: str = V2,
 ) -> Result:
-    """Score the applied annotations against the gold rows."""
+    """Score the applied annotations against the gold rows, by D-026's one rule."""
     applied = [a for a in annotations if a.applied]
     corrections = [a for a in applied if is_correction(a)]
     aliases = [a for a in applied if is_alias(a)]
@@ -197,6 +184,8 @@ def evaluate(
             continue
         if not row["term"]:
             continue
+        if status != ALIAS and not expects_correction(row):
+            continue  # D-008: a case- or accent-only difference is not a correction
 
         result.in_scope.append(row)
         result.per_term[row["term"]][1] += 1
@@ -221,13 +210,9 @@ def evaluate(
                 result.misses.append(row)
             continue
 
+        # certo or conferido: who wrote the row, not how it is scored.
         found = find(row, corrections)
-        if status == CONFERIDO and convention == V2:
-            if found is not None:
-                result.conferido_found.append((row, found))
-                used.append(found)
-            result.misses.append(row)
-        elif found is not None:
+        if found is not None:
             result.hits.append((row, found))
             result.per_term[row["term"]][0] += 1
             used.append(found)
@@ -277,7 +262,7 @@ def evaluate_fixture(fixture: Fixture, pack: Pack | None = None) -> Result:
     transcript = fixture.load_transcript()
     pack = pack if pack is not None else fixture.load_pack()
     annotations = find_annotations(transcript, pack)
-    return evaluate(transcript, annotations, fixture.load_gold(), fixture.convention)
+    return evaluate(transcript, annotations, fixture.load_gold())
 
 
 def render(result: Result) -> str:
@@ -293,8 +278,6 @@ def render(result: Result) -> str:
     out += [f"  {n:3d}x {original!r} -> {term}" for (original, term), n in counted.most_common()]
     out += ["", "aliases wrongly substituted:"]
     out += [f"  {g['timestamp']:6s} {g['wrong']!r} -> {a.replacement}" for g, a in result.aliases_substituted]
-    out += ["", "conferido rows the tool now finds:"]
-    out += [f"  {g['timestamp']:6s} {g['wrong']!r} -> {g['term']}" for g, _ in result.conferido_found]
     out += ["", "text that must stay untouched (applied annotations only):"]
     out += [f"  {where} {touched}" for where, touched in result.touched_keep.items()]
     return "\n".join(out)

@@ -164,6 +164,14 @@ Fuzzy matching runs only against the canonical term and the curated pack variant
 
 Measured after: wxgFO_fyfXg against pack 0.2.0 drops from 53 to 32 false positives with no hit lost; neither fixture moves against its frozen pack. The hazard is not fully closed, because the canonical term is still fuzzy. `milhões` scores 61.5 against `bilhão` and is only a low-band mark now (neither applied nor rendered), but `milhão` scores 83 against it, medium band, and is still applied: three times on wxgFO_fyfXg. Both are held as strict expected failures in `tests/test_exact_only.py`, so the suite goes red if either is fixed without being promoted to a real test.
 
+## D-026 Gold status is provenance; scoring is one rule
+
+In gold.csv, certo and conferido record who wrote the row (tool-proposed and human-checked vs human-added). Scoring does not distinguish them: every row with correct != wrong expects that correction; hit if an applied correction produces it on that line, miss otherwise. alias expects an alias annotation and no substitution; manter expects no applied annotation; rows with empty term are out of scope. Both fixtures use this one rule.
+
+This replaces the two gold conventions of the first version of the evaluator, under which `conferido` was always a miss in wxgFO_fyfXg and scored like `certo` in R2Qgz8tFWVI. "Produces it" means an applied correction for the row's term that covers the row's text on that line; the rendered text is not compared with `correct`, which people write with more context than the span (`Tanto as emissões`) and with their own decimal separator (`4,6 bi`). `correct != wrong` is compared on normalized text, so D-008 still holds: the three `CPFe -> CPFE` alias rows stay aliases, and 15:57 `Etaú -> ETAU`, a `conferido` row differing only by case and accent, is out of scope.
+
+Measured: R2Qgz8tFWVI does not move (167 in scope, 147 hits, 16 false positives), since it already scored the two alike. wxgFO_fyfXg goes to 225 in scope with 107 hits and 57 false positives: the frozen pack finds none of its conferido rows. Against pack 0.2.0 the same fixture goes from 149 to 188 hits, the 39 conferido rows that pack now finds.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

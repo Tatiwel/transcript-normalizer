@@ -3,7 +3,7 @@
 `experiments/exp2_units_and_threshold.py` is the reference behaviour. The only
 deliberate difference is D-007: matching runs over the joined text, so an
 annotation can straddle a caption break and is credited to every line it touches.
-How a gold row is scored depends on its status; see `transcript_normalizer.evaluate`.
+Every fixture is scored by D-026's one rule; see `transcript_normalizer.evaluate`.
 
 Any change in the numbers asserted here must be a conscious commit that also
 updates this table and `docs/DECISIONS.md`.
@@ -37,10 +37,12 @@ BOUNDS = {
     # measured 16 false positives.)
     "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=147, max_false_positives=16),
     # Commit 7: the five `SEMIG 4` / `CMIG 3` rows record the caption's text and
-    # are SEMIG -> CEMIG corrections now (was 102 hits after D-024). The touched
-    # `manter` row is 15:54 `divide a` -> dividendo.
+    # are SEMIG -> CEMIG corrections now (was 102 hits after D-024). D-026 takes
+    # 15:57 `Etaú -> ETAU` out of scope, a case- and accent-only difference
+    # (was 226); the frozen pack finds none of the conferido rows, so hits stay.
+    # The touched `manter` row is 15:54 `divide a` -> dividendo.
     "wxgFO_fyfXg": Bounds(
-        in_scope=226, min_hits=107, max_false_positives=57, max_manter_touched=1
+        in_scope=225, min_hits=107, max_false_positives=57, max_manter_touched=1
     ),
 }
 
@@ -52,7 +54,7 @@ def scored(request):
     fixture = request.param
     transcript = fixture.load_transcript()
     annotations = find_annotations(transcript, fixture.load_pack())
-    result = evaluate(transcript, annotations, fixture.load_gold(), fixture.convention)
+    result = evaluate(transcript, annotations, fixture.load_gold())
     return fixture, annotations, result
 
 
@@ -65,7 +67,7 @@ def test_every_fixture_has_bounds():
 def test_regression_against_gold(scored):
     fixture, _, result = scored
     bounds = BOUNDS[fixture.name]
-    print(f"{fixture.name} (gold {fixture.convention})\n{render(result)}")
+    print(f"{fixture.name}\n{render(result)}")
 
     assert len(result.in_scope) == bounds.in_scope
     assert len(result.hits) >= bounds.min_hits
