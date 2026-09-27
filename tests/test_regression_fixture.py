@@ -32,15 +32,15 @@ class Bounds:
 
 
 BOUNDS = {
-    # D-021: its 8 `CPFE -> CPFL` rows are aliases now, and the frozen pack
-    # still lists CPFE as a variant, so all 8 are substituted (was 156 / 9, D-014).
-    "R2Qgz8tFWVI": Bounds(in_scope=168, min_hits=148, max_false_positives=17),
-    # Measured when the fixture was added, with the frozen 0.1.0 pack and no
-    # learned layer. The touched `manter` row is 15:54 `divide a` -> dividendo.
-    # D-024 costs one hit, 36:41 `Warn Buffet`, which only the span
-    # `Warn Buffet. Tem` across the full stop had ever reached (was 103).
+    # Commit 7: the duplicated `10:59 Ox` gold row is gone, and with it the one
+    # hit that row inflated. (D-021 was 168 in scope, 148 / 17; D-024 then
+    # measured 16 false positives.)
+    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=147, max_false_positives=16),
+    # Commit 7: the five `SEMIG 4` / `CMIG 3` rows record the caption's text and
+    # are SEMIG -> CEMIG corrections now (was 102 hits after D-024). The touched
+    # `manter` row is 15:54 `divide a` -> dividendo.
     "wxgFO_fyfXg": Bounds(
-        in_scope=226, min_hits=102, max_false_positives=57, max_manter_touched=1
+        in_scope=226, min_hits=107, max_false_positives=57, max_manter_touched=1
     ),
 }
 

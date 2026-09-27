@@ -124,7 +124,6 @@ terms:
   - term: RI
     class: sigla
     aliases: [relação com investidores, relações com investidores]
-    variants: [R]
   - term: TESB
     class: companhia
     variants: [TESM]
@@ -136,7 +135,7 @@ terms:
     variants: [ESA]
   - term: ROI
     class: indicador
-    variants: [ROY, Rid]
+    variants: [Rid]
   - term: Enterprise Value
     class: indicador
     variants: [Enterprise Velho, Enterprise Valuey]
@@ -160,7 +159,7 @@ terms:
     variants: [CELIC]
   - term: dividend yield
     class: indicador
-    variants: [dividendo y, dividendo y build]
+    variants: [dividend y, dividendo y build]
   - term: Charlie Munger
     class: pessoa
     variants: [Charlie Mander]
