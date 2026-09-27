@@ -1,7 +1,9 @@
 # Termos de financas, pt-BR.
 # 0.1.0 veio do gabarito de R2Qgz8tFWVI. Termo com "?" no gabarito nao entrou.
 # 0.2.0 acrescenta os termos de wxgFO_fyfXg (linhas conferido e alias do gold).
-version: 0.2.0
+# 0.2.1 acrescenta variantes de wxgFO_fyfXg a termos que ja existiam, e os plurais
+# de preço teto como aliases.
+version: 0.2.1
 
 terms:
   - term: CEMIG
@@ -14,6 +16,7 @@ terms:
   - term: CPFL
     class: companhia
     aliases: [CPFL Energia, CPFE3, CPFE]
+    variants: [CPFS, CPF]
   - term: Taesa
     class: companhia
     aliases: [TAESA, TAEE11]
@@ -42,7 +45,7 @@ terms:
     variants: [Geração de Dentes]
   - term: EBITDA
     class: indicador
-    variants: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bicho, bitera]
+    variants: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bicho, bitera, beita, beit]
     collocations: [dívida líquida sobre EBITDA, margem EBITDA]
   - term: OPEX
     class: indicador
@@ -59,7 +62,7 @@ terms:
   - term: RAP
     class: sigla
     aliases: [receita anual permitida]
-    variants: [rap]
+    variants: [rap, rápid, rápido]
   - term: debêntures
     class: conceito
     variants: [debentories, debentor, deementories]
@@ -68,16 +71,17 @@ terms:
     variants: [dividend, dividenda]
   - term: preço teto
     class: indicador
+    aliases: [preços teto, preços tetos]
     variants: [preço delet]
   - term: valuation
     class: conceito
-    variants: [valation]
+    variants: [valation, valoristo, valueixationo, valueixo, valche, valo, valorist]
   - term: buy and hold
     class: conceito
     variants: [BU hold]
   - term: Warren Buffett
     class: pessoa
-    variants: [Warnbuff]
+    variants: [Warnbuff, Warn Buffet]
   - term: Markowitz
     class: pessoa
     variants: [Markovitz, Marcovit, Markovit]
@@ -93,7 +97,7 @@ terms:
     variants: [Word]
   - term: Adeus INSS
     class: organizacao
-    variants: [ADUS NSS, Deus NSS]
+    variants: [ADUS NSS, Deus NSS, NSS]
   - term: Leo
     class: pessoa
     variants: [Lu, Léo]

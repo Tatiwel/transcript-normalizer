@@ -1,4 +1,4 @@
-"""Pack 0.2.0: what the second fixture taught packs/financas-ptbr.yaml."""
+"""Pack 0.2.x: what the second fixture taught packs/financas-ptbr.yaml."""
 
 import csv
 from pathlib import Path
@@ -31,7 +31,7 @@ def applied(pack, line):
 
 
 def test_versions(v2):
-    assert v2.version == "0.2.0"
+    assert v2.version == "0.2.1"
     for path in FROZEN:
         assert load_pack(path, learned=Learned()).version == "0.1.0", path
 
@@ -79,3 +79,15 @@ def test_a_frozen_pack_without_bilhao_keeps_the_rules_own_bi(path):
     assert pack.term_named("bi") is None
     found = applied(pack, "lucro de 31 bit no ano")
     assert ("31 bit", "bi", RULE_UNIT, "correction") in found
+
+
+def test_the_plurals_of_preco_teto_are_curated_aliases_now(v2):
+    """0.2.1: moved from the user's learned layer into the pack."""
+    assert applied(v2, "os preços tetos subiram") == [("preços tetos", "preço teto", "term:alias", KIND_ALIAS)]
+    assert applied(v2, "dois preços teto") == [("preços teto", "preço teto", "term:alias", KIND_ALIAS)]
+
+
+def test_one_and_two_letter_misses_stayed_out(v2):
+    """0.2.1: D-005 keeps R, TI, Ta, EB, rá and sem out of the variants."""
+    variants = {v for t in v2.terms for v in t.variants}
+    assert not {"R", "TI", "Ta", "EB", "rá", "sem"} & variants
