@@ -204,7 +204,14 @@ The plurals are generated for single-word terms and aliases, on folded text, and
 
 Measured: R2Qgz8tFWVI goes from 150 / 26 to 150 / 18, wxgFO_fyfXg from 107 / 70 to 107 / 58, and wxgFO_fyfXg against pack 0.2.1 from 42 to 25 false positives with no hit lost. All three D-030 hits are kept. Neither fixture gets back to its pre-D-030 false positives (16 and 57): the difference is exactly the variant `tira -> TIR` (twice and once), which is not an inflection. The frozen fixture packs keep it, so D-032's removal of it from packs/ does not reach those numbers. The inflection open question is closed.
 
+## D-032 An ordinary word is not a variant
+
+Curation rule: a variant that is an ordinary Portuguese word does not enter the pack, even if the caption used it for the term. Exact matching on ordinary words is wrong more often than right (`tira → TIR`, `rápido → RAP`, `divide → dividendo`). Such cases wait for a collocation layer (open).
+
+Pack 0.2.2 removes `tira` from TIR, `rápido` from RAP and `valorist` from valuation, and adds the term `market cap` (indicador; aliases `marketcap`, `valor de mercado`). Measured, wxgFO_fyfXg against 0.2.2: false positives go from 25 to 20 and one hit is lost, 15:54 `rápido -> RAP`, the one row the removed variant existed for; `valorist` is still reached fuzzily through `valoristo`. `market -> market share` (three times, in `market cap`) remains: the exact form is the two-word term, which D-031 (b) does not see from inside the one-word span. The frozen fixture packs keep `tira`.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
+- A collocation layer (D-032): matching a term by the words around it, for misrecognitions that are ordinary words (`tira`, `rápido`, `divide`) and cannot be exact variants.

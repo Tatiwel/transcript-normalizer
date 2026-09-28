@@ -3,7 +3,8 @@
 # 0.2.0 acrescenta os termos de wxgFO_fyfXg (linhas conferido e alias do gold).
 # 0.2.1 acrescenta variantes de wxgFO_fyfXg a termos que ja existiam, e os plurais
 # de preço teto como aliases.
-version: 0.2.1
+# 0.2.2 tira variantes que sao palavras comuns (D-032) e acrescenta market cap.
+version: 0.2.2
 
 terms:
   - term: CEMIG
@@ -58,11 +59,11 @@ terms:
     variants: [PCA]
   - term: TIR
     class: indicador
-    variants: [tir, tira]
+    variants: [tir]
   - term: RAP
     class: sigla
     aliases: [receita anual permitida]
-    variants: [rap, rápid, rápido]
+    variants: [rap, rápid]
   - term: debêntures
     class: conceito
     variants: [debentories, debentor, deementories]
@@ -75,7 +76,7 @@ terms:
     variants: [preço delet]
   - term: valuation
     class: conceito
-    variants: [valation, valoristo, valueixationo, valueixo, valche, valo, valorist]
+    variants: [valation, valoristo, valueixationo, valueixo, valche, valo]
   - term: buy and hold
     class: conceito
     variants: [BU hold]
@@ -115,6 +116,9 @@ terms:
   - term: market share
     class: conceito
     variants: [marketha]
+  - term: market cap
+    class: indicador
+    aliases: [marketcap, valor de mercado]
   - term: ANEEL
     class: organizacao
     aliases: [Aneel, agência nacional de energia elétrica]

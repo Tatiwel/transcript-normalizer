@@ -31,7 +31,7 @@ def applied(pack, line):
 
 
 def test_versions(v2):
-    assert v2.version == "0.2.1"
+    assert v2.version == "0.2.2"
     for path in FROZEN:
         assert load_pack(path, learned=Learned()).version == "0.1.0", path
 
@@ -91,3 +91,19 @@ def test_one_and_two_letter_misses_stayed_out(v2):
     """0.2.1: D-005 keeps R, TI, Ta, EB, rá and sem out of the variants."""
     variants = {v for t in v2.terms for v in t.variants}
     assert not {"R", "TI", "Ta", "EB", "rá", "sem"} & variants
+
+
+def test_ordinary_words_are_not_variants(v2):
+    """D-032: `tira`, `rápido` and `valorist` left the pack in 0.2.2."""
+    variants = {t.term: set(t.variants) for t in v2.terms}
+    assert "tira" not in variants["TIR"]
+    assert "rápido" not in variants["RAP"]
+    assert "valorist" not in variants["valuation"]
+    assert applied(v2, "você tira esse custo, mais rápido") == []
+
+
+def test_market_cap_is_a_term_with_its_other_names(v2):
+    assert applied(v2, "o marketcap dela") == [("marketcap", "market cap", "term:alias", KIND_ALIAS)]
+    assert applied(v2, "o valor de mercado dela") == [
+        ("valor de mercado", "market cap", "term:alias", KIND_ALIAS)
+    ]
