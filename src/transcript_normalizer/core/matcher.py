@@ -91,6 +91,16 @@ def band_for(rule: str, score: float) -> str:
 UNIT_CLASS = "unidade"
 
 
+def exact_elsewhere(folded_span: str, term: str, exact_forms: dict[str, set[str]]) -> bool:
+    """Whether some run of the span's words is exactly a form of a term other than `term`."""
+    words = folded_span.split()
+    for size in range(1, len(words) + 1):
+        for start in range(len(words) - size + 1):
+            if exact_forms.get(" ".join(words[start : start + size]), {term}) - {term}:
+                return True
+    return False
+
+
 def contains_words(span: str, part: str) -> bool:
     """Whether folded `part` occurs in folded `span` as whole words (D-027, D-030)."""
     return f" {' '.join(part.split())} " in f" {' '.join(span.split())} "
@@ -170,7 +180,12 @@ def find_annotations(
     for c in pack.candidates:
         origins.setdefault((c.term, c.folded), c.origin)
     folded_term = {t.term: fold(t.term) for t in pack.terms}
-    folded_aliases = {t.term: tuple(fold(a) for a in t.aliases) for t in pack.terms}
+    # Every other name the term is spelled out by: curated and learned aliases,
+    # and (D-031) the plurals of the term and of those aliases.
+    folded_aliases: dict[str, list[str]] = {t.term: [] for t in pack.terms}
+    for c in pack.candidates:
+        if c.origin == "alias":
+            folded_aliases[c.term].append(c.folded)
 
     candidates = [
         c
@@ -180,6 +195,11 @@ def find_annotations(
 
     unit_terms = frozenset(t.term for t in pack.terms if t.klass == UNIT_CLASS)
     scored = [(c, fuzzy_allowed(c, unit_terms)) for c in candidates]
+
+    # D-031 (b): folded text -> the terms it is an exact form of.
+    exact_forms: dict[str, set[str]] = {}
+    for c in candidates:
+        exact_forms.setdefault(" ".join(c.folded.split()), set()).add(c.term)
 
     tokens = tokenize(text)
     for n in NGRAM_SIZES:
@@ -231,6 +251,10 @@ def find_annotations(
             if any(contains_words(folded_span, a) for a in folded_aliases[term]):
                 continue
             rule = term_rule(origin if folded_span == candidate else "fuzzy")
+            # D-031 (b): a span holding an exact form of another term is not a
+            # fuzzy guess at this one (`dividendos e` is not dividend yield).
+            if rule == term_rule("fuzzy") and exact_elsewhere(folded_span, term, exact_forms):
+                continue
             annotations.append(
                 Annotation(
                     start=window[0].start,

@@ -50,10 +50,7 @@ def test_containment_is_by_whole_words(span, part, expected):
     assert contains_words(span, part) is expected
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="D-030 regression: the substring guard used to block a term's own plural; "
-    "`dividendos` now fuzzily becomes dividendo at 94 (8x R2Qgz8tFWVI, 9x wxgFO_fyfXg)",
-)
 def test_a_plural_of_the_term_is_not_corrected_to_it(v2):
-    assert [a for a in applied(v2, "pagou dividendos") if a[1] == "dividendo"] == []
+    """D-031 closes D-030's regression: the plural is the term spelled out."""
+    found = [a for a in applied(v2, "pagou dividendos") if a[1] == "dividendo"]
+    assert found == [("dividendos", "dividendo", "term:alias")]

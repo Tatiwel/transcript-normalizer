@@ -20,6 +20,7 @@ LEARNED_VERSION = 1
 
 SOURCE_PACK = "pack"
 SOURCE_LEARNED = "learned"
+SOURCE_INFLECTION = "inflection"  # D-031: a plural generated from a term or alias
 
 #: D-021: the closed list of term classes. A label for consumers; matching
 #: never reads it.
@@ -254,6 +255,21 @@ class Pack:
         return any(t == term and f" {text} " in span for text, t in self.rejected)
 
 
+def plural_forms(folded: str) -> tuple[str, ...]:
+    """D-031: the Portuguese plurals of a folded single word, accents already gone.
+
+    -s, -es, -ão -> -ões, -al -> -ais, -el -> -eis. A multi-word string has no
+    plural here: D-031 speaks of a word.
+    """
+    if not folded or " " in folded:
+        return ()
+    forms = [folded + "s", folded + "es"]
+    for ending, plural in (("ao", "oes"), ("al", "ais"), ("el", "eis")):
+        if folded.endswith(ending):
+            forms.append(folded[: -len(ending)] + plural)
+    return tuple(dict.fromkeys(f for f in forms if f != folded))
+
+
 def _words(folded: str) -> str:
     """Folded text with its words separated by exactly one space."""
     return " ".join(folded.split())
@@ -322,6 +338,18 @@ def load_pack(
             + [(a, "alias", SOURCE_LEARNED) for a in learned_aliases]
         ):
             candidates.append(Candidate(display, fold(display), term.term, origin, source))
+
+    # D-031: the plural of a term or alias is that term spelled out. It becomes
+    # an alias candidate, so it is exact-only (D-025) and never a correction.
+    # Explicit entries win: a plural that some term already lists is skipped.
+    taken = {c.folded for c in candidates}
+    for c in list(candidates):
+        if c.origin not in ("term", "alias") or c.source == SOURCE_INFLECTION:
+            continue
+        for plural in plural_forms(c.folded):
+            if plural not in taken:
+                taken.add(plural)
+                candidates.append(Candidate(plural, plural, c.term, "alias", SOURCE_INFLECTION))
 
     unit_rules = tuple(
         UnitRule(pattern=str(r.get("pattern", "")), correction=str(r.get("replacement", "")))

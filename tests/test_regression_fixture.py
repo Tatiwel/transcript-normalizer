@@ -32,15 +32,14 @@ class Bounds:
 
 
 BOUNDS = {
-    # D-030 (whole-word guard): +3 hits (`autocapex`, `Sabespe`, `segundo
-    # trio`) and +10 false positives: the plural `dividendos` fuzzily corrected
-    # to dividendo (8x) and the variant `tira` -> TIR (2x), both of which the
-    # old substring guard happened to block. Was 147 / 16 after commit 7.
-    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=26),
-    # D-030: no hit, +13 false positives (`dividendos` 9x, `valuations` 3x,
-    # `tira` 1x). Was 107 / 57. The touched `manter` row is 15:54 `divide a`.
+    # D-031 undoes D-030's plural false positives and keeps its three hits
+    # (`autocapex`, `Sabespe`, `segundo trio`). Two above the pre-D-030 16: the
+    # variant `tira` -> TIR, which the frozen pack keeps (D-032 is packs/ only).
+    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=18),
+    # D-031: one above the pre-D-030 57, again `tira` -> TIR. The touched
+    # `manter` row is 15:54 `divide a`.
     "wxgFO_fyfXg": Bounds(
-        in_scope=225, min_hits=107, max_false_positives=70, max_manter_touched=1
+        in_scope=225, min_hits=107, max_false_positives=58, max_manter_touched=1
     ),
 }
 

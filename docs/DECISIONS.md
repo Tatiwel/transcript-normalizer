@@ -196,8 +196,15 @@ The guard that skips a span because the term (or one of its aliases) is already 
 
 Measured: R2Qgz8tFWVI gains three hits (`autocapex`, `Sabespe`, `segundo trio`) and wxgFO_fyfXg against pack 0.2.0 gains four (`deck` three times, `Enterprise Valuey`). The cost: the substring guard had also been blocking real words that contain the term, and they now come through. The term's own plural is fuzzily corrected to the singular (`dividendos` -> dividendo at 94, eight times on R2Qgz8tFWVI and nine on wxgFO_fyfXg; `valuations` -> valuation three times), which D-020 says is an alias, never a correction; and the TIR variant `tira`, also an everyday word, applies (three times). R2Qgz8tFWVI goes from 147 / 16 to 150 / 26; wxgFO_fyfXg from 107 / 57 to 107 / 70. The plural case is held as a strict expected failure in `tests/test_whole_word_guard.py`.
 
+## D-031 Inflection is the term spelled out; exact beats fuzzy
+
+(a) A word that equals a term or alias plus a Portuguese plural inflection (-s, -es, -ão→-ões, -al→-ais, -el→-eis) is that term already spelled out: it produces an alias annotation and is never a correction. Measured after D-030: `dividendos → dividendo` ×8 and `valuations → valuation` were applied as corrections, violating D-020. (b) A span that contains an exact match (term, alias, variant, or inflected form) of any term cannot be a fuzzy proposal for another term. Measured: `dividendos e → dividend yield` ×5 over the exact word `dividendos`.
+
+The plurals are generated for single-word terms and aliases, on folded text, and join the candidates as aliases: exact-only by D-025, and part of D-030's "already spelled out" guard. A plural that some term already lists explicitly belongs to that term. (b) applies to fuzzy proposals only and to other terms only, as worded.
+
+Measured: R2Qgz8tFWVI goes from 150 / 26 to 150 / 18, wxgFO_fyfXg from 107 / 70 to 107 / 58, and wxgFO_fyfXg against pack 0.2.1 from 42 to 25 false positives with no hit lost. All three D-030 hits are kept. Neither fixture gets back to its pre-D-030 false positives (16 and 57): the difference is exactly the variant `tira -> TIR` (twice and once), which is not an inflection. The frozen fixture packs keep it, so D-032's removal of it from packs/ does not reach those numbers. The inflection open question is closed.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
 - Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
-- Inflection of the term itself (D-030): whether a span that is the term plus a plural ending (`dividendos`, `valuations`) counts as the term spelled out, which would block all of D-030's new false positives from plurals and keep all its gains.

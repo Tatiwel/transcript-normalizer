@@ -11,7 +11,7 @@ from transcript_normalizer.cli import main
 from transcript_normalizer.core.pack import load_learned
 from transcript_normalizer.runs import learned_file
 
-from .conftest import CAPTION, PACK
+from .conftest import CAPTION, PACK, answers_for, medium_order
 
 CONFIRMED_SEMIGA = (
     "version: 1\n"
@@ -109,16 +109,18 @@ def rejected_pairs(learned):
     return sorted((r.term, r.text) for r in learned.rejected)
 
 
-# A mixed medium-band group on the fixture, in the order the loop asks it:
-# the whole point of D-019. Since D-030 it is the second group; the first is
-# dividendo's two variants, which these tests skip past.
+# The fixture's mixed medium-band group, in the order the loop asks it: the
+# whole point of D-019. Where it falls among the groups is derived, not assumed.
 CEMIG_VARIANTS = ["dos 10", "e caiu", "mês caiu", "nesse ramo"]
-SKIP_DIVIDENDO = ["s", "s"]
+
+
+def test_the_mixed_group_is_the_one_these_tests_expect():
+    assert [v for t, v in medium_order() if t == "CEMIG"] == CEMIG_VARIANTS
 
 
 def test_a_mixed_group_is_answered_one_variant_at_a_time(tmp_path, monkeypatch):
     # yes, no, yes, skip -- then end of input, so no later term is touched.
-    learned = confirm_run(tmp_path, monkeypatch, [*SKIP_DIVIDENDO, "y", "n", "y", "s"])
+    learned = confirm_run(tmp_path, monkeypatch, answers_for("CEMIG", ["y", "n", "y", "s"]))
 
     assert confirmed_pairs(learned) == [("CEMIG", "dos 10"), ("CEMIG", "mês caiu")]
     assert rejected_pairs(learned) == [("CEMIG", "e caiu")]
@@ -126,16 +128,17 @@ def test_a_mixed_group_is_answered_one_variant_at_a_time(tmp_path, monkeypatch):
 
 def test_all_yes_stops_at_the_end_of_its_term(tmp_path, monkeypatch):
     # `a` on CEMIG's first variant takes all four; the next term asks again.
-    learned = confirm_run(tmp_path, monkeypatch, [*SKIP_DIVIDENDO, "a", "n"])
+    learned = confirm_run(tmp_path, monkeypatch, answers_for("CEMIG", ["a", "n"]))
 
     assert confirmed_pairs(learned) == [("CEMIG", v) for v in CEMIG_VARIANTS]
-    # Only the one variant the `n` answered: the next term's, not CEMIG's.
-    # (Since D-024 that term is EBITDA; preço teto dropped to one occurrence.)
-    assert rejected_pairs(learned) == [("EBITDA", "de eBit")]
+    # Only the one variant the `n` answered: the first of the next term's.
+    order = medium_order()
+    after = next(pair for pair in order[order.index(("CEMIG", CEMIG_VARIANTS[-1])) + 1 :])
+    assert rejected_pairs(learned) == [after]
 
 
 def test_rest_no_takes_the_current_variant_and_the_ones_after_it(tmp_path, monkeypatch):
-    learned = confirm_run(tmp_path, monkeypatch, [*SKIP_DIVIDENDO, "y", "r"])
+    learned = confirm_run(tmp_path, monkeypatch, answers_for("CEMIG", ["y", "r"]))
 
     assert confirmed_pairs(learned) == [("CEMIG", "dos 10")]
     assert rejected_pairs(learned) == [
