@@ -31,7 +31,7 @@ def applied(pack, line):
 
 
 def test_versions(v2):
-    assert v2.version == "0.2.2"
+    assert v2.version == "0.2.3"
     for path in FROZEN:
         assert load_pack(path, learned=Learned()).version == "0.1.0", path
 

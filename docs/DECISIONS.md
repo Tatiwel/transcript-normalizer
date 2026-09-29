@@ -218,6 +218,12 @@ The core is language-agnostic. Everything language-specific lives in src/transcr
 
 Measured: every annotation of both fixtures, and of wxgFO_fyfXg against pack 0.2.2 with and without a rejection, is identical field for field before and after. Declaring `language: pt-BR` in the three packs is not a curation change and no bound moves. `tests/test_language_xx.py` runs the core on an invented language, with the generic module and with a module of its own.
 
+## D-034 D-031(b) is overlap, not containment
+
+D-031(b) is overlap, not containment: a fuzzy proposal is dropped when its span overlaps, in either direction, an exact-match span of a different term. Measured: `market` → market share ×3 survived D-031(b) because the fuzzy span sits inside the exact span `market cap`.
+
+Overlap means sharing any token: the fuzzy span inside the exact one, around it, or across part of it. Exact-match spans are found before any fuzzy guess, whether or not they produce an annotation themselves: `market cap` spelled out produces none and still counts. Measured: neither fixture moves against its frozen pack; wxgFO_fyfXg against pack 0.2.2 goes from 20 to 17 false positives with no hit lost. On these fixtures "overlap" and "containment either way" score the same: every proposal whose removal changed a number was inside another term's exact span (`market` in `market cap`, `de Dentes` in `Geração de Dentes`). Overlap drops five more raw proposals that share only part of their span (`o market`, `Valuey, aí`, `o dividend`, `de dividend` twice), each either a low mark or one that overlap resolution already discarded.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

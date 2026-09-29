@@ -4,8 +4,9 @@
 # 0.2.1 acrescenta variantes de wxgFO_fyfXg a termos que ja existiam, e os plurais
 # de preço teto como aliases.
 # 0.2.2 tira variantes que sao palavras comuns (D-032) e acrescenta market cap.
+# 0.2.3 acrescenta variantes de preço teto que o fuzzy nao alcanca (abaixo de 80).
 language: pt-BR
-version: 0.2.2
+version: 0.2.3
 
 terms:
   - term: CEMIG
@@ -74,7 +75,7 @@ terms:
   - term: preço teto
     class: indicador
     aliases: [preços teto, preços tetos]
-    variants: [preço delet]
+    variants: [preço delet, presteto, pr teto, preçeto]
   - term: valuation
     class: conceito
     variants: [valation, valoristo, valueixationo, valueixo, valche, valo]

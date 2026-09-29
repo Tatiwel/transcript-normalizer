@@ -83,3 +83,18 @@ def test_an_explicit_entry_wins_over_a_generated_plural(tmp_path):
     )
     _, found = applied(load_pack(path, learned=Learned()), "os leos")
     assert [(a.original, a.term, a.kind) for a in found] == [("leos", "Leos Corp", "correction")]
+
+
+def test_a_fuzzy_span_inside_an_exact_one_is_not_a_guess_either(v2):
+    """D-034: `market` sits inside `market cap`; D-031(b)'s containment missed it."""
+    transcript = parse_caption("0:01 do que o seu market cap atual")
+    everything = find_annotations(transcript, v2)
+    assert not [a for a in everything if a.term == "market share"]
+
+
+def test_overlap_counts_in_both_directions_and_partly(v2):
+    """D-034: inside, around, or sharing a word with another term's exact form."""
+    transcript = parse_caption("0:01 o market cap e o dividend y aqui")
+    everything = find_annotations(transcript, v2)
+    assert not [a for a in everything if a.term == "market share"]  # `o market`, `market`
+    assert not [a for a in everything if a.rule == "term:fuzzy" and a.original == "o dividend"]

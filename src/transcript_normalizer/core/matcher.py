@@ -96,16 +96,6 @@ def band_for(rule: str, score: float) -> str:
 UNIT_CLASS = "unidade"
 
 
-def exact_elsewhere(folded_span: str, term: str, exact_terms) -> bool:
-    """Whether some run of the span's words is exactly a form of a term other than `term`."""
-    words = folded_span.split()
-    for size in range(1, len(words) + 1):
-        for start in range(len(words) - size + 1):
-            if exact_terms(" ".join(words[start : start + size])) - {term}:
-                return True
-    return False
-
-
 def contains_words(span: str, part: str) -> bool:
     """Whether folded `part` occurs in folded `span` as whole words (D-027, D-030)."""
     return f" {' '.join(part.split())} " in f" {' '.join(span.split())} "
@@ -242,92 +232,110 @@ def find_annotations(
         return any(inflection_of(word) == term for word in folded_span.split())
 
     tokens = tokenize(text, language.sentence_boundaries)
-    for n in NGRAM_SIZES:
-        for i in range(len(tokens) - n + 1):
-            window = tokens[i : i + n]
-            if any(t.closes_sentence for t in window[:-1]):
-                continue  # D-024: `Warn Buffet. Tem` is two sentences, not one term
-            span = " ".join(t.text for t in window)
-            folded_span = norm(span)
-            if len(folded_span) < 2:
-                continue
 
-            # D-031a: an inflected single word is its term spelled out: an alias.
-            owner = inflection_of(folded_span) if " " not in folded_span else None
-            if owner is not None:
-                if not pack.is_rejected(folded_span, owner):
-                    original = text[window[0].start : window[-1].end]
-                    annotations.append(
-                        Annotation(
-                            start=window[0].start,
-                            end=window[-1].end,
-                            original=original,
-                            replacement=original,
-                            term=owner,
-                            rule=term_rule("alias"),
-                            band=BAND_HIGH,
-                            score=100,
-                            pack_version=pack.version,
-                            kind=KIND_ALIAS,
-                        )
-                    )
-                continue
+    def windows():
+        for n in NGRAM_SIZES:
+            for i in range(len(tokens) - n + 1):
+                window = tokens[i : i + n]
+                if any(t.closes_sentence for t in window[:-1]):
+                    continue  # D-024: `Warn Buffet. Tem` is two sentences, not one term
+                yield i, window, norm(" ".join(t.text for t in window))
 
-            score, term, candidate = max(
-                (
-                    (_score(folded_span, c.folded, fuzzy), c.term, c.folded)
-                    for c, fuzzy in scored
-                ),
-                default=(0, None, None),
-            )
-            if score < threshold:
-                continue
-            # D-013: a pair the user has turned down is never proposed again.
-            if pack.is_rejected(folded_span, term):
-                continue
-            origin = origins[(term, candidate)]
-            original = text[window[0].start : window[-1].end]
+    # D-034: every stretch of text that is exactly a form of some term, found
+    # before any fuzzy guess, as the terms each token takes part in. Whether that
+    # stretch produces an annotation does not matter: `market cap` spelled out
+    # produces none, and still rules `market` out as a guess at market share.
+    exact_at: list[set[str]] = [set() for _ in tokens]
+    for i, window, folded_span in windows():
+        terms = exact_terms(" ".join(folded_span.split()))
+        if terms:
+            for k in range(i, i + len(window)):
+                exact_at[k] |= terms
 
-            # D-020: exactly another name of the term. Recognized, never substituted.
-            if origin == "alias" and folded_span == candidate:
+    for i, window, folded_span in windows():
+        if len(folded_span) < 2:
+            continue
+
+        # D-031a: an inflected single word is its term spelled out: an alias.
+        owner = inflection_of(folded_span) if " " not in folded_span else None
+        if owner is not None:
+            if not pack.is_rejected(folded_span, owner):
+                original = text[window[0].start : window[-1].end]
                 annotations.append(
                     Annotation(
                         start=window[0].start,
                         end=window[-1].end,
                         original=original,
                         replacement=original,
-                        term=term,
+                        term=owner,
                         rule=term_rule("alias"),
                         band=BAND_HIGH,
-                        score=int(score),
+                        score=100,
                         pack_version=pack.version,
                         kind=KIND_ALIAS,
                     )
                 )
-                continue
+            continue
 
-            # The term (or one of its aliases) is already spelled out here: nothing to
-            # correct. D-030: as whole words, so `deck` is not `dec` spelled out.
-            if spelled_out(folded_span, term):
-                continue
-            rule = term_rule(origin if folded_span == candidate else "fuzzy")
-            # D-031 (b): a span holding an exact form of another term is not a
-            # fuzzy guess at this one (`dividendos e` is not dividend yield).
-            if rule == term_rule("fuzzy") and exact_elsewhere(folded_span, term, exact_terms):
-                continue
+        score, term, candidate = max(
+            (
+                (_score(folded_span, c.folded, fuzzy), c.term, c.folded)
+                for c, fuzzy in scored
+            ),
+            default=(0, None, None),
+        )
+        if score < threshold:
+            continue
+        # D-013: a pair the user has turned down is never proposed again.
+        if pack.is_rejected(folded_span, term):
+            continue
+        origin = origins[(term, candidate)]
+        original = text[window[0].start : window[-1].end]
+
+        # D-020: exactly another name of the term. Recognized, never substituted.
+        if origin == "alias" and folded_span == candidate:
             annotations.append(
                 Annotation(
                     start=window[0].start,
                     end=window[-1].end,
                     original=original,
-                    replacement=term,
+                    replacement=original,
                     term=term,
-                    rule=rule,
-                    band=band_for(rule, score),
+                    rule=term_rule("alias"),
+                    band=BAND_HIGH,
                     score=int(score),
                     pack_version=pack.version,
+                    kind=KIND_ALIAS,
                 )
             )
+            continue
+
+        # The term (or one of its aliases) is already spelled out here: nothing to
+        # correct. D-030: as whole words, so `deck` is not `dec` spelled out.
+        if spelled_out(folded_span, term):
+            continue
+        rule = term_rule(origin if folded_span == candidate else "fuzzy")
+        # D-031 (b), as D-034 amends it: a fuzzy span that overlaps, either
+        # way, an exact form of another term is not a guess at this one
+        # (`dividendos e` is not dividend yield; `market` in `market cap` is
+        # not market share).
+        if rule == term_rule("fuzzy") and any(
+            exact_at[k] - {term} for k in range(i, i + len(window))
+        ):
+            continue
+        annotations.append(
+            Annotation(
+                start=window[0].start,
+                end=window[-1].end,
+                original=original,
+                replacement=term,
+                term=term,
+                rule=rule,
+                band=band_for(rule, score),
+                score=int(score),
+                pack_version=pack.version,
+            )
+        )
     return annotations
 
 
