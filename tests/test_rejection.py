@@ -15,7 +15,9 @@ LEARNED = Path(__file__).resolve().parent / "data" / "wxgFO_fyfXg.learned.yaml"
 
 def manter_touched(pack):
     transcript = FIXTURE.load_transcript()
-    result = evaluate(transcript, find_annotations(transcript, pack), FIXTURE.load_gold())
+    result = evaluate(
+        transcript, find_annotations(transcript, pack), FIXTURE.load_gold(), pack.normalize
+    )
     return result.touched_keep["15:54 divide a"]
 
 

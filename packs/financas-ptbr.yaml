@@ -4,6 +4,7 @@
 # 0.2.1 acrescenta variantes de wxgFO_fyfXg a termos que ja existiam, e os plurais
 # de preço teto como aliases.
 # 0.2.2 tira variantes que sao palavras comuns (D-032) e acrescenta market cap.
+language: pt-BR
 version: 0.2.2
 
 terms:

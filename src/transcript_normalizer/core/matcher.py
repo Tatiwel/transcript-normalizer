@@ -3,6 +3,9 @@
 This is a port of `experiments/exp2_units_and_threshold.py`, which is the reference
 behaviour, with one deliberate difference: matching runs over the whole joined text
 instead of line by line (D-007).
+
+Nothing here knows a language (D-033). Normalization, inflection, unit rules and
+sentence punctuation all come from the pack's language module.
 """
 
 from __future__ import annotations
@@ -12,8 +15,8 @@ from dataclasses import dataclass, replace
 
 from rapidfuzz import fuzz
 
-from .pack import SOURCE_LEARNED, Candidate, Pack, fold
-from .rules import RULE_TOKENS, find_unit_hits
+from .pack import SOURCE_LEARNED, Candidate, Pack
+from .rules import find_unit_hits
 from .standoff import (
     BAND_HIGH,
     BAND_LOW,
@@ -42,9 +45,6 @@ _TOKEN = re.compile(r"[\wÀ-ÿ$%,.]+")
 _WORDY = re.compile(r"\w")
 _EDGE = ".,"
 
-#: D-024: strong punctuation. A word n-gram never runs across one. A `.` inside
-#: a token (`6.7`) is a decimal point, not an end of sentence.
-STRONG_PUNCTUATION = ".?!;"
 
 
 @dataclass(frozen=True)
@@ -56,8 +56,13 @@ class Token:
     closes_sentence: bool = False
 
 
-def tokenize(text: str) -> list[Token]:
-    """Word tokens with their offsets in `text`, as exp2 split them."""
+def tokenize(text: str, boundaries: frozenset[str] | str) -> list[Token]:
+    """Word tokens with their offsets in `text`, as exp2 split them.
+
+    `boundaries` is the language's sentence punctuation (D-024): each token
+    followed by one is marked, and no n-gram runs across the mark. A `.` inside
+    a token (`6.7`) is a decimal point, not an end of sentence.
+    """
     tokens: list[Token] = []
     for m in _TOKEN.finditer(text):
         raw, start, end = m.group(0), m.start(), m.end()
@@ -76,7 +81,7 @@ def tokenize(text: str) -> list[Token]:
     for i, token in enumerate(tokens):
         following = tokens[i + 1].start if i + 1 < len(tokens) else len(text)
         gap = text[token.end : following]
-        marked.append(replace(token, closes_sentence=any(c in STRONG_PUNCTUATION for c in gap)))
+        marked.append(replace(token, closes_sentence=any(c in boundaries for c in gap)))
     return marked
 
 
@@ -91,12 +96,12 @@ def band_for(rule: str, score: float) -> str:
 UNIT_CLASS = "unidade"
 
 
-def exact_elsewhere(folded_span: str, term: str, exact_forms: dict[str, set[str]]) -> bool:
+def exact_elsewhere(folded_span: str, term: str, exact_terms) -> bool:
     """Whether some run of the span's words is exactly a form of a term other than `term`."""
     words = folded_span.split()
     for size in range(1, len(words) + 1):
         for start in range(len(words) - size + 1):
-            if exact_forms.get(" ".join(words[start : start + size]), {term}) - {term}:
+            if exact_terms(" ".join(words[start : start + size])) - {term}:
                 return True
     return False
 
@@ -147,20 +152,23 @@ def find_annotations(
     """
     text = transcript.text
     annotations: list[Annotation] = []
+    language = pack.language
+    norm = language.normalize
+    rules = language.unit_rules()
 
     # D-006: the unit layer runs before the dictionary. Its output belongs to the
     # pack term that names the unit, when the pack has one (`bi` -> `bilhão`),
     # and that term's rule-owned words are not matched on their own below.
     owned: set[tuple[str, str]] = set()
-    for rule_term, tokens in RULE_TOKENS.items():
-        unit = pack.term_named(rule_term)
+    for rule in rules:
+        unit = pack.term_named(rule.term)
         if unit is not None:
-            owned |= {(unit.term, fold(token)) for token in tokens}
+            owned |= {(unit.term, norm(word)) for word in rule.owns}
 
-    for hit in find_unit_hits(text):
+    for hit in find_unit_hits(text, rules):
         unit = pack.term_named(hit.term)
         term = unit.term if unit is not None else hit.term
-        if pack.is_rejected(fold(hit.original), term):
+        if pack.is_rejected(norm(hit.original), term):
             continue
         annotations.append(
             Annotation(
@@ -179,13 +187,28 @@ def find_annotations(
     origins = {}
     for c in pack.candidates:
         origins.setdefault((c.term, c.folded), c.origin)
-    folded_term = {t.term: fold(t.term) for t in pack.terms}
-    # Every other name the term is spelled out by: curated and learned aliases,
-    # and (D-031) the plurals of the term and of those aliases.
+    folded_term = {t.term: norm(t.term) for t in pack.terms}
+    # Every other name the term is spelled out by: curated and learned aliases.
     folded_aliases: dict[str, list[str]] = {t.term: [] for t in pack.terms}
     for c in pack.candidates:
         if c.origin == "alias":
             folded_aliases[c.term].append(c.folded)
+
+    # D-031a: a word whose base form (per the language) is a single-word term or
+    # alias is that term spelled out. An explicit entry of any term wins, and
+    # among bases the earliest candidate of the pack does.
+    explicit = {c.folded for c in pack.candidates}
+    base_owner: dict[str, tuple[int, str]] = {}
+    for index, c in enumerate(pack.candidates):
+        if c.origin in ("term", "alias") and " " not in c.folded:
+            base_owner.setdefault(c.folded, (index, c.term))
+
+    def inflection_of(word: str) -> str | None:
+        """The term a normalized word is an inflection of, if any."""
+        if word in explicit:
+            return None
+        owners = [base_owner[b] for b in language.inflections(word) if b in base_owner]
+        return min(owners)[1] if owners else None
 
     candidates = [
         c
@@ -201,16 +224,55 @@ def find_annotations(
     for c in candidates:
         exact_forms.setdefault(" ".join(c.folded.split()), set()).add(c.term)
 
-    tokens = tokenize(text)
+    def exact_terms(run: str) -> set[str]:
+        """The terms a run of words is exactly a form of, inflections included."""
+        found = set(exact_forms.get(run, ()))
+        if " " not in run:
+            owner = inflection_of(run)
+            if owner is not None:
+                found.add(owner)
+        return found
+
+    def spelled_out(folded_span: str, term: str) -> bool:
+        """The term, an alias or (D-031a) an inflection of either, as whole words."""
+        if contains_words(folded_span, folded_term[term]):
+            return True
+        if any(contains_words(folded_span, a) for a in folded_aliases[term]):
+            return True
+        return any(inflection_of(word) == term for word in folded_span.split())
+
+    tokens = tokenize(text, language.sentence_boundaries)
     for n in NGRAM_SIZES:
         for i in range(len(tokens) - n + 1):
             window = tokens[i : i + n]
             if any(t.closes_sentence for t in window[:-1]):
                 continue  # D-024: `Warn Buffet. Tem` is two sentences, not one term
             span = " ".join(t.text for t in window)
-            folded_span = fold(span)
+            folded_span = norm(span)
             if len(folded_span) < 2:
                 continue
+
+            # D-031a: an inflected single word is its term spelled out: an alias.
+            owner = inflection_of(folded_span) if " " not in folded_span else None
+            if owner is not None:
+                if not pack.is_rejected(folded_span, owner):
+                    original = text[window[0].start : window[-1].end]
+                    annotations.append(
+                        Annotation(
+                            start=window[0].start,
+                            end=window[-1].end,
+                            original=original,
+                            replacement=original,
+                            term=owner,
+                            rule=term_rule("alias"),
+                            band=BAND_HIGH,
+                            score=100,
+                            pack_version=pack.version,
+                            kind=KIND_ALIAS,
+                        )
+                    )
+                continue
+
             score, term, candidate = max(
                 (
                     (_score(folded_span, c.folded, fuzzy), c.term, c.folded)
@@ -246,14 +308,12 @@ def find_annotations(
 
             # The term (or one of its aliases) is already spelled out here: nothing to
             # correct. D-030: as whole words, so `deck` is not `dec` spelled out.
-            if contains_words(folded_span, folded_term[term]):
-                continue
-            if any(contains_words(folded_span, a) for a in folded_aliases[term]):
+            if spelled_out(folded_span, term):
                 continue
             rule = term_rule(origin if folded_span == candidate else "fuzzy")
             # D-031 (b): a span holding an exact form of another term is not a
             # fuzzy guess at this one (`dividendos e` is not dividend yield).
-            if rule == term_rule("fuzzy") and exact_elsewhere(folded_span, term, exact_forms):
+            if rule == term_rule("fuzzy") and exact_elsewhere(folded_span, term, exact_terms):
                 continue
             annotations.append(
                 Annotation(

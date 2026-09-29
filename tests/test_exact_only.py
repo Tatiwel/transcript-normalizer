@@ -54,6 +54,7 @@ def test_an_alias_still_matches_exactly(v2):
 
 
 PACK = """\
+language: pt-BR
 version: test
 terms:
   - term: XPTO Corp

@@ -7,6 +7,7 @@ from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.evaluate import evaluate
 
 PACK = """\
+language: pt-BR
 version: test
 terms:
   - term: CEMIG
@@ -24,8 +25,9 @@ def scored(tmp_path):
     path = tmp_path / "p.yaml"
     path.write_text(PACK, encoding="utf-8")
     transcript = parse_caption(CAPTION)
-    annotations = find_annotations(transcript, load_pack(path, learned=Learned()))
-    return lambda gold: evaluate(transcript, annotations, gold)
+    pack = load_pack(path, learned=Learned())
+    annotations = find_annotations(transcript, pack)
+    return lambda gold: evaluate(transcript, annotations, gold, pack.normalize)
 
 
 def row(ts, wrong, correct, term, status):

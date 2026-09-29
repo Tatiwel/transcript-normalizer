@@ -24,9 +24,10 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .core.pack import Learned, Pack, fold, load_pack
+from .core.pack import Learned, Pack, load_pack
 from .core.standoff import Annotation
 from .core.text import Transcript, read_caption
+from .languages import generic
 
 CERTO = "certo"
 ALIAS = "alias"
@@ -36,14 +37,16 @@ SO_CAIXA = "so_caixa"
 STATUSES = (CERTO, ALIAS, CONFERIDO, MANTER, SO_CAIXA)
 
 
-def key(text: str) -> str:
-    """Gold text is compared loosely: folded, with runs of space collapsed."""
-    return " ".join(fold(text).split())
+def key(text: str, normalize=generic.normalize) -> str:
+    """Gold text is compared loosely: normalized by the pack's language (D-033),
+    with runs of space collapsed."""
+    return " ".join(normalize(text).split())
 
 
-def covers(wrong: str, annotation: Annotation) -> bool:
+def covers(wrong: str, annotation: Annotation, normalize=generic.normalize) -> bool:
     """Whether an annotation sits on the gold row's text, in either direction."""
-    return key(wrong) in key(annotation.original) or key(annotation.original) in key(wrong)
+    a, b = key(wrong, normalize), key(annotation.original, normalize)
+    return a in b or b in a
 
 
 def is_correction(annotation: Annotation) -> bool:
@@ -129,17 +132,22 @@ class Result:
         }
 
 
-def expects_correction(row: dict) -> bool:
+def expects_correction(row: dict, normalize=generic.normalize) -> bool:
     """D-026, with D-008: `correct` differs from `wrong` by more than case or accent."""
-    return key(row["correct"]) != key(row["wrong"])
+    return key(row["correct"], normalize) != key(row["wrong"], normalize)
 
 
 def evaluate(
     transcript: Transcript,
     annotations: list[Annotation],
     gold: list[dict],
+    normalize=generic.normalize,
 ) -> Result:
-    """Score the applied annotations against the gold rows, by D-026's one rule."""
+    """Score the applied annotations against the gold rows, by D-026's one rule.
+
+    `normalize` is the pack's language normalization (D-033); the generic one
+    is only a default for callers that have no pack.
+    """
     applied = [a for a in annotations if a.applied]
     corrections = [a for a in applied if is_correction(a)]
     aliases = [a for a in applied if is_alias(a)]
@@ -152,16 +160,15 @@ def evaluate(
         home[id(a)] = transcript.locate(a.start)[1]
 
     # First match on the line, as exp2 did, so one annotation can answer for two
-    # identical rows. Known effect: R2Qgz8tFWVI's gold lists `10:59 Ox -> OPEX`
-    # twice for one `Ox` in the caption, and both count. Matching one-to-one
-    # would score that fixture 155, not 156; it does not move wxgFO_fyfXg.
+    # identical rows. No fixture has such a pair since commit 7 removed the
+    # duplicated `10:59 Ox` row from R2Qgz8tFWVI.
     def find(row: dict, pool: list[Annotation], any_term: bool = False) -> Annotation | None:
         allowed = {id(a) for a in pool}
         for a in on_line.get(row["timestamp"], ()):
             if (
                 id(a) in allowed
                 and (any_term or a.term == row["term"])
-                and covers(row["wrong"], a)
+                and covers(row["wrong"], a, normalize)
             ):
                 return a
         return None
@@ -178,13 +185,13 @@ def evaluate(
             touched = [
                 (a.original, a.term)
                 for a in on_line.get(row["timestamp"], ())
-                if covers(row["wrong"], a)
+                if covers(row["wrong"], a, normalize)
             ]
             result.touched_keep[f"{row['timestamp']} {row['wrong']}"] = touched
             continue
         if not row["term"]:
             continue
-        if status != ALIAS and not expects_correction(row):
+        if status != ALIAS and not expects_correction(row, normalize):
             continue  # D-008: a case- or accent-only difference is not a correction
 
         result.in_scope.append(row)
@@ -241,7 +248,8 @@ def evaluate(
             for u in used_on_line.get(line.timestamp, ())
         }
         if any(
-            key(a.original) in key(u.original) or key(u.original) in key(a.original)
+            key(a.original, normalize) in key(u.original, normalize)
+            or key(u.original, normalize) in key(a.original, normalize)
             for u in neighbours.values()
         ):
             continue
@@ -262,7 +270,7 @@ def evaluate_fixture(fixture: Fixture, pack: Pack | None = None) -> Result:
     transcript = fixture.load_transcript()
     pack = pack if pack is not None else fixture.load_pack()
     annotations = find_annotations(transcript, pack)
-    return evaluate(transcript, annotations, fixture.load_gold())
+    return evaluate(transcript, annotations, fixture.load_gold(), pack.normalize)
 
 
 def render(result: Result) -> str:

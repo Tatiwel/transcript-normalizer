@@ -1,0 +1,12 @@
+# A three-term pack in `xx`, a language that does not exist. Every word is
+# invented, so nothing here can match by accident of Portuguese.
+language: xx
+version: test
+terms:
+  - term: Glorbank
+    class: companhia
+    variants: [glorbenk, glorb bank]
+  - term: fnord
+    class: conceito
+  - term: zorkon
+    class: unidade

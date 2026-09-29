@@ -60,7 +60,7 @@ def synthetic(tmp_path, stem):
     pack_file = tmp_path / "pack.yaml"
     pad = "k" * (20 - len(stem))
     pack_file.write_text(
-        f"version: test\nterms:\n  - term: {stem}{pad}\n    class: conceito\n", "utf-8"
+        f"language: pt-BR\nversion: test\nterms:\n  - term: {stem}{pad}\n    class: conceito\n", "utf-8"
     )
     return load_pack(pack_file, learned=Learned()), stem + "b" * (20 - len(stem))
 

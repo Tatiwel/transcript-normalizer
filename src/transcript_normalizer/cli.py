@@ -32,6 +32,7 @@ from .core.standoff import (
 )
 from .core.text import Transcript, read_caption
 from .catalog import list_runs
+from .languages import LanguageNotFound
 from .ingest import fetch as ingest_fetch
 from .runs import (
     ANNOTATIONS_FILE,
@@ -330,7 +331,11 @@ def run_normalize(args: argparse.Namespace) -> int:
         return 2
 
     learned_at = learned_file(args.pack, args.learned)
-    pack = load_pack(args.pack, learned_from=learned_at)
+    try:
+        pack = load_pack(args.pack, learned_from=learned_at, allow_generic=args.allow_generic)
+    except LanguageNotFound as error:
+        print(error, file=sys.stderr)
+        return 2
     transcript = read_caption(args.caption)
     annotations = resolve_overlaps(find_annotations(transcript, pack))
 
@@ -435,6 +440,12 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--confirm",
         action="store_true",
         help="review the medium band and record the answers in the learned layer (D-013)",
+    )
+    parser.add_argument(
+        "--allow-generic",
+        action="store_true",
+        help="if the pack's language has no module, match with the generic one "
+        "(no inflections, no unit rules) instead of stopping (D-033)",
     )
 
 

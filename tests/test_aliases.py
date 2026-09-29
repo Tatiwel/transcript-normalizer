@@ -13,6 +13,7 @@ from transcript_normalizer.core.standoff import KIND_ALIAS, KIND_CORRECTION
 from transcript_normalizer.runs import ANNOTATIONS_FILE, NORMALIZED_FILE, learned_file
 
 PACK = """\
+language: pt-BR
 version: test
 terms:
   - term: CPFL

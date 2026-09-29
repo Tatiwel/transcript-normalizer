@@ -4,9 +4,11 @@ import pytest
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption
 from transcript_normalizer.core.matcher import tokenize
+from transcript_normalizer.languages import pt_br
 from transcript_normalizer.core.pack import Learned
 
 PACK = """\
+language: pt-BR
 version: test
 terms:
   - term: Warren Buffett
@@ -26,7 +28,7 @@ def tiny_pack(tmp_path):
 
 
 def closes(text):
-    return [t.text for t in tokenize(text) if t.closes_sentence]
+    return [t.text for t in tokenize(text, pt_br.sentence_boundaries) if t.closes_sentence]
 
 
 @pytest.mark.parametrize(
@@ -58,7 +60,7 @@ def test_nothing_spans_a_question_mark_either(tiny_pack):
 
 def test_a_caption_break_is_not_a_sentence_break():
     """D-007 still holds: `ser` / `MIG` across two caption lines is one span."""
-    tokens = tokenize("tem que ser MIG, não é")
+    tokens = tokenize("tem que ser MIG, não é", pt_br.sentence_boundaries)
     assert not [t for t in tokens if t.closes_sentence]
 
 

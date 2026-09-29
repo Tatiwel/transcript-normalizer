@@ -3,24 +3,23 @@
 from __future__ import annotations
 
 import hashlib
-import re
 import unicodedata
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
+from types import ModuleType
 
 import yaml
 
+from .. import languages
 from ..runs import learned_file
 
-_KEEP = re.compile(r"[^a-z0-9$ ]+")
 
 #: Schema version written into a new learned file.
 LEARNED_VERSION = 1
 
 SOURCE_PACK = "pack"
 SOURCE_LEARNED = "learned"
-SOURCE_INFLECTION = "inflection"  # D-031: a plural generated from a term or alias
 
 #: D-021: the closed list of term classes. A label for consumers; matching
 #: never reads it.
@@ -41,11 +40,11 @@ def nfc(s: str) -> str:
     return unicodedata.normalize("NFC", s)
 
 
-def fold(s: str) -> str:
-    """Matching form: lowercase, accents stripped, punctuation flattened to spaces."""
-    s = unicodedata.normalize("NFD", nfc(s).lower())
-    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    return _KEEP.sub(" ", s).strip()
+def _same(a: str, b: str) -> bool:
+    """Whether two learned entries are the same text. Language-free on purpose:
+    the learned layer has no language, so this is case and spacing only; the
+    pack's language normalizes the entries when they are loaded (D-033)."""
+    return " ".join(nfc(a).casefold().split()) == " ".join(nfc(b).casefold().split())
 
 
 @dataclass(frozen=True)
@@ -116,7 +115,7 @@ class Learned:
         """A variant: substituted from now on. Replaces an alias entry for the same text."""
         decided = decided or date.today().isoformat()
         existing = self.confirmed.get(term, ())
-        if any(fold(c.variant) == fold(variant) for c in existing):
+        if any(_same(c.variant, variant) for c in existing):
             return self
         merged = dict(self.confirmed)
         merged[term] = existing + (Confirmation(nfc(variant), decided),)
@@ -130,12 +129,12 @@ class Learned:
         """
         decided = decided or date.today().isoformat()
         existing = self.aliases.get(term, ())
-        if any(fold(a.alias) == fold(text) for a in existing):
+        if any(_same(a.alias, text) for a in existing):
             return self
         merged = dict(self.aliases)
         merged[term] = existing + (LearnedAlias(nfc(text), decided),)
         confirmed = {
-            t: tuple(c for c in cs if not (t == term and fold(c.variant) == fold(text)))
+            t: tuple(c for c in cs if not (t == term and _same(c.variant, text)))
             for t, cs in self.confirmed.items()
         }
         confirmed = {t: cs for t, cs in confirmed.items() if cs}
@@ -143,7 +142,7 @@ class Learned:
 
     def reject(self, text: str, term: str, decided: str | None = None) -> "Learned":
         decided = decided or date.today().isoformat()
-        if any(fold(r.text) == fold(text) and r.term == term for r in self.rejected):
+        if any(_same(r.text, text) and r.term == term for r in self.rejected):
             return self
         return replace(self, rejected=self.rejected + (Rejection(nfc(text), term, decided),))
 
@@ -169,7 +168,7 @@ def _without(
     aliases: dict[str, tuple[LearnedAlias, ...]], term: str, text: str
 ) -> dict[str, tuple[LearnedAlias, ...]]:
     kept = {
-        t: tuple(a for a in entries if not (t == term and fold(a.alias) == fold(text)))
+        t: tuple(a for a in entries if not (t == term and _same(a.alias, text)))
         for t, entries in aliases.items()
     }
     return {t: entries for t, entries in kept.items() if entries}
@@ -234,13 +233,19 @@ class Pack:
     version: str
     candidates: tuple[Candidate, ...] = ()
     rejected: frozenset[tuple[str, str]] = frozenset()  # (folded text, term)
+    language: ModuleType = field(default=None)  # D-033: the pack's language module
+    language_code: str = ""
+
+    def normalize(self, text: str) -> str:
+        """Text as this pack's language compares it (D-033)."""
+        return self.language.normalize(text)
     learned: Learned = field(default_factory=Learned)
 
     def term_named(self, name: str) -> Term | None:
         """The pack term called `name`, by its own name or one of its aliases."""
-        target = fold(name)
+        target = self.normalize(name)
         for t in self.terms:
-            if fold(t.term) == target or target in {fold(a) for a in t.aliases}:
+            if self.normalize(t.term) == target or target in {self.normalize(a) for a in t.aliases}:
                 return t
         return None
 
@@ -253,21 +258,6 @@ class Pack:
         """
         span = f" {_words(folded_text)} "
         return any(t == term and f" {text} " in span for text, t in self.rejected)
-
-
-def plural_forms(folded: str) -> tuple[str, ...]:
-    """D-031: the Portuguese plurals of a folded single word, accents already gone.
-
-    -s, -es, -ão -> -ões, -al -> -ais, -el -> -eis. A multi-word string has no
-    plural here: D-031 speaks of a word.
-    """
-    if not folded or " " in folded:
-        return ()
-    forms = [folded + "s", folded + "es"]
-    for ending, plural in (("ao", "oes"), ("al", "ais"), ("el", "eis")):
-        if folded.endswith(ending):
-            forms.append(folded[: -len(ending)] + plural)
-    return tuple(dict.fromkeys(f for f in forms if f != folded))
 
 
 def _words(folded: str) -> str:
@@ -283,6 +273,7 @@ def load_pack(
     path: str | Path,
     learned: Learned | None = None,
     learned_from: str | Path | None = None,
+    allow_generic: bool = False,
 ) -> Pack:
     """Read a domain pack from YAML, merging the learned layer of D-013.
 
@@ -293,6 +284,12 @@ def load_pack(
     """
     path = Path(path)
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    code = str(data["language"]) if data.get("language") else None
+    try:
+        language = languages.for_code(code, allow_generic=allow_generic)
+    except languages.LanguageNotFound as error:
+        raise languages.LanguageNotFound(f"{path}: {error}") from None
+    norm = language.normalize
     if learned is None:
         learned = load_learned(learned_file(path, learned_from))
 
@@ -302,16 +299,16 @@ def load_pack(
         name = nfc(str(raw["term"]))
         pack_variants = _strings(raw, "variants")
         pack_aliases = _strings(raw, "aliases")
-        known = {fold(v) for v in pack_variants} | {fold(a) for a in pack_aliases}
+        known = {norm(v) for v in pack_variants} | {norm(a) for a in pack_aliases}
         learned_variants = tuple(
             c.variant
             for c in learned.confirmed.get(name, ())
-            if fold(c.variant) not in known
+            if norm(c.variant) not in known
         )
         learned_aliases = tuple(
             a.alias
             for a in learned.aliases.get(name, ())
-            if fold(a.alias) not in known
+            if norm(a.alias) not in known
         )
         klass = nfc(str(raw["class"])) if raw.get("class") else None
         if klass is not None and klass not in CLASSES:
@@ -337,19 +334,7 @@ def load_pack(
             + [(v, "variant", SOURCE_LEARNED) for v in learned_variants]
             + [(a, "alias", SOURCE_LEARNED) for a in learned_aliases]
         ):
-            candidates.append(Candidate(display, fold(display), term.term, origin, source))
-
-    # D-031: the plural of a term or alias is that term spelled out. It becomes
-    # an alias candidate, so it is exact-only (D-025) and never a correction.
-    # Explicit entries win: a plural that some term already lists is skipped.
-    taken = {c.folded for c in candidates}
-    for c in list(candidates):
-        if c.origin not in ("term", "alias") or c.source == SOURCE_INFLECTION:
-            continue
-        for plural in plural_forms(c.folded):
-            if plural not in taken:
-                taken.add(plural)
-                candidates.append(Candidate(plural, plural, c.term, "alias", SOURCE_INFLECTION))
+            candidates.append(Candidate(display, norm(display), term.term, origin, source))
 
     unit_rules = tuple(
         UnitRule(pattern=str(r.get("pattern", "")), correction=str(r.get("replacement", "")))
@@ -366,6 +351,8 @@ def load_pack(
         unit_rules=unit_rules,
         version=str(version),
         candidates=tuple(candidates),
-        rejected=frozenset((_words(fold(r.text)), r.term) for r in learned.rejected),
+        rejected=frozenset((_words(norm(r.text)), r.term) for r in learned.rejected),
         learned=learned,
+        language=language,
+        language_code=code or language.CODE,
     )

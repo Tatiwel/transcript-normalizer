@@ -50,8 +50,9 @@ FIXTURES = fixtures(FIXTURES_ROOT)
 def scored(request):
     fixture = request.param
     transcript = fixture.load_transcript()
-    annotations = find_annotations(transcript, fixture.load_pack())
-    result = evaluate(transcript, annotations, fixture.load_gold())
+    pack = fixture.load_pack()
+    annotations = find_annotations(transcript, pack)
+    result = evaluate(transcript, annotations, fixture.load_gold(), pack.normalize)
     return fixture, annotations, result
 
 

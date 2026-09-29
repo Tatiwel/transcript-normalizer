@@ -1,0 +1,22 @@
+# Synthetic caption in the invented language xx, for tests/test_language_xx.py.
+# URL: https://youtu.be/xxLanguages
+0:01 blorp vasta minde tarro
+0:03 a glorbenk vasta minde
+0:05 sulo tarro blorp vasta
+0:07 fnordix pelo minde sulo
+0:09 blorp vasta 12 zk minde
+0:11 tarro sulo blorp vasta
+0:13 vasta glorb | bank minde
+0:15 minde tarro sulo blorp
+0:17 glorbanc vasta minde tarro
+0:19 sulo blorp vasta minde
+0:21 tarro sulo pelo minde
+0:23 blorp vasta minde tarro
+0:25 sulo tarro blorp vasta
+0:27 minde sulo tarro pelo
+0:29 blorp vasta minde sulo
+0:31 tarro sulo blorp vasta
+0:33 vasta minde tarro sulo
+0:35 minde tarro sulo blorp
+0:37 pelo vasta minde tarro
+0:39 sulo blorp vasta minde

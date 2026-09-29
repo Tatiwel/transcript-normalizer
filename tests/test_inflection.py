@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption, resolve_overlaps
-from transcript_normalizer.core.pack import Learned, plural_forms
+from transcript_normalizer.core.pack import Learned
+from transcript_normalizer.languages.pt_br import inflections
 from transcript_normalizer.core.render import render_lines
 from transcript_normalizer.core.standoff import KIND_ALIAS
 
@@ -24,17 +25,24 @@ def applied(pack, line):
 
 
 @pytest.mark.parametrize(
-    "word, plurals",
+    "plural, singular",
     [
-        ("dividendo", ("dividendos", "dividendoes")),
-        ("bilhao", ("bilhaos", "bilhaoes", "bilhoes")),  # -ão -> -ões, folded
-        ("capital", ("capitals", "capitales", "capitais")),  # -al -> -ais
-        ("papel", ("papels", "papeles", "papeis")),  # -el -> -eis
-        ("preco teto", ()),  # D-031 speaks of a word
+        ("dividendos", "dividendo"),  # -s
+        ("bilhoes", "bilhao"),  # -ão -> -ões, on normalized text
+        ("capitais", "capital"),  # -al -> -ais
+        ("papeis", "papel"),  # -el -> -eis
+        ("tetos", "teto"),
     ],
 )
-def test_plural_forms(word, plurals):
-    assert plural_forms(word) == plurals
+def test_pt_br_inflections_give_the_base_form(plural, singular):
+    """D-031a, pt-BR: the module maps a plural back to its singular."""
+    assert singular in inflections(plural)
+
+
+@pytest.mark.parametrize("word", ["preco teto", "", "dividendo"])
+def test_no_base_form_for_several_words_nothing_or_a_singular(word):
+    """D-031 speaks of a word; a singular is not an inflection of anything here."""
+    assert inflections(word) == set()
 
 
 @pytest.mark.parametrize(
@@ -69,7 +77,7 @@ def test_an_explicit_entry_wins_over_a_generated_plural(tmp_path):
     """A plural that some term already lists belongs to that term."""
     path = tmp_path / "p.yaml"
     path.write_text(
-        "terms:\n  - term: Leo\n    class: pessoa\n"
+        "language: pt-BR\nterms:\n  - term: Leo\n    class: pessoa\n"
         "  - term: Leos Corp\n    class: companhia\n    variants: [leos]\n",
         encoding="utf-8",
     )

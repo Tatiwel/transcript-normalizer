@@ -39,7 +39,7 @@ def test_every_in_scope_gold_row_uses_a_listed_class(path):
 
 def test_an_unlisted_class_is_refused(tmp_path):
     path = tmp_path / "p.yaml"
-    path.write_text("terms:\n  - term: X\n    class: gestora\n", encoding="utf-8")
+    path.write_text("language: pt-BR\nterms:\n  - term: X\n    class: gestora\n", encoding="utf-8")
     with pytest.raises(ValueError, match="gestora"):
         load_pack(path, learned=Learned())
 
@@ -49,7 +49,7 @@ def test_class_does_not_affect_matching_except_for_units(tmp_path):
     def run(klass):
         path = tmp_path / f"{klass}.yaml"
         path.write_text(
-            f"terms:\n  - term: CEMIG\n    class: {klass}\n    variants: [SEMIG]\n",
+            f"language: pt-BR\nterms:\n  - term: CEMIG\n    class: {klass}\n    variants: [SEMIG]\n",
             encoding="utf-8",
         )
         found = find_annotations(parse_caption("0:01 a SEMIG caiu"), load_pack(path, learned=Learned()))
@@ -59,7 +59,7 @@ def test_class_does_not_affect_matching_except_for_units(tmp_path):
 
     def fuzzy(klass):
         path = tmp_path / f"f{klass}.yaml"
-        path.write_text(f"terms:\n  - term: bilhão\n    class: {klass}\n", encoding="utf-8")
+        path.write_text(f"language: pt-BR\nterms:\n  - term: bilhão\n    class: {klass}\n", encoding="utf-8")
         found = find_annotations(parse_caption("0:01 foi 1 milhão só"), load_pack(path, learned=Learned()))
         return [a.original for a in found]
 
