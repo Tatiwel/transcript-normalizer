@@ -43,7 +43,8 @@ Normalizing reads `packs/financas-ptbr.yaml` unless `--pack` names another. Ever
 
 ```
 src/transcript_normalizer/
-  core/          the engine: pack, rules, text, matcher, stand-off, render
+  core/          the engine: pack, rules, text, matcher, stand-off, render; no language in it
+  languages/     one module per language: normalization, inflection, units, sentences (D-033)
   ingest/        fetching captions; optional, needs the `ingest` extra
 packs/           your domain packs, and the learned layer beside each (D-017)
 fixtures/        frozen test material; the regression test reads it, nothing writes it
@@ -66,6 +67,10 @@ Experimental, but the engine is a package with a regression test.
 - `experiments/`: throwaway scripts that measured how far naive approaches go against that fixture. Results are in `docs/DECISIONS.md`.
 
 Measured on the fixture, with RapidFuzz plus a hand-curated variant list, a unit rule, and a disciplined threshold: 156 of 168 hits, 9 false positives in ~1000 caption lines, zero changes to the lines that had to stay untouched.
+
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) has the three procedures for adding a language, building a domain pack, and building a fixture that measures them.
 
 ## Test content
 
