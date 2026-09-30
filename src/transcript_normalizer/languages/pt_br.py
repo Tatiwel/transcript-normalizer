@@ -58,5 +58,5 @@ def unit_rules() -> list[UnitRule]:
 
 # ------------------------------------------------------------------ sentences
 
-#: D-024.
-sentence_boundaries: frozenset[str] = frozenset(".?!;")
+#: D-024; D-044 adds the comma. A comma inside a token (`11,5`) is a decimal separator.
+sentence_boundaries: frozenset[str] = frozenset(".?!;,")

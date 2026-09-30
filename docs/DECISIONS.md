@@ -288,6 +288,14 @@ YouTube publishes the original automatic caption as `<lang>-orig` and an auto-tr
 
 Within each of the three, an exact code comes before a regional variant (`pt-BR-orig` for `--lang pt`), with the existing warning when there are several. Another language's `-orig` (`en-orig`) says nothing about `pt`, so an automatic `pt` is still taken. It is a translation then, but the chain has no better caption to offer, and the header names the track. The header keeps its line `# Origem da legenda: <source> (<track>)`. The source is `manual`, `automatica` or the new `automatica original`, so a caption from `pt-orig` reads `automatica original (pt-orig)`. meta.yaml gains `caption_track` and `caption_source` when step 1 produced the text. Tested with a fake track list shaped like 4tTmY8Buask's (`pt-orig` alongside translations into `de`, `en`, `es`, `fr`, `pt`, `zh-Hans`). Existing headers are unchanged, since a video without `-orig` takes the same track as before.
 
+## D-044 pt-BR n-grams stop at a comma
+
+Add comma to the pt-BR sentence boundaries (D-024). Measured: the proposals `preço, valor`, `preço, não` and `isso, Amigo` crossed a comma in 4tTmY8Buask.
+
+This supersedes D-024's "a comma does not count" for pt-BR only. The generic language module keeps `. ? ! ;`. A comma inside a token is still part of it, so a decimal comma (`11,5%`) and a decimal point (`6.7`) are both unaffected. A caption break is still not punctuation (D-007). No term, alias or variant in any pack contains a comma.
+
+Measured on the 4tTmY8Buask run with the bundled pack 0.2.4, no learned layer: eight proposals crossed a comma. Three were medium band and applied (`preço, valor` and `preço, não` → preço alvo at 85 and 84, `isso, Amigo` → CEMIG at 80), and five were low marks. None is left. Applied annotations go from 46 to 43 and corrections from 7 to 4. That run's caption is the translated `pt` track (`automatica (pt)`) D-045 is about, fetched before D-045. The fixtures do not move against their frozen packs, so no bound changes. Against 0.2.4, 4wCtn8BWR4o goes from 4 to 3 false positives (`preço, você` → preço alvo is gone), and R2Qgz8tFWVI and wxgFO_fyfXg do not move. No hit is lost anywhere.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
