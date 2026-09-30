@@ -214,6 +214,12 @@ def find_annotations(
     for c in candidates:
         exact_forms.setdefault(" ".join(c.folded.split()), set()).add(c.term)
 
+    # D-040: the same, for the term's own names only (canonical and aliases).
+    name_forms: dict[str, set[str]] = {}
+    for c in candidates:
+        if c.origin in ("term", "alias"):
+            name_forms.setdefault(" ".join(c.folded.split()), set()).add(c.term)
+
     def exact_terms(run: str) -> set[str]:
         """The terms a run of words is exactly a form of, inflections included."""
         found = set(exact_forms.get(run, ()))
@@ -251,6 +257,24 @@ def find_annotations(
         if terms:
             for k in range(i, i + len(window)):
                 exact_at[k] |= terms
+
+    # D-040: every stretch of text that is exactly a term or an alias, as
+    # (first token, past the last, terms). A shorter correction of another term
+    # overlapping it is not a correction: `Dividend` in `Dividend Yield`.
+    exact_names: list[tuple[int, int, set[str]]] = []
+    for i, window, folded_span in windows():
+        run = " ".join(folded_span.split())
+        names = set(name_forms.get(run, ()))
+        if " " not in run and (owner := inflection_of(run)) is not None:
+            names.add(owner)
+        if names:
+            exact_names.append((i, i + len(window), names))
+
+    def inside_a_longer_name(i: int, j: int, term: str) -> bool:
+        return any(
+            s < j and i < e and e - s > j - i and names - {term}
+            for s, e, names in exact_names
+        )
 
     for i, window, folded_span in windows():
         if len(folded_span) < 2:
@@ -322,6 +346,9 @@ def find_annotations(
         if rule == term_rule("fuzzy") and any(
             exact_at[k] - {term} for k in range(i, i + len(window))
         ):
+            continue
+        # D-040: D-034 for exact corrections too, when the name is longer.
+        if inside_a_longer_name(i, i + len(window), term):
             continue
         annotations.append(
             Annotation(

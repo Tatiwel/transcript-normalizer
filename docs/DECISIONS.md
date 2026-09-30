@@ -246,13 +246,21 @@ Every `y`, `n` and `l` is written before the next question; a skip changes nothi
 
 ## D-039 The design is stable for pt-BR finance
 
-Third fixture (4wCtn8BWR4o) changed only the speaker and the recognizer (Whisper medium instead of platform captions) while keeping the vocabulary. Result with pack 0.2.3 and the user's learned layer: 37 applied, 4 asked (1 confirmed, 3 rejected), no new design rule required; every gap was pack data (evitida, dividendio, preço alvo, dívida alíquida). CEMIG misrecognitions (Semig, semiga) appeared with a different speaker and recognizer, so the variants are properties of the recognizers, not of one speaker. The design is considered stable for pt-BR finance: from here, new videos are expected to change packs, not code.
+Third fixture (4wCtn8BWR4o) changed only the speaker and the recognizer (Whisper medium instead of platform captions) while keeping the vocabulary. Result with pack 0.2.3 and the user's learned layer: 37 applied, 4 asked (1 confirmed, 3 rejected), no new design rule required; every gap was pack data (evitida, dividendio, preço alvo, dívida alíquida). CEMIG misrecognitions (Semig, semiga) appeared with a different speaker and recognizer, so the variants are properties of the recognizers, not of one speaker. The design is considered stable for pt-BR finance: from here, new videos are expected to change packs, not code. Amended by D-040: one matcher gap (exact-over-exact overlap) was found in this fixture.
 
 The four answers are the 2026-09-29 entries of the learned layer: `evitida` → EBITDA confirmed; `saber se` → Sabesp, `dividendio` → dividendo and `preço alto` → preço teto rejected. The two gold rows at 0:19 are status alias (`Dividend Yield`, both words, is in the caption line).
 
 Measured against the frozen pack 0.2.3, no learned layer: 40 in scope, 35 hits, 5 misses, 7 false positives, 13 aliases recognized, 2 wrongly substituted. CEMIG is 21/21. New regression bounds: hits >= 35, false positives <= 7, in scope 40. With the learned layer, false positives drop to 2 and no hit moves. Against packs/ 0.2.4, no learned layer: 38 hits, 2 misses, 6 false positives. `preço alto` → preço alvo is a hit reached fuzzily, not through a variant, and the new term brings one false positive (`preço, você` → preço alvo). R2Qgz8tFWVI (147 / 22) and wxgFO_fyfXg (214 / 18) do not move from 0.2.3 to 0.2.4.
 
 One gap is not in the list: at 0:19 the exact variant `dividend` of dividendo substitutes `Dividend` inside the term `Dividend Yield` spelled out. That is two false positives, two aliases wrongly substituted and two alias misses, with every pack measured. D-034 drops fuzzy proposals that overlap an exact span of another term. It does not drop exact ones.
+
+## D-040 An exact name suppresses a shorter correction overlapping it
+
+An exact term or alias span suppresses any shorter correction of another term that overlaps it, the way D-034 suppresses fuzzy proposals. Measured: at 4wCtn8BWR4o 0:19 the exact variant `dividend` of dividendo substituted `Dividend` inside `Dividend Yield`, twice. That is the gap D-039 names. D-034's check ran only on fuzzy proposals, so an exact variant got through.
+
+A name is the canonical term, an alias (curated or learned), or D-031a's inflection of either. A variant is not a name, so a longer variant does not suppress anything here. "Shorter" counts tokens: the correction's span has fewer words than the name's. An equal or longer one is still left to `resolve_overlaps`. A name of the same term suppresses nothing, since D-030's spelled-out guard already covers that. Unit rules (D-006) run before the dictionary and are unaffected. `dividend` on its own is still corrected.
+
+Measured: 4wCtn8BWR4o against its frozen pack 0.2.3 goes from 35 hits / 7 false positives / 2 aliases wrongly substituted to 35 / 5 / 0. Against packs/ 0.2.4 it goes from 38 / 6 / 2 to 38 / 4 / 0. Its bound moves to false positives <= 5. R2Qgz8tFWVI and wxgFO_fyfXg do not move, against their frozen packs or against 0.2.4. The two 0:19 alias rows are still misses. The term's canonical name spelled out produces no annotation, while an alias row expects an alias annotation.
 
 ## Open, not yet decided
 
