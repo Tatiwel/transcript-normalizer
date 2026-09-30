@@ -224,6 +224,10 @@ D-031(b) is overlap, not containment: a fuzzy proposal is dropped when its span 
 
 Overlap means sharing any token: the fuzzy span inside the exact one, around it, or across part of it. Exact-match spans are found before any fuzzy guess, whether or not they produce an annotation themselves: `market cap` spelled out produces none and still counts. Measured: neither fixture moves against its frozen pack; wxgFO_fyfXg against pack 0.2.2 goes from 20 to 17 false positives with no hit lost. On these fixtures "overlap" and "containment either way" score the same: every proposal whose removal changed a number was inside another term's exact span (`market` in `market cap`, `de Dentes` in `Geração de Dentes`). Overlap drops five more raw proposals that share only part of their span (`o market`, `Valuey, aí`, `o dividend`, `de dividend` twice), each either a low mark or one that overlap resolution already discarded.
 
+## D-035 Reserved
+
+Number skipped by mistake on 2026-09-29; kept to avoid renumbering. To be used for the out-of-domain silence test (running the finance pack on a non-finance video and counting applied corrections) when it is run.
+
 ## D-036 The fetch strategy chain
 
 fetch resolves its source in a fixed chain and records which step produced the caption in the legenda.txt header and in meta.yaml: (1) platform caption; on HTTP 429 retry up to 3 times with exponential backoff; (2) if no caption exists or (1) fails after retries, download audio and transcribe locally with faster-whisper; (3) error only if both fail. --caption-only stops after (1); --whisper skips (1). yt-dlp already covers most platforms (TikTok, Instagram, Vimeo, X, Twitch); the tool never depends on third-party converter sites.
