@@ -18,15 +18,18 @@ dependencies = [
 
 [project.optional-dependencies]
 ingest = [
-    "yt-dlp>=2024.1.1",
+    # 2024.03.10 is the first release with --impersonate, which curl_cffi enables.
+    "yt-dlp>=2024.3.10",
+    "curl_cffi>=0.7",
     "faster-whisper>=1.0",
+    "rich>=13.0",
 ]
 
 [project.scripts]
 transcript-normalizer = "transcript_normalizer.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "rich>=13.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/transcript_normalizer"]

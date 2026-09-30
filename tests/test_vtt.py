@@ -75,8 +75,8 @@ def test_a_downloaded_vtt_is_picked_up_and_renamed(tmp_path, monkeypatch):
         return subprocess.CompletedProcess(args, 0, "", "")
 
     monkeypatch.setattr(fetch, "run_ytdlp", fake_run)
-    found = fetch.download_caption(URL, "pt", "automatica", tmp_path)
+    found, retries = fetch.download_caption(URL, "pt", "automatica", tmp_path)
 
-    assert found == tmp_path / "legenda.vtt"
+    assert (found, retries) == (tmp_path / "legenda.vtt", 0)
     assert not (tmp_path / "legenda.pt.vtt").exists()
     assert subtitle_to_lines(found.read_text("utf-8"), found.suffix).startswith("0:03 ")

@@ -51,7 +51,9 @@ def test_fetch_writes_meta_yaml_into_the_video_s_run(tmp_path, monkeypatch, fake
     run = tmp_path / "runs" / "abcdefghijk"
     assert (run / CAPTION_FILE).exists()
     meta = yaml.safe_load((run / META_FILE).read_text(encoding="utf-8"))
-    assert list(meta) == ["title", "channel", "url", "published", "fetched_at"]
+    # D-022's five fields first, then D-036's record of the step that ran.
+    assert list(meta)[:5] == ["title", "channel", "url", "published", "fetched_at"]
+    assert (meta["step"], meta["step_name"], meta["retries"]) == (1, "platform caption", 0)
     assert meta["title"] == "Video sintetico de teste"
     assert meta["channel"] == "Canal de Teste"
     assert meta["url"] == URL

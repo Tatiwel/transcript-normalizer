@@ -1,5 +1,18 @@
 """`transcript-normalizer fetch <url>`: a caption from the platform, or local speech.
 
+D-036: the source is resolved in a fixed chain, and the step that produced the
+text is recorded in the legenda.txt header and in meta.yaml.
+
+1. The platform's caption. An HTTP 429 is retried with exponential backoff:
+   three attempts in all.
+2. If there is no caption, or step 1 fails, the audio is downloaded and
+   transcribed locally with faster-whisper.
+3. Only if both fail is it an error.
+
+`--caption-only` stops after step 1; `--whisper` starts at step 2. yt-dlp covers
+most platforms (YouTube, TikTok, Instagram, Vimeo, X, Twitch); the tool never
+depends on third-party converter sites.
+
 Speech recognition is not the same thing as asking an AI provider to transcribe:
 it maps audio to text and does not fill a gap with something plausible. Its
 errors are phonetic and visible, which is exactly what the domain packs correct.
@@ -15,20 +28,18 @@ import importlib.util
 import json
 import subprocess
 import sys
+import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from ..catalog import write_meta
 from ..runs import runs_root
+from .console import Output
 from .header import Metadata, caption_header, speech_header
 from .subtitles import subtitle_to_lines
 
 CAPTION_FILE = "legenda.txt"
 SUBTITLE_STEM = "legenda"
-
-
-def save_meta(target: Path, meta: Metadata, url: str) -> Path:
-    """D-022: runs/<id>/meta.yaml, so `list` does not have to parse the header."""
-    return write_meta(target, meta.title, meta.channel, url, meta.published)
 
 #: What yt-dlp may leave behind, best first. WebVTT is what YouTube serves.
 SUBTITLE_SUFFIXES = (".vtt", ".srt")
@@ -37,8 +48,59 @@ DEFAULT_LANG = "pt"
 DEFAULT_MODEL = "medium"
 SPEECH_MODELS = ("tiny", "base", "small", "medium", "large-v2", "large-v3")
 
-#: What each command needs from the `ingest` extra.
+#: What each step needs from the `ingest` extra.
 REQUIRES = {"yt_dlp": "yt-dlp", "faster_whisper": "faster-whisper"}
+
+#: D-036: attempts per yt-dlp call on HTTP 429, and the first wait (2s, then 4s).
+MAX_ATTEMPTS = 3
+BACKOFF_SECONDS = 2.0
+
+#: Replaced in tests, so a retry does not really wait.
+sleep = time.sleep
+
+STEP_CAPTION = 1
+STEP_SPEECH = 2
+STEP_NAMES = {STEP_CAPTION: "platform caption", STEP_SPEECH: "local speech recognition"}
+
+
+class FetchError(Exception):
+    """One step of the chain could not produce a text."""
+
+
+class NoCaption(FetchError):
+    """The platform has no caption in the language asked for."""
+
+
+class RateLimited(FetchError):
+    """HTTP 429 on every attempt."""
+
+
+@dataclass(frozen=True)
+class Step:
+    """What produced the text, as the header and meta.yaml record it (D-036)."""
+
+    number: int
+    retries: int = 0
+    reason: str = ""  # why step 2 ran, if it did
+
+    @property
+    def name(self) -> str:
+        return STEP_NAMES[self.number]
+
+    def header(self) -> str:
+        """The `# Etapa:` line, in the header's language (Portuguese)."""
+        if self.number == STEP_CAPTION:
+            line = "1, legenda da plataforma"
+            if self.retries:
+                line += f", apos {self.retries} nova(s) tentativa(s) por HTTP 429"
+            return line
+        return f"2, reconhecimento de fala local ({self.reason})"
+
+    def meta(self) -> dict:
+        data = {"step": self.number, "step_name": self.name, "retries": self.retries}
+        if self.reason:
+            data["fallback_reason"] = self.reason
+        return data
 
 
 def fetch_dir(video_id: str, out: str | Path | None = None) -> Path:
@@ -62,18 +124,47 @@ def report_missing(missing: list[str]) -> int:
     return 2
 
 
+# --------------------------------------------------------------------------- yt-dlp
+
+
+def impersonation_args() -> list[str]:
+    """Browser impersonation, which is what gets past most HTTP 429s. It needs
+    curl_cffi, part of the ingest extra; without it yt-dlp runs as before."""
+    return ["--impersonate", "chrome"] if importlib.util.find_spec("curl_cffi") else []
+
+
 def run_ytdlp(args: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "-m", "yt_dlp", *args], capture_output=True, text=True
+        [sys.executable, "-m", "yt_dlp", *impersonation_args(), *args],
+        capture_output=True,
+        text=True,
     )
 
 
-def read_metadata(url: str) -> Metadata:
-    result = run_ytdlp(["--dump-single-json", "--skip-download", url])
-    if result.returncode != 0:
-        print("could not read the video:", file=sys.stderr)
-        print(result.stderr.strip()[:800], file=sys.stderr)
-        raise SystemExit(1)
+def is_rate_limited(result: subprocess.CompletedProcess) -> bool:
+    text = f"{result.stderr}\n{result.stdout}"
+    return "HTTP Error 429" in text or "Too Many Requests" in text
+
+
+def ytdlp(args: list[str], what: str, out: Output) -> tuple[subprocess.CompletedProcess, int]:
+    """Run yt-dlp, retrying HTTP 429 with exponential backoff. Returns the result
+    and how many retries it took; raises RateLimited or FetchError otherwise."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        result = run_ytdlp(args)
+        if result.returncode == 0:
+            return result, attempt - 1
+        if not is_rate_limited(result):
+            raise FetchError(f"{what} failed: {result.stderr.strip()[-600:]}")
+        if attempt == MAX_ATTEMPTS:
+            raise RateLimited(f"{what}: HTTP 429 on all {MAX_ATTEMPTS} attempts")
+        wait = BACKOFF_SECONDS * 2 ** (attempt - 1)
+        out.countdown(wait, f"HTTP 429 on {what} (attempt {attempt}/{MAX_ATTEMPTS})", sleep)
+    raise AssertionError("unreachable")
+
+
+def read_metadata(url: str, out: Output | None = None) -> Metadata:
+    """What the platform says about the video. Both steps need it."""
+    result, _ = ytdlp(["--dump-single-json", "--skip-download", url], "reading the video", out or Output())
     data = json.loads(result.stdout)
     return Metadata(
         id=data.get("id", ""),
@@ -86,13 +177,14 @@ def read_metadata(url: str) -> Metadata:
     )
 
 
-def choose_language(meta: Metadata, wanted: str) -> tuple[str, str]:
+def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> tuple[str, str]:
     """Return (code, source). A manual caption is preferred over an automatic one.
 
     Exact match first. When only a regional variant exists, say so before
     choosing: asking for `pt` with both `pt-BR` and `pt-PT` available has no
     obvious answer, and picking alphabetically in silence decides by accident.
     """
+    out = out or Output()
     for available, source in (
         (meta.manual_captions, "manual"),
         (meta.automatic_captions, "automatica"),
@@ -102,10 +194,10 @@ def choose_language(meta: Metadata, wanted: str) -> tuple[str, str]:
         variants = sorted(c for c in available if c.split("-")[0] == wanted)
         if variants:
             if len(variants) > 1:
-                print(
-                    f"warning: '{wanted}' has more than one variant "
-                    f"({', '.join(variants)}). choosing '{variants[0]}'. pass "
-                    f"--lang with the exact variant if you want another."
+                out.warn(
+                    f"'{wanted}' has more than one variant ({', '.join(variants)}). "
+                    f"choosing '{variants[0]}'. pass --lang with the exact variant "
+                    f"if you want another."
                 )
             return variants[0], source
     return "", ""
@@ -137,13 +229,11 @@ def caption_args(url: str, code: str, source: str, target: Path) -> list[str]:
     ]
 
 
-def download_caption(url: str, code: str, source: str, target: Path) -> Path:
-    result = run_ytdlp(caption_args(url, code, source, target))
-    if result.returncode != 0:
-        print("could not download the caption:", file=sys.stderr)
-        print(result.stderr.strip()[:800], file=sys.stderr)
-        raise SystemExit(1)
-
+def download_caption(
+    url: str, code: str, source: str, target: Path, out: Output | None = None
+) -> tuple[Path, int]:
+    """The subtitle file, and how many 429 retries it took."""
+    _, retries = ytdlp(caption_args(url, code, source, target), "the caption download", out or Output())
     found = next(
         (
             path
@@ -153,45 +243,43 @@ def download_caption(url: str, code: str, source: str, target: Path) -> Path:
         None,
     )
     if found is None:
-        print(
+        raise FetchError(
             "yt-dlp finished without error but no subtitle file appeared "
-            f"({', '.join(SUBTITLE_SUFFIXES)})",
-            file=sys.stderr,
+            f"({', '.join(SUBTITLE_SUFFIXES)})"
         )
-        raise SystemExit(1)
     # yt-dlp writes legenda.<lang>.<ext>; the fixed name saves the reader from
     # having to know which language came out. The language stays in the header.
     fixed = target / f"{SUBTITLE_STEM}{found.suffix}"
     if found != fixed:
         found.replace(fixed)
         found = fixed
-    return found
+    return found, retries
 
 
-def download_audio(url: str, target: Path) -> Path:
+def download_audio(url: str, target: Path, out: Output | None = None) -> Path:
     """Download the audio track without converting, which needs no ffmpeg."""
-    result = run_ytdlp(
-        [
-            "-f",
-            "bestaudio[ext=m4a]/bestaudio",
-            "--no-part",
-            "--output",
-            str(target / "audio.%(ext)s"),
-            url,
-        ]
+    ytdlp(
+        ["-f", "bestaudio[ext=m4a]/bestaudio", "--no-part", "--output", str(target / "audio.%(ext)s"), url],
+        "the audio download",
+        out or Output(),
     )
-    if result.returncode != 0:
-        print("could not download the audio:", file=sys.stderr)
-        print(result.stderr.strip()[-900:], file=sys.stderr)
-        raise SystemExit(1)
     found = sorted(target.glob("audio.*"))
     if not found:
-        print("download finished without error but no audio appeared", file=sys.stderr)
-        raise SystemExit(1)
+        raise FetchError("the audio download finished without error but no audio appeared")
     return found[-1]
 
 
-def transcribe(audio: Path, lang: str, model: str) -> str:
+# --------------------------------------------------------------------------- speech
+
+
+def load_whisper(model: str):
+    """The faster-whisper model. Replaced in tests by a fake transcriber."""
+    from faster_whisper import WhisperModel  # the ingest extra, imported lazily
+
+    return WhisperModel(model, device="cpu", compute_type="int8")
+
+
+def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) -> str:
     """Local speech recognition, as `m:ss text` lines.
 
     `vad_filter` is required, not optional. Without it a stretch with no speech,
@@ -200,22 +288,76 @@ def transcribe(audio: Path, lang: str, model: str) -> str:
     filter and no segment at all with it. That is the only way speech
     recognition invents, and it is mitigable.
     """
-    from faster_whisper import WhisperModel  # the ingest extra, imported lazily
-
-    print(f"transcribing with model '{model}', this can take a while")
-    engine = WhisperModel(model, device="cpu", compute_type="int8")
-    segments, _info = engine.transcribe(
+    out = out or Output()
+    out.info(f"loading speech model '{model}' (the first run downloads it)")
+    engine = load_whisper(model)
+    segments, info = engine.transcribe(
         str(audio), language=lang, vad_filter=True, condition_on_previous_text=False
     )
     lines = []
-    for segment in segments:
-        text = segment.text.strip()
-        if not text:
-            continue
-        minutes, seconds = divmod(int(segment.start), 60)
-        lines.append(f"{minutes}:{seconds:02d} {text}")
-    print(f"segments with speech: {len(lines)}")
+    done = 0.0
+    with out.progress(total=float(info.duration or 0), description="transcribing") as advance:
+        for segment in segments:
+            advance(max(segment.end - done, 0.0))
+            done = max(done, segment.end)
+            text = segment.text.strip()
+            if not text:
+                continue
+            minutes, seconds = divmod(int(segment.start), 60)
+            lines.append(f"{minutes}:{seconds:02d} {text}")
+    out.info(f"segments with speech: {len(lines)}")
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- the chain
+
+
+def save_meta(target: Path, meta: Metadata, url: str, step: Step | None = None) -> Path:
+    """D-022: runs/<id>/meta.yaml, with the step of D-036 that produced the text."""
+    return write_meta(
+        target, meta.title, meta.channel, url, meta.published, extra=step.meta() if step else None
+    )
+
+
+def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Output) -> Step:
+    """Step 1: the platform's caption. Raises NoCaption, RateLimited or FetchError."""
+    code, source = choose_language(meta, args.lang, out)
+    if not code:
+        raise NoCaption(
+            f"there is no caption in '{args.lang}' for this video "
+            f"(manual: {summarise(meta.manual_captions)}; "
+            f"automatic: {summarise(meta.automatic_captions)})"
+        )
+    out.info(f"caption chosen: {code} ({source})")
+    subtitle, retries = download_caption(args.url, code, source, target, out)
+    step = Step(STEP_CAPTION, retries=retries)
+    body = subtitle_to_lines(subtitle.read_text(encoding="utf-8"), subtitle.suffix)
+    caption = target / CAPTION_FILE
+    caption.write_text(
+        caption_header(meta, args.url, source, code, step=step.header()) + body + "\n",
+        encoding="utf-8",
+    )
+    out.info(f"subtitle: {subtitle}")
+    return step
+
+
+def step_speech(
+    args: argparse.Namespace, meta: Metadata, target: Path, reason: str, out: Output
+) -> Step:
+    """Step 2: local speech recognition. Raises FetchError."""
+    missing = missing_extra("faster_whisper")
+    if missing:
+        raise FetchError(f"local speech recognition needs {', '.join(missing)} (the ingest extra)")
+    audio = download_audio(args.url, target, out)
+    out.info(f"audio: {audio}")
+    body = transcribe(audio, args.lang, args.model, out)
+    step = Step(STEP_SPEECH, reason=reason)
+    (target / CAPTION_FILE).write_text(
+        speech_header(meta, args.url, args.lang, args.model, step=step.header()) + body + "\n",
+        encoding="utf-8",
+    )
+    out.info("the audio can be deleted once you have checked the text; it is not knowledge")
+    return step
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
@@ -226,10 +368,16 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         metavar="DIR",
         help="write into DIR instead of runs/<video-id>/",
     )
-    parser.add_argument(
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument(
         "--whisper",
         action="store_true",
-        help="ignore the platform caption and transcribe the audio locally",
+        help="skip the platform caption: transcribe the audio locally (step 2 only)",
+    )
+    source.add_argument(
+        "--caption-only",
+        action="store_true",
+        help="use the platform caption or fail; never fall back to local speech (step 1 only)",
     )
     parser.add_argument(
         "--lang", default=DEFAULT_LANG, help=f"caption language code. default: {DEFAULT_LANG}"
@@ -246,74 +394,78 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> int:
-    needed = ("yt_dlp", "faster_whisper") if args.whisper else ("yt_dlp",)
-    missing = missing_extra(*needed)
+    """Fetch a caption for a video: the platform's, or local speech recognition (D-036)."""
+    out = Output()
+    missing = missing_extra("yt_dlp")
     if missing:
         return report_missing(missing)
 
-    if args.whisper and args.model not in SPEECH_MODELS:
+    if args.model not in SPEECH_MODELS:
         print(
             f"unknown speech model: {args.model!r}\nvalid: {', '.join(SPEECH_MODELS)}",
             file=sys.stderr,
         )
         return 2
 
-    meta = read_metadata(args.url)
-    print(f"\ntitle: {meta.title}")
-    print(f"channel: {meta.channel}")
-    print(f"published: {meta.published}")
-    print(f"duration: {meta.duration // 60}min{meta.duration % 60:02d}s")
+    try:
+        meta = read_metadata(args.url, out)
+    except FetchError as error:
+        print(f"could not read the video: {error}", file=sys.stderr)
+        return 1
+    out.info(f"title: {meta.title}")
+    out.info(f"channel: {meta.channel}")
+    out.info(f"published: {meta.published}")
+    out.info(f"duration: {meta.duration // 60}min{meta.duration % 60:02d}s")
 
     if args.list:
-        print(f"\nmanual captions: {summarise(meta.manual_captions)}")
-        print(f"automatic captions: {summarise(meta.automatic_captions)}")
+        out.info(f"manual captions: {summarise(meta.manual_captions)}")
+        out.info(f"automatic captions: {summarise(meta.automatic_captions)}")
         return 0
 
     target = fetch_dir(meta.id, args.out)
     target.mkdir(parents=True, exist_ok=True)
-    print(f"directory: {target}")
-    caption = target / CAPTION_FILE
+    out.info(f"directory: {target}")
 
+    step = None
+    failures: list[str] = []
     if args.whisper:
-        audio = download_audio(args.url, target)
-        print(f"audio: {audio}")
-        body = transcribe(audio, args.lang, args.model)
-        caption.write_text(
-            speech_header(meta, args.url, args.lang, args.model) + body + "\n",
-            encoding="utf-8",
-        )
-        print(f"text: {caption}")
-        print(f"meta: {save_meta(target, meta, args.url)}")
-        print(
-            "\nThe audio can be deleted once you have checked the text. "
-            "It is not knowledge."
-        )
-        return 0
+        reason = "pedido com --whisper"
+    else:
+        out.stage(f"step 1: {STEP_NAMES[STEP_CAPTION]}")
+        try:
+            step = step_caption(args, meta, target, out)
+        except NoCaption as error:
+            failures.append(str(error))
+            reason = "sem legenda na plataforma"
+        except RateLimited as error:
+            failures.append(str(error))
+            reason = f"legenda falhou: HTTP 429 em {MAX_ATTEMPTS} tentativas"
+        except FetchError as error:
+            failures.append(str(error))
+            reason = "legenda falhou"
+        if step is None:
+            out.warn(failures[-1])
+            if args.caption_only:
+                print(
+                    f"no platform caption, and --caption-only forbids local speech "
+                    f"recognition: {failures[-1]}",
+                    file=sys.stderr,
+                )
+                return 1
 
-    code, source = choose_language(meta, args.lang)
-    if not code:
-        print(f"\nthere is no caption in '{args.lang}' for this video.", file=sys.stderr)
-        print(f"manual: {summarise(meta.manual_captions)}", file=sys.stderr)
-        print(f"automatic: {summarise(meta.automatic_captions)}", file=sys.stderr)
-        print("use --list to see the whole list", file=sys.stderr)
-        print(
-            "\nif the video has no caption in any useful language, use --whisper "
-            "for local speech recognition. Do not use an AI provider to "
-            "transcribe: it summarises and fills gaps with what sounds plausible.",
-            file=sys.stderr,
-        )
-        return 2
+    if step is None:
+        out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
+        try:
+            step = step_speech(args, meta, target, reason, out)
+        except FetchError as error:
+            failures.append(str(error))
+            print("could not get a text for this video:", file=sys.stderr)
+            for failure in failures:
+                print(f"  - {failure}", file=sys.stderr)
+            return 1
 
-    print(f"caption chosen: {code} ({source})")
-    subtitle = download_caption(args.url, code, source, target)
-    body = subtitle_to_lines(
-        subtitle.read_text(encoding="utf-8"), subtitle.suffix
-    )
-    caption.write_text(
-        caption_header(meta, args.url, source, code) + body + "\n", encoding="utf-8"
-    )
-    print(f"\nsubtitle: {subtitle}")
-    print(f"text:  {caption}")
-    print(f"meta:  {save_meta(target, meta, args.url)}")
-    print(f"lines: {len(caption.read_text(encoding='utf-8').splitlines())}")
+    caption = target / CAPTION_FILE
+    out.info(f"meta:  {save_meta(target, meta, args.url, step)}")
+    out.info(f"text:  {caption} (step {step.number}, {step.name})")
+    out.info(f"lines: {len(caption.read_text(encoding='utf-8').splitlines())}")
     return 0

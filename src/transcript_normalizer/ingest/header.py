@@ -29,8 +29,18 @@ def _today() -> str:
     return date.today().isoformat()
 
 
+def _step_line(step: str | None) -> list[str]:
+    """D-036: which step of the fetch chain produced this text, when known."""
+    return [f"# Etapa: {step}"] if step else []
+
+
 def caption_header(
-    meta: Metadata, url: str, source: str, lang: str, downloaded: str | None = None
+    meta: Metadata,
+    url: str,
+    source: str,
+    lang: str,
+    downloaded: str | None = None,
+    step: str | None = None,
 ) -> str:
     """The header of a caption taken from the platform. `source` is manual/automatica."""
     return "\n".join(
@@ -40,6 +50,7 @@ def caption_header(
             "# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.",
             "# Legenda obtida da plataforma, sem transcricao por IA.",
             f"# Origem da legenda: {source} ({lang})",
+            *_step_line(step),
             f"# Titulo: {meta.title}",
             f"# Canal: {meta.channel}",
             f"# Publicado: {meta.published}",
@@ -58,7 +69,12 @@ def caption_header(
 
 
 def speech_header(
-    meta: Metadata, url: str, lang: str, model: str, transcribed: str | None = None
+    meta: Metadata,
+    url: str,
+    lang: str,
+    model: str,
+    transcribed: str | None = None,
+    step: str | None = None,
 ) -> str:
     """The header of a transcript produced by local speech recognition."""
     return "\n".join(
@@ -69,6 +85,7 @@ def speech_header(
             "# NAO FOI TRANSCRITO POR PROVEDOR DE IA. Reconhecimento de fala",
             "# mapeia audio para texto e nao completa lacuna com plausibilidade.",
             f"# Modelo: faster-whisper {model}, idioma {lang}, vad_filter ativo",
+            *_step_line(step),
             f"# Titulo: {meta.title}",
             f"# Canal: {meta.channel}",
             f"# Publicado: {meta.published}",

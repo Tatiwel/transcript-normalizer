@@ -34,7 +34,9 @@ def write_meta(
     url: str,
     published: str,
     fetched_at: datetime | None = None,
+    extra: dict | None = None,
 ) -> Path:
+    """D-022's five fields, then whatever the fetch recorded about itself (D-036)."""
     fetched_at = fetched_at or datetime.now().astimezone()
     data = {
         "title": title,
@@ -42,6 +44,7 @@ def write_meta(
         "url": url,
         "published": iso_date(published),
         "fetched_at": fetched_at.isoformat(timespec="seconds"),
+        **(extra or {}),
     }
     path = Path(directory) / META_FILE
     path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
