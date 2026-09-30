@@ -141,7 +141,15 @@ A fixture is a video whose caption has been checked by hand against the tool's o
 transcript-normalizer fetch <url>
 ```
 
-This writes `runs/<video-id>/legenda.txt` (the platform's caption with a provenance header) and `meta.yaml`. `--whisper` transcribes the audio locally when there is no caption.
+This writes `runs/<video-id>/legenda.txt` (the platform's caption, with a provenance header) and `meta.yaml`. If the platform has no caption, or it cannot be had after retrying rate limits, the audio is transcribed locally instead; the header's `# Etapa:` line and meta.yaml say which happened (D-036). `--caption-only` never falls back, and `--whisper` always transcribes.
+
+For a recording you have as a file, pass its path instead of a url:
+
+```
+transcript-normalizer fetch path/to/entrevista.mp4
+```
+
+A file has no platform caption, so it is transcribed locally into `runs/<file-stem>/` (`runs/entrevista/` here). Its header records the file name where a video's records the url, and meta.yaml records `source: file` and the file's absolute path (D-038).
 
 **3.2 Normalize, asking for the corrections draft.**
 

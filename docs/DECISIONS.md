@@ -230,6 +230,10 @@ fetch resolves its source in a fixed chain and records which step produced the c
 
 "Up to 3" is three attempts in all, the first and two retries, waiting 2s and then 4s: three 429s in a row fall through to step 2. Any failure of step 1 falls through, but only a 429 is retried. Reading the video's metadata comes before both steps and is retried the same way; if it fails, there is nothing to fall through to. The header gains a line `# Etapa: 1, legenda da plataforma` (with the retries, when there were any) or `# Etapa: 2, reconhecimento de fala local (<why>)`, in the header's Portuguese; meta.yaml gains `step`, `step_name`, `retries` and, for step 2, `fallback_reason`. With curl_cffi installed (the ingest extra), yt-dlp is asked to impersonate a browser (`--impersonate chrome`), which is what avoids most 429s; without it yt-dlp runs as before. On a terminal the stages, the transcription progress (by seconds of audio) and the retry countdown are drawn with rich; anywhere else they are plain lines. The model download shows faster-whisper's own progress, announced by a line before it starts.
 
+## D-038 fetch takes a local audio or video file
+
+`transcript-normalizer fetch <path>` accepts a local audio or video file as well as a url. A file has no platform caption, so the D-036 chain starts at step 2: it is transcribed locally with faster-whisper, where it sits, without being copied, and needs faster-whisper but not yt-dlp. The run directory is `runs/<file-stem>/`, D-018's third rule. meta.yaml records `source: file` and the file's absolute path, with `url: null`, and a url run now records `source: url`. The legenda.txt header has `# Arquivo: <file name>` where a video's has `# URL:`, and `# Etapa: 2, reconhecimento de fala local (arquivo local)`. `--caption-only` with a file is an error, since there is no caption to take; so is a path that is neither an existing file nor a url, rather than handing it to yt-dlp.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

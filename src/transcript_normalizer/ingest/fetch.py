@@ -1,4 +1,4 @@
-"""`transcript-normalizer fetch <url>`: a caption from the platform, or local speech.
+"""`transcript-normalizer fetch <url | file>`: a platform caption, or local speech.
 
 D-036: the source is resolved in a fixed chain, and the step that produced the
 text is recorded in the legenda.txt header and in meta.yaml.
@@ -9,9 +9,10 @@ text is recorded in the legenda.txt header and in meta.yaml.
    transcribed locally with faster-whisper.
 3. Only if both fail is it an error.
 
-`--caption-only` stops after step 1; `--whisper` starts at step 2. yt-dlp covers
-most platforms (YouTube, TikTok, Instagram, Vimeo, X, Twitch); the tool never
-depends on third-party converter sites.
+`--caption-only` stops after step 1; `--whisper` starts at step 2. A local audio
+or video file starts at step 2 too, since it has no platform caption (D-038).
+yt-dlp covers most platforms (YouTube, TikTok, Instagram, Vimeo, X, Twitch); the
+tool never depends on third-party converter sites.
 
 Speech recognition is not the same thing as asking an AI provider to transcribe:
 it maps audio to text and does not fill a gap with something plausible. Its
@@ -312,11 +313,59 @@ def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) ->
 # --------------------------------------------------------------------------- the chain
 
 
-def save_meta(target: Path, meta: Metadata, url: str, step: Step | None = None) -> Path:
-    """D-022: runs/<id>/meta.yaml, with the step of D-036 that produced the text."""
-    return write_meta(
-        target, meta.title, meta.channel, url, meta.published, extra=step.meta() if step else None
+def save_meta(
+    target: Path, meta: Metadata, url: str | None, step: Step | None = None, path: Path | None = None
+) -> Path:
+    """D-022: runs/<id>/meta.yaml, with the step of D-036 that produced the text,
+    and (D-038) whether the input was a url or a local file."""
+    extra = {"source": "file", "path": str(path)} if path is not None else {"source": "url"}
+    extra.update(step.meta() if step else {})
+    return write_meta(target, meta.title, meta.channel, url, meta.published, extra=extra)
+
+
+def local_media(source: str) -> Path | None:
+    """The local file `source` names, or None if it is a url (D-038)."""
+    if "://" in source:
+        return None
+    path = Path(source).expanduser()
+    return path.resolve() if path.is_file() else None
+
+
+def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
+    """D-038: a local audio or video file. No platform caption, so step 2 only."""
+    if args.caption_only:
+        print(f"{media.name} is a local file: it has no platform caption, and "
+              f"--caption-only forbids local speech recognition", file=sys.stderr)
+        return 1
+    if args.list:
+        print("--list lists a video's platform captions; a local file has none", file=sys.stderr)
+        return 2
+    missing = missing_extra("faster_whisper")
+    if missing:
+        return report_missing(missing)
+
+    meta = Metadata(id=media.stem, title=media.stem)
+    target = fetch_dir(media.stem, args.out)  # D-018 rule 3: the file's stem
+    target.mkdir(parents=True, exist_ok=True)
+    out.info(f"file: {media}")
+    out.info(f"directory: {target}")
+    out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
+    step = Step(STEP_SPEECH, reason="arquivo local")
+    try:
+        body = transcribe(media, args.lang, args.model, out)
+    except Exception as error:  # a decoder or model failure: the chain's step 3
+        print(f"could not transcribe {media}: {error}", file=sys.stderr)
+        return 1
+    caption = target / CAPTION_FILE
+    caption.write_text(
+        speech_header(meta, "", args.lang, args.model, step=step.header(), file_name=media.name)
+        + body
+        + "\n",
+        encoding="utf-8",
     )
+    out.info(f"meta:  {save_meta(target, meta, None, step, path=media)}")
+    out.info(f"text:  {caption} (step {step.number}, {step.name})")
+    return 0
 
 
 def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Output) -> Step:
@@ -361,7 +410,11 @@ def step_speech(
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("url", help="video url")
+    parser.add_argument(
+        "url",
+        metavar="URL_OR_FILE",
+        help="a video url, or a local audio or video file (which goes straight to step 2)",
+    )
     parser.add_argument(
         "--out",
         type=Path,
@@ -396,16 +449,22 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
 def run(args: argparse.Namespace) -> int:
     """Fetch a caption for a video: the platform's, or local speech recognition (D-036)."""
     out = Output()
-    missing = missing_extra("yt_dlp")
-    if missing:
-        return report_missing(missing)
-
     if args.model not in SPEECH_MODELS:
         print(
             f"unknown speech model: {args.model!r}\nvalid: {', '.join(SPEECH_MODELS)}",
             file=sys.stderr,
         )
         return 2
+    media = local_media(args.url)
+    if media is not None:
+        return run_file(args, media, out)
+    if "://" not in args.url:
+        print(f"{args.url}: no such file, and not a url", file=sys.stderr)
+        return 1
+
+    missing = missing_extra("yt_dlp")
+    if missing:
+        return report_missing(missing)
 
     try:
         meta = read_metadata(args.url, out)

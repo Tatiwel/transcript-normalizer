@@ -75,6 +75,7 @@ def speech_header(
     model: str,
     transcribed: str | None = None,
     step: str | None = None,
+    file_name: str | None = None,
 ) -> str:
     """The header of a transcript produced by local speech recognition."""
     return "\n".join(
@@ -89,7 +90,7 @@ def speech_header(
             f"# Titulo: {meta.title}",
             f"# Canal: {meta.channel}",
             f"# Publicado: {meta.published}",
-            f"# URL: {url}",
+            f"# Arquivo: {file_name}" if file_name else f"# URL: {url}",
             f"# Transcrito em: {transcribed or _today()}",
             "#",
             "# Cada linha comeca com o timestamp mm:ss. O timestamp e a",
