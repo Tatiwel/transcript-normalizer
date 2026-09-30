@@ -244,6 +244,16 @@ The confirmation loop writes the learned layer after every answer (atomic write:
 
 Every `y`, `n` and `l` is written before the next question; a skip changes nothing and writes nothing. The temporary file sits beside the learned file, so the rename stays on one filesystem; a failed write removes it and leaves the previous file whole. Ctrl+C ends the loop, pending.txt is rewritten from the answers so far (a variant the loop never reached is `[never asked]`, one skipped is `[skipped]`), the run prints how many answers it kept, and it exits with 130. A finished session still ends with "learned layer written to". A rerun asks nothing already answered, because a confirmed variant now matches exactly, a rejected pair is never proposed, and an alias is recognized.
 
+## D-039 The design is stable for pt-BR finance
+
+Third fixture (4wCtn8BWR4o) changed only the speaker and the recognizer (Whisper medium instead of platform captions) while keeping the vocabulary. Result with pack 0.2.3 and the user's learned layer: 37 applied, 4 asked (1 confirmed, 3 rejected), no new design rule required; every gap was pack data (evitida, dividendio, preço alvo, dívida alíquida). CEMIG misrecognitions (Semig, semiga) appeared with a different speaker and recognizer, so the variants are properties of the recognizers, not of one speaker. The design is considered stable for pt-BR finance: from here, new videos are expected to change packs, not code.
+
+The four answers are the 2026-09-29 entries of the learned layer: `evitida` → EBITDA confirmed; `saber se` → Sabesp, `dividendio` → dividendo and `preço alto` → preço teto rejected. The two gold rows at 0:19 are status alias (`Dividend Yield`, both words, is in the caption line).
+
+Measured against the frozen pack 0.2.3, no learned layer: 40 in scope, 35 hits, 5 misses, 7 false positives, 13 aliases recognized, 2 wrongly substituted. CEMIG is 21/21. New regression bounds: hits >= 35, false positives <= 7, in scope 40. With the learned layer, false positives drop to 2 and no hit moves. Against packs/ 0.2.4, no learned layer: 38 hits, 2 misses, 6 false positives. `preço alto` → preço alvo is a hit reached fuzzily, not through a variant, and the new term brings one false positive (`preço, você` → preço alvo). R2Qgz8tFWVI (147 / 22) and wxgFO_fyfXg (214 / 18) do not move from 0.2.3 to 0.2.4.
+
+One gap is not in the list: at 0:19 the exact variant `dividend` of dividendo substitutes `Dividend` inside the term `Dividend Yield` spelled out. That is two false positives, two aliases wrongly substituted and two alias misses, with every pack measured. D-034 drops fuzzy proposals that overlap an exact span of another term. It does not drop exact ones.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
