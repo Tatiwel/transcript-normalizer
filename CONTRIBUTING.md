@@ -62,7 +62,7 @@ A pack in a language with no module is an error. `--allow-generic` runs it with 
 
 ## 2. Building a domain pack
 
-A pack is the list of terms the tool is allowed to touch (D-001, D-002). Nothing outside it is ever changed. Packs live in `packs/`, and the one used by default is `packs/financas-ptbr.yaml`.
+A pack is the list of terms the tool is allowed to touch (D-001, D-002). Nothing outside it is ever changed. The curated one, used by default, is `src/transcript_normalizer/packs/financas-ptbr.yaml` and ships in the package; `packs/` at the root is for your learned layers and your own packs (D-043).
 
 **2.1 The schema.**
 
@@ -184,6 +184,6 @@ The status records who wrote the row. Scoring treats `certo` and `conferido` ali
 **3.6 Measure, record, and write it down.**
 
 1. Run `uv run pytest -q tests/test_regression_fixture.py`. A fixture without bounds fails on purpose (`test_every_fixture_has_bounds`).
-2. Run `uv run python scripts/measure.py`, which prints every fixture's in-scope rows, hits, misses, false positives, aliases recognized and aliases wrongly substituted, and a non-blocking run of each fixture against the current `packs/` pack.
+2. Run `uv run python scripts/measure.py`, which prints every fixture's in-scope rows, hits, misses, false positives, aliases recognized and aliases wrongly substituted, and a non-blocking run of each fixture against the current curated pack.
 3. Add the fixture to `BOUNDS` in `tests/test_regression_fixture.py` with the numbers **as measured**, not tuned: `in_scope`, `min_hits`, `max_false_positives`, and `max_manter_touched` if a `manter` row is touched. Write a comment saying what the numbers are and where they came from.
 4. Append a decision to `docs/DECISIONS.md` recording the fixture and its measured bounds. Decisions are append-only: from then on, any change that moves a bound gets a commit that updates the table, and a decision that says why.

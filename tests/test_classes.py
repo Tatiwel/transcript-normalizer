@@ -7,10 +7,11 @@ import pytest
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption
 from transcript_normalizer.core.pack import CLASSES, Learned
+from transcript_normalizer.runs import BUNDLED_PACKS
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKS = [
-    ROOT / "packs" / "financas-ptbr.yaml",
+    BUNDLED_PACKS / "financas-ptbr.yaml",
     *sorted((ROOT / "fixtures").glob("*/pack.yaml")),
 ]
 GOLDS = sorted((ROOT / "fixtures").glob("*/gold.csv"))

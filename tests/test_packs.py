@@ -17,7 +17,7 @@ from transcript_normalizer.runs import (
 
 from .conftest import CAPTION, FIXTURE, FIXTURE_VIDEO_ID, PACK
 
-REPO_PACK = FIXTURE.parents[1] / "packs" / DEFAULT_PACK
+REPO_PACK = BUNDLED_PACKS / DEFAULT_PACK
 
 
 def test_the_repo_ships_a_usable_default_pack():
@@ -40,9 +40,11 @@ def test_pack_defaults_to_the_packs_directory(tmp_path, monkeypatch):
     assert (tmp_path / "runs" / FIXTURE_VIDEO_ID / "annotations.json").exists()
 
 
-def test_the_repo_s_packs_directory_is_the_bundled_pack():
-    """packs/financas-ptbr.yaml is a link to the copy that ships in the wheel."""
-    assert REPO_PACK.resolve() == (BUNDLED_PACKS / DEFAULT_PACK).resolve()
+def test_the_repo_s_packs_directory_holds_no_curated_pack():
+    """D-043: the curated pack ships in the package; packs/ is the user's."""
+    root_packs = FIXTURE.parents[1] / "packs"
+    assert not (root_packs / DEFAULT_PACK).exists()
+    assert not any(p.is_symlink() for p in root_packs.iterdir())
 
 
 def test_with_no_packs_directory_the_default_is_the_bundled_pack(tmp_path, monkeypatch):

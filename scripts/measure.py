@@ -14,9 +14,10 @@ from transcript_normalizer.core.matcher import MARK_THRESHOLD, find_annotations,
 from transcript_normalizer.core.pack import Learned, load_pack
 from transcript_normalizer.core.standoff import BAND_LOW, in_band
 from transcript_normalizer.evaluate import Fixture, evaluate_fixture, fixtures
+from transcript_normalizer.runs import BUNDLED_PACKS
 
 ROOT = Path(__file__).resolve().parents[1]
-PACK = ROOT / "packs" / "financas-ptbr.yaml"
+PACK = BUNDLED_PACKS / "financas-ptbr.yaml"
 COLUMNS = (
     "in scope",
     "hits",
@@ -48,7 +49,7 @@ def pack_effect(found: list[Fixture]) -> str:
     for fixture in found:
         rows += [
             (f"{fixture.name} frozen {fixture.load_pack().version}", evaluate_fixture(fixture).counts()),
-            (f"{fixture.name} packs/ {pack.version}", evaluate_fixture(fixture, pack).counts()),
+            (f"{fixture.name} bundled {pack.version}", evaluate_fixture(fixture, pack).counts()),
         ]
     return table(rows)
 
@@ -75,7 +76,7 @@ def main() -> None:
     found = fixtures(ROOT / "fixtures")
     print("Per fixture, frozen fixture pack, no learned layer\n")
     print(table([(f.name, evaluate_fixture(f).counts()) for f in found]))
-    print("\n\nNon-blocking: every fixture against packs/financas-ptbr.yaml, no learned layer\n")
+    print("\n\nNon-blocking: every fixture against the bundled financas-ptbr.yaml, no learned layer\n")
     print(pack_effect(found))
     print("\n\nLow band, lower threshold 60 vs 70 (D-029 chose 70; frozen fixture packs)\n")
     print(low_band(found))

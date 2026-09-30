@@ -35,11 +35,7 @@ BOUNDS = {
     # D-031 undoes D-030's plural false positives and keeps its three hits
     # (`autocapex`, `Sabespe`, `segundo trio`). Two above the pre-D-030 16: the
     # variant `tira` -> TIR, which the frozen pack keeps (D-032 is packs/ only).
-    # D-041: the touched `manter` row is 7:30 `Léo ruim`, recognized as the
-    # term Leo (folded, it is the canonical name). Nothing is substituted.
-    "R2Qgz8tFWVI": Bounds(
-        in_scope=167, min_hits=150, max_false_positives=18, max_manter_touched=1
-    ),
+    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=18),
     # D-031: one above the pre-D-030 57, again `tira` -> TIR. The touched
     # `manter` row is 15:54 `divide a`.
     "wxgFO_fyfXg": Bounds(

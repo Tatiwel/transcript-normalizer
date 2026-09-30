@@ -1,14 +1,13 @@
 """D-030: "the term is already spelled out here" means as whole words."""
 
-from pathlib import Path
-
 import pytest
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption
 from transcript_normalizer.core.matcher import contains_words
 from transcript_normalizer.core.pack import Learned
+from transcript_normalizer.runs import BUNDLED_PACKS
 
-PACK_V2 = Path(__file__).resolve().parents[1] / "packs" / "financas-ptbr.yaml"
+PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
 
 
 @pytest.fixture(scope="module")

@@ -268,7 +268,19 @@ An exact occurrence of a term's canonical name (or its inflected form) produces 
 
 The inflected form already produced a recognition under D-031a, and its rule stays `term:alias`. The new annotation is the exact canonical name, compared folded (case and accent), so `Léo` is the name `Leo`. The report lists these under "recognized (not changed)". normalized.txt does not change.
 
-Measured, after overlap resolution, `term:exact` annotations per fixture (frozen pack / packs/ 0.2.4): 4wCtn8BWR4o 43 / 48, R2Qgz8tFWVI 61 / 76, wxgFO_fyfXg 105 / 125. Against the frozen packs, 4wCtn8BWR4o goes from 35 to 37 hits and from 13 to 15 aliases recognized: the two 0:19 rows. Its misses go from 5 to 3 and its false positives stay at 5. Its bound moves to hits >= 37. R2Qgz8tFWVI and wxgFO_fyfXg do not move in hits, false positives or aliases, against either pack. Against 0.2.4, 4wCtn8BWR4o has 40 hits, 0 misses and 4 false positives. One `manter` row of R2Qgz8tFWVI now carries an applied annotation: 7:30 `Léo ruim` is recognized as the term Leo. The gold note says the speaker said "Leo, ruim?". The text is not substituted, but D-026 counts any applied annotation on a manter row, so that fixture's bound allows one touched row.
+Measured, after overlap resolution, `term:exact` annotations per fixture (frozen pack / packs/ 0.2.4): 4wCtn8BWR4o 43 / 48, R2Qgz8tFWVI 61 / 76, wxgFO_fyfXg 105 / 125. Against the frozen packs, 4wCtn8BWR4o goes from 35 to 37 hits and from 13 to 15 aliases recognized: the two 0:19 rows. Its misses go from 5 to 3 and its false positives stay at 5. Its bound moves to hits >= 37. R2Qgz8tFWVI and wxgFO_fyfXg do not move in hits, false positives or aliases, against either pack. Against 0.2.4, 4wCtn8BWR4o has 40 hits, 0 misses and 4 false positives. One `manter` row of R2Qgz8tFWVI now carries an applied annotation: 7:30 `Léo ruim` is recognized as the term Leo. The gold note says the speaker said "Leo, ruim?". The text is not substituted, but D-026 counts any applied annotation on a manter row, so that fixture's bound allows one touched row. Amended by D-042: recognitions do not touch a manter row, and the bound is back to zero.
+
+## D-042 A manter row forbids corrections, not recognitions
+
+Amends D-026. A manter row forbids an applied correction on its span, not a recognition annotation; recognitions never change text. Measured: `Léo ruim` at 7:30 in R2Qgz8tFWVI was counted as touched once canonical mentions were recognized (D-041).
+
+The evaluator's touched list for a manter row now holds applied corrections only, of any term. Recognitions (kind alias) are not in it. Measured: R2Qgz8tFWVI goes back to no touched manter row, and its bound is zero again. wxgFO_fyfXg keeps its one touched row, 15:54 `divide a`, which is a correction. No fixture moves in hits, misses, false positives or aliases.
+
+## D-043 The curated pack ships in the package
+
+The curated pack ships inside the package at transcript_normalizer/packs/ and is the default when no ./packs/financas-ptbr.yaml exists in the working directory (supersedes the error case of D-017). The root packs/ directory holds only user files: learned layers and user-authored packs.
+
+The root `packs/financas-ptbr.yaml` is no longer a link to the bundled copy. It is gone, so the sdist carries no symlink. Run in the repo, the default is therefore the bundled pack, while the learned layer still sits at `./packs/<pack-name>.learned.yaml`. Tests and `scripts/measure.py` read the bundled path. `packs/README.md` says what the directory is for.
 
 ## Open, not yet decided
 

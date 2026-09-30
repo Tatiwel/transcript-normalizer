@@ -46,7 +46,8 @@ src/transcript_normalizer/
   core/          the engine: pack, rules, text, matcher, stand-off, render; no language in it
   languages/     one module per language: normalization, inflection, units, sentences (D-033)
   ingest/        fetching captions; optional, needs the `ingest` extra
-packs/           your domain packs, and the learned layer beside each (D-017)
+  packs/         the curated packs, shipped in the wheel; financas-ptbr.yaml is the default (D-043)
+packs/           your own packs and learned layers (D-017, D-043)
 fixtures/        frozen test material; the regression test reads it, nothing writes it
 experiments/     the throwaway scripts that measured the decisions, kept as record
 runs/            everything a command produces, gitignored (D-015)

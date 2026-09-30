@@ -9,9 +9,10 @@ from transcript_normalizer import find_annotations, load_pack, parse_caption, re
 from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.core.render import render_lines
 from transcript_normalizer.core.standoff import KIND_ALIAS, RULE_UNIT
+from transcript_normalizer.runs import BUNDLED_PACKS
 
 ROOT = Path(__file__).resolve().parents[1]
-PACK_V2 = ROOT / "packs" / "financas-ptbr.yaml"
+PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
 FROZEN = sorted((ROOT / "fixtures").glob("*/pack.yaml"))
 #: The third fixture froze packs/ as it was when it was added.
 FROZEN_VERSIONS = {"R2Qgz8tFWVI": "0.1.0", "wxgFO_fyfXg": "0.1.0", "4wCtn8BWR4o": "0.2.3"}

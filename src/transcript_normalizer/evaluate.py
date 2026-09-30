@@ -9,7 +9,8 @@ gold row names a stretch of a caption line (`wrong`), the text it should become
   on this line, a miss otherwise;
 - an `alias` row expects an alias annotation for this term and no substitution
   of its text; a substitution there, to any term, is a false positive;
-- a `manter` row expects no applied annotation on its text, whatever the term;
+- a `manter` row expects no applied correction on its text, whatever the term;
+  a recognition (alias kind) changes no text and is allowed there (D-042);
 - a row with an empty term is out of scope, and so is `so_caixa` or any other
   row whose `correct` differs from `wrong` only by case or accent (D-008).
 
@@ -182,10 +183,11 @@ def evaluate(
         if status == SO_CAIXA:
             continue
         if status == MANTER:
+            # D-042: a recognition never changes text, so only corrections touch.
             touched = [
                 (a.original, a.term)
                 for a in on_line.get(row["timestamp"], ())
-                if covers(row["wrong"], a, normalize)
+                if is_correction(a) and covers(row["wrong"], a, normalize)
             ]
             result.touched_keep[f"{row['timestamp']} {row['wrong']}"] = touched
             continue
@@ -286,6 +288,6 @@ def render(result: Result) -> str:
     out += [f"  {n:3d}x {original!r} -> {term}" for (original, term), n in counted.most_common()]
     out += ["", "aliases wrongly substituted:"]
     out += [f"  {g['timestamp']:6s} {g['wrong']!r} -> {a.replacement}" for g, a in result.aliases_substituted]
-    out += ["", "text that must stay untouched (applied annotations only):"]
+    out += ["", "text that must stay untouched (applied corrections only):"]
     out += [f"  {where} {touched}" for where, touched in result.touched_keep.items()]
     return "\n".join(out)

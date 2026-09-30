@@ -8,9 +8,10 @@ import pytest
 from transcript_normalizer import find_annotations, load_pack, parse_caption, resolve_overlaps
 from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.core.render import render_lines
+from transcript_normalizer.runs import BUNDLED_PACKS
 
 ROOT = Path(__file__).resolve().parents[1]
-PACK_V2 = ROOT / "packs" / "financas-ptbr.yaml"
+PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
 MILHOES = "0:01 o lucro foi de 300 milhões no trimestre"
 
 

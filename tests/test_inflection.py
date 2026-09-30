@@ -1,7 +1,5 @@
 """D-031: plurals are the term spelled out; exact forms beat fuzzy guesses."""
 
-from pathlib import Path
-
 import pytest
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption, resolve_overlaps
@@ -9,8 +7,9 @@ from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.languages.pt_br import inflections
 from transcript_normalizer.core.render import render_lines
 from transcript_normalizer.core.standoff import KIND_ALIAS
+from transcript_normalizer.runs import BUNDLED_PACKS
 
-PACK_V2 = Path(__file__).resolve().parents[1] / "packs" / "financas-ptbr.yaml"
+PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
 
 
 @pytest.fixture(scope="module")
