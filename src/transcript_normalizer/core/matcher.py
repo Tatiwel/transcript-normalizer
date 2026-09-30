@@ -317,7 +317,8 @@ def find_annotations(
         original = text[window[0].start : window[-1].end]
 
         # D-020: exactly another name of the term. Recognized, never substituted.
-        if origin == "alias" and folded_span == candidate:
+        # D-041: so is the term's own name, as `term:exact`.
+        if origin in ("alias", "term") and folded_span == candidate:
             annotations.append(
                 Annotation(
                     start=window[0].start,
@@ -325,7 +326,7 @@ def find_annotations(
                     original=original,
                     replacement=original,
                     term=term,
-                    rule=term_rule("alias"),
+                    rule=term_rule("alias" if origin == "alias" else "exact"),
                     band=BAND_HIGH,
                     score=int(score),
                     pack_version=pack.version,

@@ -44,6 +44,8 @@ def test_every_applied_replacement_lands_on_its_line(transcript, annotations):
     index = {line.index: i for i, line in enumerate(transcript.lines)}
 
     for a in resolved(annotations):
+        if a.is_alias:
+            continue  # D-020, D-041: nothing replaced, and it may straddle a break
         line_index, _stamp = transcript.locate(a.start)
         _, body = rendered[index[line_index]]
         assert a.replacement in body, (a.original, a.replacement, body)

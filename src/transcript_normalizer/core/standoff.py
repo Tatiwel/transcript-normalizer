@@ -26,7 +26,7 @@ KIND_ALIAS = "alias"
 
 
 def term_rule(origin: str) -> str:
-    """`variant` | `alias` | `fuzzy` -> the `rule` field of an annotation."""
+    """`variant` | `alias` | `exact` | `fuzzy` -> the `rule` field of an annotation."""
     return f"term:{origin}"
 
 
@@ -37,7 +37,7 @@ class Annotation:
     original: str
     replacement: str
     term: str
-    rule: str  # "unit" | "term:variant" | "term:alias" | "term:fuzzy"
+    rule: str  # "unit" | "term:variant" | "term:alias" | "term:exact" | "term:fuzzy"
     band: str  # "high" | "medium" | "low"
     score: int
     pack_version: str

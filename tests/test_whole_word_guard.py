@@ -32,7 +32,9 @@ def test_enterprise_valuey_is_a_variant_not_the_term_spelled_out(v2):
 
 
 def test_the_term_spelled_out_is_still_left_alone(v2):
-    assert [a for a in applied(v2, "o DEC e o Enterprise Value") if a[1] in ("DEC", "Enterprise Value")] == []
+    """Not corrected; since D-041, recognized."""
+    found = [a for a in applied(v2, "o DEC e o Enterprise Value") if a[1] in ("DEC", "Enterprise Value")]
+    assert found == [("DEC", "DEC", "term:exact"), ("Enterprise Value", "Enterprise Value", "term:exact")]
 
 
 @pytest.mark.parametrize(

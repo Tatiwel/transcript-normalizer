@@ -262,6 +262,14 @@ A name is the canonical term, an alias (curated or learned), or D-031a's inflect
 
 Measured: 4wCtn8BWR4o against its frozen pack 0.2.3 goes from 35 hits / 7 false positives / 2 aliases wrongly substituted to 35 / 5 / 0. Against packs/ 0.2.4 it goes from 38 / 6 / 2 to 38 / 4 / 0. Its bound moves to false positives <= 5. R2Qgz8tFWVI and wxgFO_fyfXg do not move, against their frozen packs or against 0.2.4. The two 0:19 alias rows are still misses. The term's canonical name spelled out produces no annotation, while an alias row expects an alias annotation.
 
+## D-041 Canonical mentions are recognized
+
+An exact occurrence of a term's canonical name (or its inflected form) produces a recognition annotation (kind alias, rule term:exact) like an alias does; nothing is substituted. Downstream consumers need every mention of a term, not only the misspelled ones. Measured: the two `Dividend Yield` rows at 0:19 in 4wCtn8BWR4o were counted as misses because a correctly spelled term produced no annotation.
+
+The inflected form already produced a recognition under D-031a, and its rule stays `term:alias`. The new annotation is the exact canonical name, compared folded (case and accent), so `Léo` is the name `Leo`. The report lists these under "recognized (not changed)". normalized.txt does not change.
+
+Measured, after overlap resolution, `term:exact` annotations per fixture (frozen pack / packs/ 0.2.4): 4wCtn8BWR4o 43 / 48, R2Qgz8tFWVI 61 / 76, wxgFO_fyfXg 105 / 125. Against the frozen packs, 4wCtn8BWR4o goes from 35 to 37 hits and from 13 to 15 aliases recognized: the two 0:19 rows. Its misses go from 5 to 3 and its false positives stay at 5. Its bound moves to hits >= 37. R2Qgz8tFWVI and wxgFO_fyfXg do not move in hits, false positives or aliases, against either pack. Against 0.2.4, 4wCtn8BWR4o has 40 hits, 0 misses and 4 false positives. One `manter` row of R2Qgz8tFWVI now carries an applied annotation: 7:30 `Léo ruim` is recognized as the term Leo. The gold note says the speaker said "Leo, ruim?". The text is not substituted, but D-026 counts any applied annotation on a manter row, so that fixture's bound allows one touched row.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
