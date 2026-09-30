@@ -55,9 +55,19 @@ def packs_root() -> Path:
     return Path.cwd() / PACKS_DIR
 
 
+#: The packs that ship inside the package. The repo's `packs/` links to them.
+BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
+
+
 def default_pack() -> Path:
-    """The pack `--pack` falls back to (D-017)."""
-    return packs_root() / DEFAULT_PACK
+    """The pack `--pack` falls back to (D-017).
+
+    `packs/<default>` in the current directory when there is one, so a pack the
+    user edits wins; otherwise the copy that ships in the package, so the
+    default still resolves after `pip install`, from any directory.
+    """
+    local = packs_root() / DEFAULT_PACK
+    return local if local.exists() else BUNDLED_PACKS / DEFAULT_PACK
 
 
 def video_id_from_url(url: str) -> str:

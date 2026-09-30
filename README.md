@@ -27,7 +27,7 @@ transcript-normalizer list
 
 `fetch` takes the platform's own caption with yt-dlp, retrying rate limits; if there is none, or it cannot be had, it transcribes the audio locally with faster-whisper (D-036). It writes `runs/<video-id>/legenda.txt` and `meta.yaml`, both recording which of the two produced the text. `--caption-only` never falls back; `--whisper` goes straight to local transcription. A local audio or video file works too: it goes straight to local transcription, into `runs/<file-stem>/` (D-038). It needs the optional extra: `uv sync --extra ingest`. WebVTT is converted in Python, so the caption path needs no ffmpeg; only `--whisper` does. Speech recognition is not the same as asking an AI provider to transcribe: it maps audio to text and does not fill a gap with something plausible.
 
-Normalizing reads `packs/financas-ptbr.yaml` unless `--pack` names another. Every output goes under `runs/<id>/` in the current directory, never beside the input:
+Normalizing reads `packs/financas-ptbr.yaml` in the current directory unless `--pack` names another; with no such file it uses the copy that ships in the package. Every output goes under `runs/<id>/` in the current directory, never beside the input:
 
 - `annotations.json` — the stand-off layer: every proposal with its band and its kind, `correction` or `alias` (D-020).
 - `normalized.txt` — the caption with the corrections substituted; aliases are left as they were said.

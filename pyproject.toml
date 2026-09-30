@@ -4,13 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "transcript-normalizer"
-version = "0.1.0"
-description = "Domain-term normalization for ASR transcripts and auto-captions."
+version = "0.3.0"
+description = "Domain-term normalization for ASR transcripts and auto-captions"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Daniel Oliveira" }]
+keywords = ["asr", "captions", "subtitles", "text-normalization", "terminology", "whisper"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Text Processing :: Linguistic",
+]
 dependencies = [
     "rapidfuzz>=3.0",
     "pyyaml>=6.0",
@@ -24,6 +32,10 @@ ingest = [
     "faster-whisper>=1.0",
     "rich>=13.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Tatiwel/transcript-normalizer"
+Issues = "https://github.com/Tatiwel/transcript-normalizer/issues"
 
 [project.scripts]
 transcript-normalizer = "transcript_normalizer.cli:main"

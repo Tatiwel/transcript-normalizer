@@ -446,13 +446,21 @@ def run_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def shown(path: Path) -> str:
+    """A path relative to the current directory when it is under it."""
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError:
+        return str(path)
+
+
 def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
     parser.add_argument(
         "--pack",
         type=Path,
         default=default_pack(),
-        help=f"domain pack. default: {default_pack().relative_to(Path.cwd()) }",
+        help=f"domain pack. default: {shown(default_pack())}",
     )
     parser.add_argument(
         "--out",
