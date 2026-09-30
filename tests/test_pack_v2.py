@@ -33,7 +33,7 @@ def applied(pack, line):
 
 
 def test_versions(v2):
-    assert v2.version == "0.2.3"
+    assert v2.version == "0.2.4"
     assert {p.parent.name for p in FROZEN} == set(FROZEN_VERSIONS)
     for path in FROZEN:
         assert load_pack(path, learned=Learned()).version == FROZEN_VERSIONS[path.parent.name], path
@@ -112,3 +112,12 @@ def test_market_cap_is_a_term_with_its_other_names(v2):
     assert applied(v2, "o valor de mercado dela") == [
         ("valor de mercado", "market cap", "term:alias", KIND_ALIAS)
     ]
+
+
+def test_what_the_third_fixture_added(v2):
+    """0.2.4, from 4wCtn8BWR4o. `preço alto` is two ordinary words (D-032)."""
+    assert applied(v2, "a evitida caiu") == [("evitida", "EBITDA", "term:variant", "correction")]
+    assert applied(v2, "o dividendio subiu") == [("dividendio", "dividend yield", "term:variant", "correction")]
+    assert applied(v2, "a dívida alíquida") == [("dívida alíquida", "dívida líquida", "term:variant", "correction")]
+    assert not v2.term_named("preço alvo").variants
+    assert applied(v2, "o target price dela") == [("target price", "preço alvo", "term:alias", KIND_ALIAS)]

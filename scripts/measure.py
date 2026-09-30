@@ -37,18 +37,19 @@ def table(rows: list[tuple[str, dict[str, int]]]) -> str:
     return "\n".join(out)
 
 
-def pack_effect() -> str:
-    """wxgFO_fyfXg against the current packs/ pack, beside its frozen numbers.
+def pack_effect(found: list[Fixture]) -> str:
+    """Each fixture against the current packs/ pack, beside its frozen numbers.
 
     Not a bound: the regression test keeps the frozen pack so the fixture's
     numbers stay comparable over time. This shows what the pack itself buys.
     """
-    fixture = Fixture(ROOT / "fixtures" / "wxgFO_fyfXg")
     pack = load_pack(PACK, learned=Learned())
-    rows = [
-        (f"frozen pack {fixture.load_pack().version}", evaluate_fixture(fixture).counts()),
-        (f"packs/ {pack.version}", evaluate_fixture(fixture, pack).counts()),
-    ]
+    rows = []
+    for fixture in found:
+        rows += [
+            (f"{fixture.name} frozen {fixture.load_pack().version}", evaluate_fixture(fixture).counts()),
+            (f"{fixture.name} packs/ {pack.version}", evaluate_fixture(fixture, pack).counts()),
+        ]
     return table(rows)
 
 
@@ -74,8 +75,8 @@ def main() -> None:
     found = fixtures(ROOT / "fixtures")
     print("Per fixture, frozen fixture pack, no learned layer\n")
     print(table([(f.name, evaluate_fixture(f).counts()) for f in found]))
-    print("\n\nNon-blocking: wxgFO_fyfXg against packs/financas-ptbr.yaml, no learned layer\n")
-    print(pack_effect())
+    print("\n\nNon-blocking: every fixture against packs/financas-ptbr.yaml, no learned layer\n")
+    print(pack_effect(found))
     print("\n\nLow band, lower threshold 60 vs 70 (D-029 chose 70; frozen fixture packs)\n")
     print(low_band(found))
 

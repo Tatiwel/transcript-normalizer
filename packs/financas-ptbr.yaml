@@ -5,8 +5,10 @@
 # de preço teto como aliases.
 # 0.2.2 tira variantes que sao palavras comuns (D-032) e acrescenta market cap.
 # 0.2.3 acrescenta variantes de preço teto que o fuzzy nao alcanca (abaixo de 80).
+# 0.2.4 acrescenta o que 4wCtn8BWR4o mostrou: evitida, dividendio, preço alvo e
+# dívida líquida. preço alvo fica sem variante: `preço alto` sao duas palavras comuns (D-032).
 language: pt-BR
-version: 0.2.3
+version: 0.2.4
 
 terms:
   - term: CEMIG
@@ -48,7 +50,7 @@ terms:
     variants: [Geração de Dentes]
   - term: EBITDA
     class: indicador
-    variants: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bicho, bitera, beita, beit]
+    variants: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bicho, bitera, beita, beit, evitida]
     collocations: [dívida líquida sobre EBITDA, margem EBITDA]
   - term: OPEX
     class: indicador
@@ -169,7 +171,14 @@ terms:
     variants: [CELIC]
   - term: dividend yield
     class: indicador
-    variants: [dividend y, dividend y build]
+    variants: [dividend y, dividend y build, dividendio]
+  - term: preço alvo
+    class: indicador
+    aliases: [target price]
+  - term: dívida líquida
+    class: indicador
+    aliases: [dívida líquida sobre EBITDA]
+    variants: [dívida alíquida]
   - term: Charlie Munger
     class: pessoa
     variants: [Charlie Mander]
