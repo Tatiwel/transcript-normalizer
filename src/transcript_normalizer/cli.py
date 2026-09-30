@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass, field
 import csv
 import os
 import shutil
@@ -222,9 +223,10 @@ def pending_text(
     for term, group in confirm_groups(annotations):
         lines = []
         for variant, found in variant_groups(group):
-            if outcomes is None:
-                tag = NEVER_ASKED
-            elif outcomes.get((term, variant), "s").startswith("s"):
+            answer = None if outcomes is None else outcomes.get((term, variant))
+            if answer is None:
+                tag = NEVER_ASKED  # no --confirm, or the loop was interrupted first
+            elif answer.startswith("s"):
                 tag = SKIPPED
             else:
                 continue
@@ -257,9 +259,22 @@ def write_pending(
     return path, count
 
 
+@dataclass
+class Session:
+    """Where a --confirm session got to (D-037)."""
+
+    learned: Learned
+    outcomes: dict[tuple[str, str], str] = field(default_factory=dict)
+    kept: int = 0  # answers written to the learned layer
+    interrupted: bool = False
+
+
 def confirm_loop(
-    transcript: Transcript, annotations: list[Annotation], learned: Learned
-) -> tuple[Learned, dict[tuple[str, str], str]]:
+    transcript: Transcript,
+    annotations: list[Annotation],
+    learned: Learned,
+    save=None,
+) -> Session:
     """D-011's confirmation loop, one question per variant (D-019).
 
     A term-level answer cannot express a mixed group, so the term is shown once
@@ -268,13 +283,24 @@ def confirm_loop(
     the next term. `l` records the variant as an alias of the term (D-020): it
     will be recognized from then on and never substituted.
 
-    Returns the updated layer and the answer given to each (term, variant).
+    D-037: `save(learned)` runs after every answer that changes the layer, so
+    an interrupted session keeps what it was told; Ctrl+C ends the loop and the
+    session says it was interrupted.
     """
-    outcomes: dict[tuple[str, str], str] = {}
+    session = Session(learned)
     groups = confirm_groups(annotations)
     if not groups:
         print("nothing to confirm.")
-        return learned, outcomes
+        return session
+    try:
+        _ask_all(transcript, groups, session, save)
+    except KeyboardInterrupt:
+        session.interrupted = True
+    return session
+
+
+def _ask_all(transcript, groups, session: Session, save) -> None:
+    learned, outcomes = session.learned, session.outcomes
 
     for term, group in groups:
         print(f"\n{term_heading(term, group)}")
@@ -302,7 +328,12 @@ def confirm_loop(
             else:
                 outcomes[(term, variant)] = "s"
                 print("    skipped.")
-    return learned, outcomes
+                continue
+            # D-037: every answer is on disk before the next question.
+            session.learned = learned
+            session.kept += 1
+            if save is not None:
+                save(learned)
 
 
 def review_path(out_dir: Path, name: str) -> Path:
@@ -382,11 +413,20 @@ def run_normalize(args: argparse.Namespace) -> int:
         print("--gold-draft is now --corrections (D-023)", file=sys.stderr)
 
     if args.confirm:
-        learned, outcomes = confirm_loop(transcript, annotations, pack.learned)
-        if not learned.is_empty():
-            # D-013 and D-017: the learned layer under packs/, never pack.yaml.
-            print(f"\nlearned layer written to {save_learned(learned, learned_at)}")
-        pending, count = write_pending(out_dir, transcript, annotations, outcomes)
+        # D-013 and D-017: the learned layer under packs/, never pack.yaml.
+        # D-037: saved after every answer, not once at the end.
+        session = confirm_loop(
+            transcript, annotations, pack.learned, save=lambda learned: save_learned(learned, learned_at)
+        )
+        pending, count = write_pending(out_dir, transcript, annotations, session.outcomes)
+        if session.interrupted:
+            print(
+                f"\ninterrupted: {session.kept} answer(s) kept in {learned_at}; "
+                f"run --confirm again to go on from there"
+            )
+            return 130
+        if not session.learned.is_empty():
+            print(f"\nlearned layer written to {save_learned(session.learned, learned_at)}")
         if count:
             print(f"{count} variant(s) still pending in {pending}")
         else:

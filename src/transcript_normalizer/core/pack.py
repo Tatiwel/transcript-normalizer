@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import tempfile
 import unicodedata
 from dataclasses import dataclass, field, replace
 from datetime import date
@@ -217,9 +219,18 @@ def load_learned(path: str | Path) -> Learned:
 
 
 def save_learned(learned: Learned, path: str | Path) -> Path:
+    """Write the learned layer atomically (D-037): a temporary file beside it,
+    then a rename, so an interrupted write never leaves half a file."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(learned.to_yaml(), encoding="utf-8")
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(learned.to_yaml())
+        os.replace(temporary, path)
+    except BaseException:
+        Path(temporary).unlink(missing_ok=True)
+        raise
     return path
 
 

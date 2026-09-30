@@ -234,6 +234,12 @@ fetch resolves its source in a fixed chain and records which step produced the c
 
 `transcript-normalizer fetch <path>` accepts a local audio or video file as well as a url. A file has no platform caption, so the D-036 chain starts at step 2: it is transcribed locally with faster-whisper, where it sits, without being copied, and needs faster-whisper but not yt-dlp. The run directory is `runs/<file-stem>/`, D-018's third rule. meta.yaml records `source: file` and the file's absolute path, with `url: null`, and a url run now records `source: url`. The legenda.txt header has `# Arquivo: <file name>` where a video's has `# URL:`, and `# Etapa: 2, reconhecimento de fala local (arquivo local)`. `--caption-only` with a file is an error, since there is no caption to take; so is a path that is neither an existing file nor a url, rather than handing it to yt-dlp.
 
+## D-037 The confirm loop saves as it goes
+
+The confirmation loop writes the learned layer after every answer (atomic write: temp file then rename), so an interrupted session keeps its answers and a rerun only asks what is still pending. Measured: a Ctrl+C during the third fixture's first --confirm run lost every answer given.
+
+Every `y`, `n` and `l` is written before the next question; a skip changes nothing and writes nothing. The temporary file sits beside the learned file, so the rename stays on one filesystem; a failed write removes it and leaves the previous file whole. Ctrl+C ends the loop, pending.txt is rewritten from the answers so far (a variant the loop never reached is `[never asked]`, one skipped is `[skipped]`), the run prints how many answers it kept, and it exits with 130. A finished session still ends with "learned layer written to". A rerun asks nothing already answered, because a confirmed variant now matches exactly, a rejected pair is never proposed, and an alias is recognized.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
