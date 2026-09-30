@@ -499,8 +499,12 @@ def run(args: argparse.Namespace) -> int:
     out.info(f"duration: {meta.duration // 60}min{meta.duration % 60:02d}s")
 
     if args.list:
+        # D-045: the source track first and in full; the translations may be summarised.
+        originals = tuple(c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX))
+        translated = tuple(c for c in meta.automatic_captions if not c.endswith(ORIGINAL_SUFFIX))
+        out.info(f"original: {', '.join(originals) or 'none'}")
         out.info(f"manual captions: {summarise(meta.manual_captions)}")
-        out.info(f"automatic captions: {summarise(meta.automatic_captions)}")
+        out.info(f"automatic captions: {summarise(translated)}")
         return 0
 
     target = fetch_dir(meta.id, args.out)

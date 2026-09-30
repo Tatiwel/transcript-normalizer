@@ -67,3 +67,25 @@ def test_speech_recognition_records_no_track(tmp_path, monkeypatch):
     assert main(["fetch", URL, "--whisper"]) == 0
     meta = yaml.safe_load((tmp_path / "runs" / VIDEO_ID / META_FILE).read_text(encoding="utf-8"))
     assert "caption_track" not in meta
+
+
+def listed(tmp_path, monkeypatch, capsys, fake):
+    monkeypatch.chdir(tmp_path)
+    fetch_fakes.install(monkeypatch, fetch, fake)
+    assert main(["fetch", URL, "--list"]) == 0
+    return [l for l in capsys.readouterr().out.splitlines() if "captions:" in l or "original:" in l]
+
+
+def test_list_shows_the_original_first_even_when_the_list_is_long(tmp_path, monkeypatch, capsys):
+    """Twenty translations would push `pt-orig` past the summary's cut-off."""
+    many = tuple(f"x{i:02d}" for i in range(20)) + ("pt", "pt-orig")
+    lines = listed(tmp_path, monkeypatch, capsys, FakeYtDlp(automatic=many))
+    assert lines[0].endswith("original: pt-orig")
+    assert lines[1].endswith("manual captions: none")
+    assert "... and 9 more" in lines[2] and "pt-orig" not in lines[2]
+
+
+def test_list_says_when_there_is_no_original(tmp_path, monkeypatch, capsys):
+    lines = listed(tmp_path, monkeypatch, capsys, FakeYtDlp(automatic=("pt",)))
+    assert lines[0].endswith("original: none")
+    assert lines[2].endswith("automatic captions: pt")
