@@ -17,14 +17,19 @@ class FakeYtDlp:
 
     `caption` is what each caption download does, in order: "ok" writes a
     WebVTT, "429" fails rate-limited, anything else fails another way. The last
-    entry repeats. `has_caption=False` offers no caption at all.
+    entry repeats. `has_caption=False` offers no caption at all. `manual` and
+    `automatic` are the track lists the platform reports (D-045); each caption
+    download is recorded in `downloads` as (flag, track).
     """
 
-    def __init__(self, caption=("ok",), has_caption=True, audio_ok=True):
+    def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",)):
         self.caption = list(caption)
         self.has_caption = has_caption
         self.audio_ok = audio_ok
+        self.manual = tuple(manual)
+        self.automatic = tuple(automatic)
         self.calls: list[str] = []
+        self.downloads: list[tuple[str, str]] = []
 
     def __call__(self, args):
         if "--dump-single-json" in args:
@@ -35,8 +40,8 @@ class FakeYtDlp:
                 "uploader": "Canal de Teste",
                 "upload_date": "20260825",
                 "duration": 125,
-                "subtitles": {},
-                "automatic_captions": {"pt": [{}]} if self.has_caption else {},
+                "subtitles": {c: [{}] for c in self.manual} if self.has_caption else {},
+                "automatic_captions": {c: [{}] for c in self.automatic} if self.has_caption else {},
             }
             return subprocess.CompletedProcess(args, 0, json.dumps(video), "")
         target = Path(args[args.index("--output") + 1]).parent
@@ -47,9 +52,11 @@ class FakeYtDlp:
             (target / "audio.m4a").write_bytes(b"\0" * 16)
             return subprocess.CompletedProcess(args, 0, "", "")
         self.calls.append("caption")
+        track = args[args.index("--sub-langs") + 1]
+        self.downloads.append((args[0], track))
         outcome = self.caption.pop(0) if len(self.caption) > 1 else self.caption[0]
         if outcome == "ok":
-            shutil.copy(VTT, target / "legenda.pt.vtt")
+            shutil.copy(VTT, target / f"legenda.{track}.vtt")
             return subprocess.CompletedProcess(args, 0, "", "")
         if outcome == "429":
             return subprocess.CompletedProcess(args, 1, "", RATE_LIMITED)

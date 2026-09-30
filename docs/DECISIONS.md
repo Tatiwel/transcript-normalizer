@@ -282,6 +282,12 @@ The curated pack ships inside the package at transcript_normalizer/packs/ and is
 
 The root `packs/financas-ptbr.yaml` is no longer a link to the bundled copy. It is gone, so the sdist carries no symlink. Run in the repo, the default is therefore the bundled pack, while the learned layer still sits at `./packs/<pack-name>.learned.yaml`. Tests and `scripts/measure.py` read the bundled path. `packs/README.md` says what the directory is for.
 
+## D-045 fetch prefers the original automatic caption
+
+YouTube publishes the original automatic caption as `<lang>-orig` and an auto-translated track as `<lang>`. fetch must prefer `<lang>-orig`, then a manual `<lang>`, then automatic `<lang>`, and record which track it took in the header and meta.yaml. Measured: for 4tTmY8Buask the `pt` track was a translation (`BTG Pacific`, `Portfólio de canais`, `Ofertas públicas iniciais (IPOs)`), useless as a normalization source.
+
+Within each of the three, an exact code comes before a regional variant (`pt-BR-orig` for `--lang pt`), with the existing warning when there are several. Another language's `-orig` (`en-orig`) says nothing about `pt`, so an automatic `pt` is still taken. It is a translation then, but the chain has no better caption to offer, and the header names the track. The header keeps its line `# Origem da legenda: <source> (<track>)`. The source is `manual`, `automatica` or the new `automatica original`, so a caption from `pt-orig` reads `automatica original (pt-orig)`. meta.yaml gains `caption_track` and `caption_source` when step 1 produced the text. Tested with a fake track list shaped like 4tTmY8Buask's (`pt-orig` alongside translations into `de`, `en`, `es`, `fr`, `pt`, `zh-Hans`). Existing headers are unchanged, since a video without `-orig` takes the same track as before.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

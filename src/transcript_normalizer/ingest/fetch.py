@@ -83,6 +83,8 @@ class Step:
     number: int
     retries: int = 0
     reason: str = ""  # why step 2 ran, if it did
+    track: str = ""  # D-045: the caption track step 1 took, e.g. `pt-orig`
+    track_source: str = ""  # manual | automatica | automatica original
 
     @property
     def name(self) -> str:
@@ -101,6 +103,9 @@ class Step:
         data = {"step": self.number, "step_name": self.name, "retries": self.retries}
         if self.reason:
             data["fallback_reason"] = self.reason
+        if self.track:
+            data["caption_track"] = self.track
+            data["caption_source"] = self.track_source
         return data
 
 
@@ -178,20 +183,37 @@ def read_metadata(url: str, out: Output | None = None) -> Metadata:
     )
 
 
-def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> tuple[str, str]:
-    """Return (code, source). A manual caption is preferred over an automatic one.
+#: D-045: YouTube's suffix for the automatic caption in the spoken language.
+ORIGINAL_SUFFIX = "-orig"
+MANUAL = "manual"
+AUTOMATIC = "automatica"
+AUTOMATIC_ORIGINAL = "automatica original"
 
-    Exact match first. When only a regional variant exists, say so before
-    choosing: asking for `pt` with both `pt-BR` and `pt-PT` available has no
-    obvious answer, and picking alphabetically in silence decides by accident.
+
+def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> tuple[str, str]:
+    """Return (code, source), in D-045's order.
+
+    1. the automatic caption of the spoken language, `<lang>-orig`;
+    2. a manual `<lang>`;
+    3. an automatic `<lang>`, which is a machine translation whenever a
+       `-orig` track of another language exists.
+
+    Within each, exact match first. When only a regional variant exists, say so
+    before choosing: asking for `pt` with both `pt-BR` and `pt-PT` available has
+    no obvious answer, and picking alphabetically in silence decides by accident.
     """
     out = out or Output()
-    for available, source in (
-        (meta.manual_captions, "manual"),
-        (meta.automatic_captions, "automatica"),
+    original = tuple(
+        c[: -len(ORIGINAL_SUFFIX)] for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)
+    )
+    translated = tuple(c for c in meta.automatic_captions if not c.endswith(ORIGINAL_SUFFIX))
+    for available, source, suffix in (
+        (original, AUTOMATIC_ORIGINAL, ORIGINAL_SUFFIX),
+        (meta.manual_captions, MANUAL, ""),
+        (translated, AUTOMATIC, ""),
     ):
         if wanted in available:
-            return wanted, source
+            return wanted + suffix, source
         variants = sorted(c for c in available if c.split("-")[0] == wanted)
         if variants:
             if len(variants) > 1:
@@ -200,7 +222,7 @@ def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> t
                     f"choosing '{variants[0]}'. pass --lang with the exact variant "
                     f"if you want another."
                 )
-            return variants[0], source
+            return variants[0] + suffix, source
     return "", ""
 
 
@@ -220,7 +242,7 @@ def caption_args(url: str, code: str, source: str, target: Path) -> list[str]:
     by `subtitles.vtt_to_lines`. ffmpeg only comes into it for --whisper.
     """
     return [
-        "--write-subs" if source == "manual" else "--write-auto-subs",
+        "--write-subs" if source == MANUAL else "--write-auto-subs",
         "--skip-download",
         "--sub-langs",
         code,
@@ -379,7 +401,7 @@ def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Ou
         )
     out.info(f"caption chosen: {code} ({source})")
     subtitle, retries = download_caption(args.url, code, source, target, out)
-    step = Step(STEP_CAPTION, retries=retries)
+    step = Step(STEP_CAPTION, retries=retries, track=code, track_source=source)
     body = subtitle_to_lines(subtitle.read_text(encoding="utf-8"), subtitle.suffix)
     caption = target / CAPTION_FILE
     caption.write_text(

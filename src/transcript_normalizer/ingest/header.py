@@ -42,7 +42,11 @@ def caption_header(
     downloaded: str | None = None,
     step: str | None = None,
 ) -> str:
-    """The header of a caption taken from the platform. `source` is manual/automatica."""
+    """The header of a caption taken from the platform.
+
+    `source` is manual, automatica or (D-045) automatica original; with `lang`
+    it names the track, e.g. `automatica original (pt-orig)`.
+    """
     return "\n".join(
         [
             "# Legenda de video, material bruto para ingestao",
