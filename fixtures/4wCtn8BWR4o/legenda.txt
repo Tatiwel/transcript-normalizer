@@ -1,0 +1,261 @@
+# Transcricao por reconhecimento de fala local, material bruto
+#
+# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.
+# NAO FOI TRANSCRITO POR PROVEDOR DE IA. Reconhecimento de fala
+# mapeia audio para texto e nao completa lacuna com plausibilidade.
+# Modelo: faster-whisper medium, idioma pt, vad_filter ativo
+# Titulo: CEMIG ESTÁ DE GRAÇA E ANUNCIOU NOVO DIVIDENDO (porém cuidado com cmig4!)
+# Canal: Adan Paulo - Adapta Partners
+# Publicado: 20260918
+# URL: https://youtu.be/4wCtn8BWR4o
+# Transcrito em: 2026-09-29
+#
+# Cada linha comeca com o timestamp mm:ss. O timestamp e a
+# procedencia de qualquer afirmacao extraida daqui.
+#
+# DUAS LIMITACOES MEDIDAS:
+# 1. Erro fonetico em termo de dominio. Sigla, nome de agencia,
+#    nome de norma e nome de companhia sao os mais afetados.
+#    Confira contra outra fonte antes de citar.
+# 2. Trecho sem fala pode gerar texto inventado. O vad_filter
+#    reduz isso e nao elimina. Frase curta e generica isolada,
+#    perto de vinheta ou musica, e suspeita.
+0:00 A CEMIG, das suas máximas recentes, até então, já acumulou uma queda de 15% e hoje
+0:05 ainda é a elétrica mais barata da bolsa quando falamos, lógico, das que valem a
+0:10 pena análise quando olhado para PLP sobre BP, muito distante da CPFL Energy, Copel
+0:16 e empresas próximas do seu setor.
+0:19 Atualmente um Dividend Yield de 11,5%, quase 12% em Dividend Yield e anunciou um
+0:25 novo Dividendo.
+0:26 A CEMIG anunciou um novo dividendo bem interessante naquele mesmo esquema da política um pouco
+0:31 embaraçada da CEMIG, já vou te mostrar todos os detalhes, valores, percentual, qual
+0:36 a data com, data de pagamento, tudo que você tem que saber, mas além disso, vamos
+0:40 focar também em tomada de decisão.
+0:43 Vale a pena hoje aumentar a posição, manter a posição visando esse novo dividendo
+0:47 da CEMIG?
+0:48 Olhando pro que?
+0:49 Pro cenário atual da empresa vislumbre futuro, projeções e precificação.
+0:54 preço teto, preço justo, olhando para operação sempre em vinculado com a empresa, tudo o que você
+0:59 tem que saber para saber se realmente é oportunidade. Então veja, quando entramos aqui na aba de
+1:04 comunicados, que é a aba mais recente aqui da Adaptavalda, entramos aqui nesse anúncio que
+1:09 foi feito pela CEMIG, podemos ver que foi um aviso ao acionista bem recente do dia 17 contendo
+1:16 todas as principais informações, tal qual o valor de 200 milhões em um JCP, ou seja,
+1:23 juros sobre capital próprio, totalizando um valor bruto, lembrando não é líquido e o JCP esse ano tem um tributo a mais do que o ano passado, houve um aumento do imposto sobre o JCP, mas um valor bruto de quase sete centavos por cota.
+1:38 Calma que eu já vou te mostrar o valor líquido e também o percentual, mas tendo a data de direito, ou seja, a data com no dia 22 do 9 e a data ex no próximo dia útil, nesse caso 23 do 9.
+1:50 o pagamento né a data com perdão bem próxima muito próxima hoje quando eu
+1:55 gravo esse vídeo é dia 18 mas ainda dá tempo de quem quiser se posicionar
+2:00 poder aumentar a posição na empresa calma que já vamos ver se realmente
+2:03 vale tanto a pena sim beleza data de pagamento em duas parcelas aí aqui
+2:09 entre o grande problema né da semiga por exemplo eu tinha posição na semiga
+2:14 eu vou te mostrar isso até eu tinha posição na semiga eu vendi a minha
+2:17 posição recentemente e eu tenho vários dividendos a receber ainda da Semig. Vários,
+2:22 vários, inúmeras datas de pagamento a receber, umas 10 mais ou menos. Por que? Porque a empresa
+2:27 traz a sua data quando o dia 29, é 22, do 9 de 2026 e o pagamento vai ser 30 do 6 de 2027,
+2:36 ou seja, quase um ano depois e o outro pagamento mais de um ano depois. Isso aqui é feito não por
+2:43 coincidência ou à toa. Não, a CEMIG faz isso por um movimento de defasagem de caixa intencional.
+2:50 O que a CEMIG está fazendo? Olha, eu estou provisionando hoje que vai haver um pagamento
+2:54 futuro, só que isso aqui vai gerar um efeito contábil, porém não de caixa. Existem duas
+3:00 formas de metrificar resultado, análise contábil e análise financeira. Fluxo de caixa,
+3:05 análise financeira. A empresa já comprometeu uma provisão para esse dividendos, só que o
+3:10 o desembolso só vai acontecer daqui a um ano, entendeu?
+3:13 Então isso gera um movimento intempestivo da saída do caixa da empresa
+3:18 que gera algum tipo de vantagem pra ela, tanto é que a Sanepa tem uma política bem parecida.
+3:22 Mas veja, quando pegamos aqui, vem cá, vamos botar aqui o valor do que vai ser pago, né?
+3:28 0,0969, tá? Pra ficar até bem exato e vamos subtrair 17,5%, que é o novo imposto sobre JCP.
+3:39 Aí temos um valor líquido de 5 centavos, um pouco mais de 5 centavos.
+3:43 O que vamos fazer agora? Dividir esse valor pela cotação atual, que está na média de 11 reais e 50 centavos
+3:50 multiplicado por 100, encontramos o yield do pagamento.
+3:53 A Semiga é uma empresa complicada em política de remuneração.
+3:56 Ela anuncia várias vezes, tem muitas datas cons, o pagamento normalmente é um pouco mais concentrado, um ano depois.
+4:03 Mas esse anúncio isoladamente tem um percentual de yield, a cotação atual, de cerca de 0,5%,
+4:11 que é bem abaixo da distribuição que a Semig fazia no seu passado, no seu histórico,
+4:16 nos anúncios individuais.
+4:18 Então assim, vamos conversar um pouco agora mais sobre o momento da Semig, a operação,
+4:22 o quadro de endividamento, pra chegarmos a conclusão do valer a pena ou não.
+4:28 O quanto eu peso na porte, vale a pena aportar a oportunidade, e o vislumbre
+4:32 futuro que é o que importa de fato, o que importa não é o yield atual de 12 e sim o
+4:36 que ela vai pagar no futuro a partir de agora certo? E as projeções são tanto
+4:41 quanto complicadas para a Simig e já podemos sentir aqui como você pode ver
+4:45 uma remuneração bem menor nos seus anúncios e é o que se espera que
+4:50 continue dessa forma. Então como eu te falei aqui pra você que tem acesso
+4:54 adaptar a válvula temos agora essa nova aba de comunicados todos os dias
+4:57 temos aqui atualizado os principais comunicados que as empresas vão divulgando pra que? Pra
+5:03 sempre você saber das principais informações. É o que eu sempre te falo, a DAPTA Valdre
+5:08 é a ferramenta mais completa e 100% automática pra você ter tudo que precisa aqui na
+5:14 forma da mão, beleza? Link na descrição pra você que tem interesse agora. Olha
+5:18 que interessante, hoje quando olhamos aqui a recomendação com base em 14 analistas
+5:23 é uma elétrica extremamente acompanhada pelas principais casas de análise, mesmo pagando tanto,
+5:29 mesmo sendo, dentre as principais elétricas, a mais barata e é, por muito do que qualquer outra,
+5:35 só elétricas especulativas, de baixo free float e de baixa liquidez, que serão mais baratas
+5:40 do que essa MIG, dentre as principais é a mais barata, e mesmo assim a recomendação é de
+5:45 manutenção, isso aqui não é à toa meu amigo. Zero recomendações de compra forte, uma de
+5:49 compra, 10 de manutenção, 2 de venda e 2 de venda forte, mesmo tendo um preço alvo
+5:55 de 12,30, o que ainda assim é muito barato para o preço que a Semig é negociada, até
+6:00 tendo um potencial de upside, ainda assim a recomendação é de manutenção, que
+6:04 em tese seria, nem compra e nem venda, mantenha.
+6:07 Sempre importante lembrar que a Semig é uma empresa extremamente verticalizada,
+6:12 é um estatal de controle de Minas Gerais, porém não é uma empresa de buy free float,
+6:17 17% dos papéis totais são de Minas Gerais, porém, os ordinários, que é o que dá direito ao controle e a voto,
+6:24 que são em grande parte da posição de Minas Gerais, por isso, Minas Gerais é a controladora logo, é uma estatal.
+6:30 Mas é uma empresa que tem um free float de 61%, excepcional.
+6:34 Tendo o seu braço de distribuição, que é a principal, é a distribuidora-mãe de Minas Gerais,
+6:39 o braço de geração, que é bem interessante, vem crescendo bem, e também o seu braço de transmissão,
+6:44 Principalmente aqui com a posição na Taesa, que é outra empresa listada em bolsa, que a Semig tem
+6:50 22% quase de posição. Então, porra, é uma ótima posição em uma transmissora, sendo que
+6:57 a Semig tem o seu braço próprio também de transmissão.
+7:01 É uma empresa extremamente boa, a interessa, é lógico, a Semig é fenomenal, certo?
+7:06 Só que tem muita gente querendo fechar os olhos para o momento atual da empresa.
+7:11 E qual é esse momento atual?
+7:13 Pô, a SEMIG, e olha o peso disso aqui, presta muita atenção nisso.
+7:17 A SEMIG hoje tem 44 bilhões de plano de execução de investimentos até 2030.
+7:23 Começando em 2026, então começou agora esse plano de investimentos da empresa.
+7:29 Se pegarmos em uma média, esses 44 bilhões dividido por 5 anos,
+7:34 26, 27, 28, 29, 30, 44 dividido por 5 anos daria uma média anual de investimentos de 8,8 bilhões.
+7:42 Quando olhamos aqui os indicadores da CEMIG, o que temos que olhar?
+7:45 Lucro?
+7:46 Não!
+7:47 Você não mensura investimentos com lucro, jamais!
+7:51 Você olha o EBITDA, Resultado Operacional.
+7:53 Hoje a CEMIG tem o EBITDA do trimestre, ou seja, dos 3 anos do mês, aqui determinados,
+7:59 de 2 bilhões e 200 milhões, logo, se multiplicarmos por 4 esse número, é 2,2 multiplicado
+8:06 por 4, olha lá, 8 bilhões e 800 milhões.
+8:09 Então hoje a Semig tem um plano de investimentos médio anual que é proporcional ao quanto
+8:16 a empresa gera do que se assemelha ao fluxo de caixa operacional que é o EBITDA.
+8:22 O EBITDA nada mais é do que uma simplificação, uma teórica simplificação do fluxo de
+8:27 caixa operacional da empresa.
+8:29 Uma aproximação, não é o fluxo de caixa operacional, é uma aproximação contável.
+8:33 Só que, meu amigo, olha o peso disso, eu espero que você consiga compreender.
+8:37 é uma empresa que investe anualmente em média, a partir de então, o tanto que ela gera de
+8:42 resultado operacional.
+8:44 Pra isso ser sustentável, o que a empresa tem que fazer?
+8:47 Pegar dívida.
+8:48 Por isso que eu sempre te falo, uma coisa é dívida, outra coisa é investimento.
+8:52 A empresa pode investir com seu capital próprio, por exemplo, ou com as reservas
+8:56 de lucro e por aí vai.
+8:57 Agora veja, o que houve aqui com o EBITDA?
+9:00 E calma que ainda temos muito a desbravar, o EBITDA cresceu, maravilha, cresceu 8,8%
+9:06 e é um bom crescimento até. Só que os investimentos da CEMIG do mesmo período do ano passado
+9:12 pra cá cresceram 17%. Então já que é um plano de investimentos muito robusto e os
+9:19 investimentos vêm crescendo mais do que o fluxo de caixa operacional, podemos ver
+9:23 um crescimento da dívida líquida de 58%. Meu amigo, a dívida líquida da CEMIG,
+9:30 é, a dívida bruta menos o caixa disponível cresceu quase 60% de um ano pro outro, o
+9:36 lógico indicador de alavancagem, dívida alíquida sobre evitida, cresceu uma vez,
+9:40 saiu de 1,59 ano passado, 2,58 esse ano, um crescimento elevadíssimo e rápido,
+9:48 acelerado. E tudo isso que eu te falei, sendo que essa média que eu te mostrei de 8,8
+9:54 bilhões de investimentos anuais, é uma média, porque a CEMIG não vai começar o seu plano de
+9:59 de investimentos por isso. Ela começou esse ano com um investimento planejado de 6 bilhões
+10:04 e 700 milhões. Ou seja, os investimentos e a dívida já cresceu tanto, sendo que ela
+10:11 nem chegou ainda na média de investimentos anuais que ela vai fazer daqui pra frente.
+10:15 Se esse ano não vai ser de 8,8 milhões, vai ser menor, em algum ano futuro terá
+10:20 que ser maior do que 8,8 milhões. Bilhões, perdão. Então assim meu amigo, é uma
+10:25 empresa. Isso aqui já está impactando o fluxo de caixa livre em consecutivo também, as projeções
+10:32 de fluxo de caixa descontado e do preço teto projetado, metrificando capacidade de pagamento,
+10:38 capacidade, geração de fluxo de caixa livre para o acionista e principalmente precificação.
+10:44 Ninguém tem dúvida que a CEMIC tá barata. Adam, a CEMIC tá barata? Tá, tá barata,
+10:49 eu sei disso, você sabe, o mercado sabe. E o mercado tem um preço alto de 12 reais,
+10:54 Mas que ainda tá barata também, a semigue recentemente foi cotada a 14 reais.
+10:59 Então por que recomendação de manutenção?
+11:01 Porque nem tudo é preço, você tem que correlacionar o preço com o custo de oportunidade,
+11:06 com a entrega, a incerteza, o quanto de tempo você vai demorar a ter a colheita
+11:12 do fruto e se vai ter, entendeu?
+11:15 Então tudo isso tá na mesa, então assim, semigue tá barata, tá, tá barata, mas
+11:20 com alto custo de oportunidade e da incerteza.
+11:23 mercado sabe disso. Você pode falar pra miada, eu quero montar a posição, tá barato, eu quero
+11:27 esperar 4, 5, eu vou te respeitar por isso, por quê? Porque você foi o nome de tomar a decisão,
+11:32 porém, você não pode ignorar os fatos de que vai haver um custo de oportunidade daqui pra lá,
+11:38 é só isso. Você pode escolher participar, comprar barato e daqui algum tempo ser premiado
+11:43 por isso. Maravilha, certo? Só que entendendo o que tá envolvido no meio campo. E pra
+11:48 Para você que não só quer investir em boas ações, ações laterais, mas que não potencializam
+11:53 o crescimento do seu patrimônio, para você que quer uma estrutura de carteira que potencialize
+11:58 esse crescimento inicial para te fazer chegar lá mais rápido, em menos tempo,
+12:02 com menos dificuldade e erros, eu quero te convidar para no dia 28 e 29 de setembro
+12:07 ter uma reunião comigo, uma reunião comigo ao vivo, teórica, prática e com tira-duvidas.
+12:13 Eu vou te ensinar no evento da tria de que vai acontecer no final do mês de setembro
+12:17 a estrutura de 3 classes, ações perenes de crescimento de oportunidade e também o
+12:25 método da triade, de análise, quantitativa, qualitativa e de precificação, pra que
+12:29 com esses 2 conhecimentos que eu vou te ensinar em 2 dias ao vivo comigo, você aprenda
+12:34 a estruturar a carteira que potencializa o crescimento de seu patrimônio, escolher
+12:39 os melhores ativos e precificá-los e administrar a carteira da forma correta.
+12:44 isso ao vivo comigo, final do mês, por um custo-benefício bizarro. Então, até hoje,
+12:49 ainda estamos aqui no primeiro lote, e são as últimas vagas do primeiro lote, então
+12:54 até hoje você ainda pode participar aqui pelo primeiro lote e amanhã já vamos
+12:58 aqui para o segundo lote, tá? Para você que quer participar pelo melhor custo-benefício
+13:02 possível, aproveita. Então, não à toa, quando entramos aqui no preço teto projetado,
+13:08 eu vou te mostrar o fluxo de caixa descontado, preço justo, tudo que você tem que saber.
+13:12 Só que primeiro, preço teto projetado.
+13:14 Vamos dar até um passo atrás antes, tá?
+13:16 Eu vou entrar aqui no ranking do preço teto do Bazin, porque primeiro eu quero te mostrar
+13:20 a média do pagamento dos últimos 5 anos da Semig.
+13:23 Não foi uma das melhores elétricas, não, pra dividendos, foi a melhor.
+13:26 Um dividendio de médio de 12%, um preço teto de acordo com o Bazin, com 105% de
+13:32 margem de segurança.
+13:33 Vamos fazer assim, ó.
+13:34 Eu vou ranquear pelo setor elétrico, né?
+13:36 Não tem jeito, ela fica atrás da Seb, mas a Seb teve vários pagamentos na minha
+13:40 fez a venda de uma posição muito relevante, de brasilia pra dar energia, enfim, não vou nem entrar no ponto. Tirando a
+13:47 CBR, que teve muito não recorrente ali nos pagamentos, a Semig foi a principal, tá? Então assim,
+13:54 isso aqui mostra o que? O passado, e é muito importante olhar pro passado, mas você não pode ficar preso ao passado.
+14:01 Quando olhamos pro futuro, que é o que importa, com o momento atual, a entrega atual, a Semig hoje tem uma capacidade de pagamento
+14:09 atual, operacional. Qualquer empresa pode pegar dívida pra fazer pagamento, pode pagar todo o
+14:14 lucro, mas isso não é recorrente. Você tem que projetar o que? Recorrência, certo? A CMEG hoje
+14:20 no seu pagamento recorrente tem um dívida em due de médio de 6%. A capacidade de pagamento.
+14:25 Ou seja, tem margem de segurança frente preço teto? Até tem, em uma expectativa de 6% o
+14:30 preço teto de 11,50 hoje tá até que bem próxima disso depois dessa alta recente.
+14:35 Agora, falando sobre preço justo, olhando pro fluxo de caixa descontado, a principal
+14:41 análise de precificação, isso aqui já foi muito diferente, mas hoje a empresa não
+14:46 tem margem de segurança mesmo estando barata, e ela tá barata, eu volto ao ponto que
+14:50 eu já te falei.
+14:51 Um preço justo no fluxo de caixa descontado de 9,40, a margem no negativo.
+14:56 E olha que interessante, o meu preço alvo, preço justo, no cenário mais otimista
+15:02 é de 12,85 que casa basicamente aqui com o preço-alvo do mercado.
+15:07 A Semig é uma empresa que é elétrica, é perene, logo, ela não tem uma alta taxa
+15:12 de desconto, não tem.
+15:14 Se fosse uma quepra da vida, aí tem uma taxa de desconto de mais de 20%.
+15:17 A Semig não, é uma elétrica, é uma empresa blue chip, não é uma empresa
+15:21 de commodity.
+15:22 A taxa de desconto é baixa e tem que ser.
+15:24 Quando olhamos pra taxa de crescimento, também não é lá essas coisas.
+15:28 Por quê?
+15:29 Porque a Semig não reteve muito do seu lucro nos últimos anos.
+15:32 Ela distribuiu quase tudo, pagou e pagou muito, logo a taxa de crescimento compacta por conta
+15:38 disso.
+15:39 Mas o que mais impacta hoje no fluxo de caixa descontado da CEMIG é o fluxo de caixa
+15:45 livre, já que o que está acontecendo com a CEMIG?
+15:50 Ela está tendo uma queda do seu fluxo de caixa livre por conta de um aumento substancial
+15:55 do fluxo de caixa operacional, só que não acompanhado de uma manutenção ou queda
+16:00 do fluxo de caixa de investimentos e de financiamento. O que que acontece? Fluxo de caixa operacional
+16:06 tá crescendo assim e o fluxo de caixa de investimentos e financiamento tá crescendo
+16:10 assim e daqui a pouco vai estar assim. O que que acontece com o fluxo de caixa livre,
+16:14 que é o que fica livre pra o astrôniista, pra você, pra mina gerais, cai e cai forte.
+16:19 Olha isso aqui, fluxo de caixa livre, ACMEG em 2022, 5.400.000.000, 5.300.000, 2.024.000.000,
+16:28 4.025.000, 2.500.000, os últimos 12 meses 1.800.000.000 e a tendência é que isso
+16:35 caia e caia ainda mais.
+16:37 Então na nossa média ponderada do fluxo de caixa livre já é uma queda substancial,
+16:43 muito forte.
+16:44 É uma empresa que estava extremamente barata, não tenha dúvida, só que gera um custo
+16:51 de oportunidade também.
+16:52 Custo de oportunidade de uma valorização proporcional ao que a empresa merece, ela
+16:57 vai valorizar nos próximos meses e anos, porque é uma boa empresa e boas empresas
+17:02 até em momentos difíceis valorizam, porém ela não vai valorizar tanto quanto a média
+17:06 do mercado, porque ela vai entregar menos do que a média do mercado.
+17:10 a valorização ou preço é sempre intrínseco à entrega. O mercado tem suas ineficiências
+17:16 principalmente no Brasil, mas a médio e longo prazo o mercado sempre pressifica razoavelmente
+17:20 correto. Vamos colocar dessa forma. Lembrando, meu amigo, pra você ter acesso
+17:24 a todo esse nível de análise que fazemos por aqui, análise do ativo, fluxo caixa
+17:29 descontado, sempre atualizado, preço teto projetado, Gordon, valuation, gestão fundamental,
+17:34 mata mata, setorial das principais empresas, ranking do bazinho, preço justo, medo
+17:39 ganância, vamos dar uma olhada aqui, eu acho que tá no neutro. Vê, neutro. Aqui sabe muito né,
+17:44 indicador de neutro. Como eu te mostrei, temos uma nova aqui de comunicados,
+17:48 principais comunicados das principais empresas na palma da sua mão, mas muito além, o controle
+17:53 da sua carteira, todos os seus ativos, dividendos, renda fixa, ações, exterior,
+17:58 rebalanceamento, importa com a B3 e puxa tudo automaticamente. Mas além disso,
+18:03 bolsas, radar de oportunidades, as maiores barganhas da bolsa para dividendos, previdenciário,
+18:09 radar setorial, as melhores empresas sempre atualizadas de cada setor. Sobretudo você
+18:16 tem muito mais. Análise técnica, uma nova aba também aqui da AdaptaValor, análise
+18:22 de mercado, commodity, notícias mais importantes, mercado como todo, juros, inflação,
+18:27 Bic, dólar, criptoativo, tudo que você precisa na palma da sua mão, sempre atualizado, na
+18:36 mesma ferramenta, pra você não precisar de 4, 5, 3 assinaturas, blá blá blá, ajudante
+18:42 de R, tudo isso na adaptavala.
+18:45 Eu vou deixar aqui pra você o QR code pra você ter acesso, ou também o primeiro
+18:49 link da descrição, tá certo?
+18:51 No mais meu amigo, foi um prazer te ter por aqui, de verdade, e como sempre,
+18:56 E nunca se esqueça, é só o começo.

@@ -13,6 +13,8 @@ from transcript_normalizer.core.standoff import KIND_ALIAS, RULE_UNIT
 ROOT = Path(__file__).resolve().parents[1]
 PACK_V2 = ROOT / "packs" / "financas-ptbr.yaml"
 FROZEN = sorted((ROOT / "fixtures").glob("*/pack.yaml"))
+#: The third fixture froze packs/ as it was when it was added.
+FROZEN_VERSIONS = {"R2Qgz8tFWVI": "0.1.0", "wxgFO_fyfXg": "0.1.0", "4wCtn8BWR4o": "0.2.3"}
 
 
 @pytest.fixture(scope="module")
@@ -32,8 +34,9 @@ def applied(pack, line):
 
 def test_versions(v2):
     assert v2.version == "0.2.3"
+    assert {p.parent.name for p in FROZEN} == set(FROZEN_VERSIONS)
     for path in FROZEN:
-        assert load_pack(path, learned=Learned()).version == "0.1.0", path
+        assert load_pack(path, learned=Learned()).version == FROZEN_VERSIONS[path.parent.name], path
 
 
 def test_every_new_term_from_the_second_gold_is_in_the_pack(v2):
@@ -72,7 +75,9 @@ def test_bilhoes_is_recognized_as_the_unit(v2):
     assert applied(v2, "44 bilhões de reais") == [("bilhões", "bilhão", "term:alias", KIND_ALIAS)]
 
 
-@pytest.mark.parametrize("path", FROZEN, ids=lambda p: p.parent.name)
+@pytest.mark.parametrize(
+    "path", [p for p in FROZEN if FROZEN_VERSIONS[p.parent.name] == "0.1.0"], ids=lambda p: p.parent.name
+)
 def test_a_frozen_pack_without_bilhao_keeps_the_rules_own_bi(path):
     """The fixture packs do not name the unit, so the rule's term is unchanged."""
     pack = load_pack(path, learned=Learned())

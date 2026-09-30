@@ -41,6 +41,10 @@ BOUNDS = {
     "wxgFO_fyfXg": Bounds(
         in_scope=225, min_hits=107, max_false_positives=58, max_manter_touched=1
     ),
+    # Whisper medium, not platform captions; frozen pack 0.2.3. Two of the seven
+    # false positives are 0:19 `Dividend Yield`, where the exact variant
+    # `dividend` -> dividendo substitutes inside the term spelled out.
+    "4wCtn8BWR4o": Bounds(in_scope=40, min_hits=35, max_false_positives=7),
 }
 
 FIXTURES = fixtures(FIXTURES_ROOT)

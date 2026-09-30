@@ -1,0 +1,41 @@
+﻿timestamp,wrong,correct,term,class,status
+0:19,Dividend Yield,Dividend Yield,dividend yield,indicador,alias
+0:19,Dividend Yield,Dividend Yield,dividend yield,indicador,alias
+2:09,semiga,CEMIG,CEMIG,companhia,certo
+2:09,semiga,CEMIG,CEMIG,companhia,certo
+2:14,semiga,CEMIG,CEMIG,companhia,certo
+2:17,dividendos,dividendos,dividendo,indicador,alias
+2:17,Semig,CEMIG,CEMIG,companhia,certo
+3:05,dividendos,dividendos,dividendo,indicador,alias
+3:53,Semiga,CEMIG,CEMIG,companhia,certo
+4:11,Semig,CEMIG,CEMIG,companhia,certo
+4:18,Semig,CEMIG,CEMIG,companhia,certo
+5:55,Semig,CEMIG,CEMIG,companhia,certo
+6:07,Semig,CEMIG,CEMIG,companhia,certo
+6:44,Semig,CEMIG,CEMIG,companhia,certo
+6:57,Semig,CEMIG,CEMIG,companhia,certo
+7:01,Semig,CEMIG,CEMIG,companhia,certo
+7:13,SEMIG,CEMIG,CEMIG,companhia,certo
+7:17,SEMIG,CEMIG,CEMIG,companhia,certo
+7:17,bilhões,bilhões,bilhão,unidade,alias
+7:29,bilhões,bilhões,bilhão,unidade,alias
+7:34,bilhões,bilhões,bilhão,unidade,alias
+7:59,bilhões,bilhões,bilhão,unidade,alias
+8:06,bilhões,bilhões,bilhão,unidade,alias
+8:09,Semig,CEMIG,CEMIG,companhia,certo
+9:36,evitida,EBITDA,EBITDA,indicador,certo
+9:36,dívida alíquida,dívida líquida,dívida líquida,indicador,conferido
+9:54,bilhões,bilhões,bilhão,unidade,alias
+9:59,bilhões,bilhões,bilhão,unidade,alias
+10:20,Bilhões,Bilhões,bilhão,unidade,alias
+10:49,preço alto,preço alvo,preço alvo,indicador,conferido
+13:20,Semig,CEMIG,CEMIG,companhia,certo
+13:23,dividendos,dividendos,dividendo,indicador,alias
+13:26,dividendio,dividend yield,dividend yield,indicador,conferido
+13:47,Semig,CEMIG,CEMIG,companhia,certo
+14:01,Semig,CEMIG,CEMIG,companhia,certo
+15:07,Semig,CEMIG,CEMIG,companhia,certo
+15:17,Semig,CEMIG,CEMIG,companhia,certo
+15:29,Semig,CEMIG,CEMIG,companhia,certo
+17:53,dividendos,dividendos,dividendo,indicador,alias
+18:03,dividendos,dividendos,dividendo,indicador,alias
