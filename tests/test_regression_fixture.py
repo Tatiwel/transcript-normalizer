@@ -14,7 +14,11 @@ from pathlib import Path
 
 import pytest
 
-from transcript_normalizer.core.matcher import APPLY_THRESHOLD, MARK_THRESHOLD, find_annotations
+from transcript_normalizer.core.matcher import (
+    MARK_THRESHOLD,
+    VARIANT_APPLY_THRESHOLD,
+    find_annotations,
+)
 from transcript_normalizer.core.standoff import BAND_LOW, in_band
 from transcript_normalizer.evaluate import evaluate, fixtures, render
 
@@ -35,16 +39,23 @@ BOUNDS = {
     # D-031 undoes D-030's plural false positives and keeps its three hits
     # (`autocapex`, `Sabespe`, `segundo trio`). Two above the pre-D-030 16: the
     # variant `tira` -> TIR, which the frozen pack keeps (D-032 is packs/ only).
-    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=18),
+    # D-047 (variant fuzzy needs 85): `dos 10` x2, `nesse ramo`, `de eBit` (18 -> 14).
+    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=14),
     # D-031: one above the pre-D-030 57, again `tira` -> TIR. The touched
-    # `manter` row is 15:54 `divide a`.
+    # `manter` row is 15:54, by `divide` (85; `divide a` is a mark since D-047).
+    # D-047 also drops the three `dividend -> dividendo` gold rows (225 -> 222,
+    # 107 -> 104): the frozen pack's three `dividend` corrections and their six
+    # overlapping spans become false positives (58 -> 67), and the variant
+    # threshold of D-047 takes eight others out (67 -> 59).
     "wxgFO_fyfXg": Bounds(
-        in_scope=225, min_hits=107, max_false_positives=58, max_manter_touched=1
+        in_scope=222, min_hits=104, max_false_positives=59, max_manter_touched=1
     ),
     # Whisper medium, not platform captions; frozen pack 0.2.3. D-040 took out
     # the two 0:19 `Dividend` -> dividendo inside `Dividend Yield` (7 -> 5);
-    # D-041 makes those two alias rows hits (35 -> 37).
-    "4wCtn8BWR4o": Bounds(in_scope=40, min_hits=37, max_false_positives=5),
+    # D-041 makes those two alias rows hits (35 -> 37). D-047 adds five gold rows
+    # for the channel's tool, which 0.2.3 does not know (40 -> 45 in scope), and
+    # takes out `saber se` -> Sabesp (5 -> 4).
+    "4wCtn8BWR4o": Bounds(in_scope=45, min_hits=37, max_false_positives=4),
     # Same speaker as 4wCtn8BWR4o, new sector; platform `pt-orig` caption (D-045),
     # frozen pack 0.2.4. 36 of the 40 hits are alias rows; 4 of 81 corrections.
     # The touched `manter` row is 19:46 `bicho`, an EBITDA variant in 0.2.4.
@@ -95,4 +106,5 @@ def test_the_fixture_produces_low_band_marks(scored):
     low = in_band(annotations, BAND_LOW)
     assert low
     assert all(not a.applied for a in low)
-    assert all(a.rule == "term:fuzzy" and MARK_THRESHOLD <= a.score < APPLY_THRESHOLD for a in low)
+    # D-047: a fuzzy match reached from a variant is a mark up to its own threshold.
+    assert all(a.rule == "term:fuzzy" and MARK_THRESHOLD <= a.score < VARIANT_APPLY_THRESHOLD for a in low)

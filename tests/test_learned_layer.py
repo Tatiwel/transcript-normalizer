@@ -4,14 +4,28 @@ import hashlib
 import io
 import shutil
 
+import pytest
 import yaml
 
 from transcript_normalizer import find_annotations, load_pack, read_caption
 from transcript_normalizer.cli import main
+from transcript_normalizer.core import matcher
 from transcript_normalizer.core.pack import load_learned
 from transcript_normalizer.runs import learned_file
 
 from .conftest import CAPTION, PACK, answers_for, medium_order
+
+
+@pytest.fixture(autouse=True)
+def mixed_group_as_designed(monkeypatch):
+    """These tests are about the confirmation loop (D-013, D-019), not matching.
+
+    They script answers against the fixture's CEMIG group of four variants.
+    D-047 demoted `dos 10` and `nesse ramo` (fuzzy from a variant, under 85) to
+    marks, which leaves two, too few for y/n/y/s or rest-no to mean anything,
+    so the variant threshold is held at the canonical one here.
+    """
+    monkeypatch.setattr(matcher, "VARIANT_APPLY_THRESHOLD", matcher.APPLY_THRESHOLD)
 
 CONFIRMED_SEMIGA = (
     "version: 1\n"

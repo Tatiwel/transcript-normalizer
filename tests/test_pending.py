@@ -36,8 +36,8 @@ def test_without_confirm_everything_is_never_asked(tmp_path, monkeypatch):
     text = run(tmp_path, monkeypatch).read_text(encoding="utf-8")
     assert tagged(text) == {variant: NEVER_ASKED for _, variant in MEDIUM}
     # Grouped by term, each variant with its own examples (D-019).
-    assert text.count("CEMIG  (5 occurrences)") == 1
-    assert "  dos 10  (2 occurrences)  [never asked]" in text
+    assert text.count("CEMIG  (2 occurrences)") == 1
+    assert "  e caiu  (1 occurrence)  [never asked]" in text
     assert "    0:37  Neste mês caiu 7% e desde o início do" in text
     # A list of what is left, not a set of questions.
     assert "[y]es" not in text

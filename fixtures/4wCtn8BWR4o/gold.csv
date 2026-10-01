@@ -1,6 +1,7 @@
 ﻿timestamp,wrong,correct,term,class,status
 0:19,Dividend Yield,Dividend Yield,dividend yield,indicador,alias
 0:19,Dividend Yield,Dividend Yield,dividend yield,indicador,alias
+1:04,Adaptavalda,Adapta Valuer,Adapta Valuer,ferramenta,conferido
 2:09,semiga,CEMIG,CEMIG,companhia,certo
 2:09,semiga,CEMIG,CEMIG,companhia,certo
 2:14,semiga,CEMIG,CEMIG,companhia,certo
@@ -10,6 +11,8 @@
 3:53,Semiga,CEMIG,CEMIG,companhia,certo
 4:11,Semig,CEMIG,CEMIG,companhia,certo
 4:18,Semig,CEMIG,CEMIG,companhia,certo
+4:54,adaptar a válvula,Adapta Valuer,Adapta Valuer,ferramenta,conferido
+5:03,DAPTA Valdre,Adapta Valuer,Adapta Valuer,ferramenta,conferido
 5:55,Semig,CEMIG,CEMIG,companhia,certo
 6:07,Semig,CEMIG,CEMIG,companhia,certo
 6:44,Semig,CEMIG,CEMIG,companhia,certo
@@ -39,3 +42,5 @@
 15:29,Semig,CEMIG,CEMIG,companhia,certo
 17:53,dividendos,dividendos,dividendo,indicador,alias
 18:03,dividendos,dividendos,dividendo,indicador,alias
+18:16,AdaptaValor,Adapta Valuer,Adapta Valuer,ferramenta,conferido
+18:42,adaptavala,Adapta Valuer,Adapta Valuer,ferramenta,conferido

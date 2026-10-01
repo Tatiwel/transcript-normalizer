@@ -10,8 +10,9 @@
 # 0.3.0 acrescenta os termos de 4tTmY8Buask (linhas conferido do gold) e tira `bicho`
 # (EBITDA) e `dividend` (dividendo), palavras que o gold mostra com outro sentido (D-032).
 # Ficam de fora `apos` (é `após` sem acento) e `Portes`, `porta`, `portas`, `Port`, `sel`.
+# 0.3.1 acrescenta `commodity` como alias de commodities: o singular não é erro (D-047).
 language: pt-BR
-version: 0.3.0
+version: 0.3.1
 
 terms:
   - term: CEMIG
@@ -228,6 +229,7 @@ terms:
     variants: [securizadora]
   - term: commodities
     class: conceito
+    aliases: [commodity]
     variants: [commodit]
   - term: payout
     class: indicador

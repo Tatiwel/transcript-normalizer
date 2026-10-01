@@ -156,9 +156,7 @@
 32:28,CPFE,CPFE,CPFL,companhia,alias
 32:30,Word,Ward,Ward,ferramenta,certo
 32:32,preç teto,preço teto,preço teto,indicador,certo
-33:17,dividend,dividendo,dividendo,indicador,certo
 33:17,dividend y,dividend yield,dividend yield,indicador,conferido
-33:25,dividend,dividendo,dividendo,indicador,certo
 33:25,dividend y build,dividend yield,dividend yield,indicador,conferido
 33:46,valation,valuation,valuation,conceito,certo
 33:50,SEMIG,CEMIG,CEMIG,companhia,certo
@@ -216,7 +214,6 @@
 39:10,CPFE,CPFE,CPFL,companhia,alias
 39:22,Wield,yield,yield,indicador,conferido
 39:29,CPFE,CPFE,CPFL,companhia,alias
-39:32,dividend,dividendo,dividendo,indicador,certo
 39:32,dividend y,dividend yield,dividend yield,indicador,conferido
 39:34,SEMIG,CEMIG,CEMIG,companhia,certo
 39:42,CPFE,CPFE,CPFL,companhia,alias

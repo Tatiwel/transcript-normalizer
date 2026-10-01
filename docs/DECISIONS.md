@@ -317,6 +317,38 @@ The removals cost four hits elsewhere. R2Qgz8tFWVI 28:44 `sobre bicho` is EBITDA
 
 Most of the new false positives are curated variants reaching ordinary words fuzzily at 80 to 86. `Portizar` reaches `aportar` (×5) and `amortizar`. `Portess` reaches `por essa`, `por esse` and `por três`, `Portudo` reaches `oportuno`, and `Portinas` reaches `portas`. `Selica` reaches `eólica`, `securizadora` reaches `seguradora`, `Dio Bazin` reaches `do bazinho`, and `adapta Vala` reaches `adaptar a`. `commodit` corrects the singular `commodity` (×2) to the plural. Seven of 4wCtn8BWR4o's twelve new false positives are spellings of the channel's tool (`AdaptaValor`, `adaptavala`, `DAPTA Valdre`), likely gaps in that fixture's gold, not checked. Only the frozen packs are bounds, so none of this blocks.
 
+## D-047 Fuzzy from a curated variant needs 85
+
+A fuzzy match reached from a curated variant is applied only at 85 or above. A match reached from the canonical term keeps D-011's 80. Below its threshold a variant's match is a low mark: it keeps its real score and is never applied. Measured on D-046: the variants of 0.3.0 reached ordinary words at 80 to 84 (`Portizar` → `aportar`, `Portess` → `por essa`, `Selica` → `eólica`).
+
+Two rules were measured on all four fixtures with the bundled pack 0.3.0, before anything changed. A: curated variants match by exact equality only, so fuzzy runs from the canonical term alone. C: fuzzy from a variant requires 85. Hits / false positives:
+
+| fixture | 0.3.0 | A | C |
+|---|---|---|---|
+| 4tTmY8Buask | 103 / 10 | 98 / 8 | 103 / 7 |
+| 4wCtn8BWR4o | 40 / 15 | 40 / 7 | 40 / 9 |
+| R2Qgz8tFWVI | 146 / 28 | 146 / 14 | 146 / 17 |
+| wxgFO_fyfXg | 211 / 19 | 206 / 8 | 211 / 9 |
+| total | 500 / 72 | 490 / 37 | 500 / 42 |
+
+The same, after the gold fixes below:
+
+| fixture | 0.3.0 | A | C |
+|---|---|---|---|
+| 4tTmY8Buask | 103 / 10 | 98 / 8 | 103 / 7 |
+| 4wCtn8BWR4o | 45 / 7 | 42 / 4 | 44 / 4 |
+| R2Qgz8tFWVI | 146 / 28 | 146 / 14 | 146 / 17 |
+| wxgFO_fyfXg | 211 / 19 | 206 / 8 | 211 / 9 |
+| total | 505 / 64 | 492 / 34 | 504 / 37 |
+
+C is adopted. It removes 27 false positives for one hit, while A removes 30 for thirteen, so the two are not close. A loses hits that only a variant reaches fuzzily: `Waren Buff`, `esse mig`, `sem mig`, `ebítica`, `valorist`, `freeat` twice, `Adaptavalda`, `adaptavala` and `adaptar a válvula`, plus three more on 4tTmY8Buask. C loses one hit, 4wCtn8BWR4o 4:54 `adaptar a válvula`, reached at 80 from `adapta Vala`. Ranking is by the demoted score, so a variant's match under 85 does not win a span from a better proposal. Two tests now hold the old threshold on purpose: the confirmation-loop tests script answers against R2Qgz8tFWVI's four-variant CEMIG group, and C leaves two of those four.
+
+Gold fixes, authorized. In wxgFO_fyfXg the rows `dividend` → dividendo at 33:17, 33:25 and 39:32 are dropped. Those spans are dividend yield, and the dividend yield rows stay. In 4wCtn8BWR4o there are five conferido rows for the channel's tool, Adapta Valuer, each checked on its line: 1:04 `Adaptavalda`, 4:54 `adaptar a válvula` ("pra você que tem acesso [à Adapta Valuer], temos agora essa nova aba"), 5:03 `DAPTA Valdre`, 18:16 `AdaptaValor`, 18:42 `adaptavala`. Against the frozen pack, wxgFO_fyfXg goes from 107 / 58 to 104 / 67 from the gold alone. The evaluator scores proposals before overlap resolution, so each dropped row's `dividend` correction also brings its overlapping `o dividend`, `de dividend` and `dividend y`. C then takes it to 104 / 59.
+
+Pack 0.3.1 adds `commodity` as an alias of commodities: the singular is not an error. 4wCtn8BWR4o loses its two `commodity` → commodities false positives.
+
+Bounds, frozen packs (hits / false positives): R2Qgz8tFWVI 150 / 14 (was 18), 4wCtn8BWR4o 37 / 4 with 45 in scope (was 37 / 5 with 40), wxgFO_fyfXg 104 / 59 with 222 in scope (was 107 / 58 with 225, the gold change). 4tTmY8Buask does not move. Bundled 0.3.1: 4tTmY8Buask 103 / 7, 4wCtn8BWR4o 44 / 2, R2Qgz8tFWVI 146 / 17, wxgFO_fyfXg 211 / 9.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

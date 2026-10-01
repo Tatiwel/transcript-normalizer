@@ -22,9 +22,14 @@ def manter_touched(pack):
 
 
 def test_without_the_rejection_the_manter_row_is_touched():
-    """The measured regression: `divide a -> dividendo` on a must-not-touch row."""
+    """The measured regression: `divide a -> dividendo` on a must-not-touch row.
+
+    Since D-047 `divide a` (82, reached from a variant) is only a mark, but
+    `divide` (85) is still applied there, so the row is still touched.
+    """
     touched = manter_touched(load_pack(FIXTURE.pack, learned=Learned()))
-    assert ("divide a", "dividendo") in touched
+    assert ("divide", "dividendo") in touched
+    assert ("divide a", "dividendo") not in touched
 
 
 def test_rejecting_divide_keeps_the_manter_row_clean():

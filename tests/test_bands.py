@@ -4,7 +4,11 @@ import pytest
 import yaml
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption
-from transcript_normalizer.core.matcher import APPLY_THRESHOLD, MARK_THRESHOLD
+from transcript_normalizer.core.matcher import (
+    APPLY_THRESHOLD,
+    MARK_THRESHOLD,
+    VARIANT_APPLY_THRESHOLD,
+)
 from transcript_normalizer.core.pack import Learned
 
 from .conftest import PACK
@@ -37,7 +41,7 @@ def test_listed_variant_is_high(pack_without_semiga):
     ]
 
 
-def test_unlisted_near_miss_is_medium(pack_without_semiga):
+def test_unlisted_near_miss_of_a_variant_under_85_is_a_mark(pack_without_semiga):
     hits = [
         a
         for a in annotate(pack_without_semiga, 'Pô, semiga é horrível')
@@ -47,11 +51,12 @@ def test_unlisted_near_miss_is_medium(pack_without_semiga):
     a = hits[0]
     # Unlisted, so it is reached fuzzily. Since D-014 the nearest string is
     # `SEMigd`, which belongs to Cemig D; the band is what this test is about.
+    # D-047: reached from a variant at 83, under 85, so a mark, not applied.
     assert a.term == "Cemig D"
     assert a.rule == "term:fuzzy"
-    assert a.band == "medium"
-    assert a.applied is True
-    assert a.score >= APPLY_THRESHOLD
+    assert APPLY_THRESHOLD <= a.score < VARIANT_APPLY_THRESHOLD
+    assert a.band == "low"
+    assert a.applied is False
 
 
 def synthetic(tmp_path, stem):
@@ -82,3 +87,19 @@ def test_a_65_score_match_is_below_the_mark_and_not_annotated(tmp_path):
     """13 shared characters of 20: 65, low band under D-011's 60, nothing under D-029."""
     pack, span = synthetic(tmp_path, "custo de capi")
     assert annotate(pack, f"o {span} subiu") == []
+
+
+def tiny(tmp_path, terms):
+    path = tmp_path / "tiny.yaml"
+    path.write_text(yaml.safe_dump({"language": "pt-BR", "version": "test", "terms": terms}), "utf-8")
+    return load_pack(path)
+
+
+def test_the_same_score_applies_from_the_term_and_only_marks_from_a_variant(tmp_path):
+    """D-047, measured: `Portizar` (a BR Partners variant) reached `aportar` at 80."""
+    as_variant = tiny(tmp_path, [{"term": "BR Partners", "class": "companhia", "variants": ["Portizar"]}])
+    as_term = tiny(tmp_path, [{"term": "Portizar", "class": "companhia"}])
+    [mark] = [a for a in annotate(as_variant, "quero aportar mais") if a.original == "aportar"]
+    [guess] = [a for a in annotate(as_term, "quero aportar mais") if a.original == "aportar"]
+    assert mark.score == guess.score == 80
+    assert (mark.band, guess.band) == ("low", "medium")

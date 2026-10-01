@@ -33,6 +33,9 @@ from .text import Transcript
 # D-029 raised the mark threshold from D-011's initial 60.
 APPLY_THRESHOLD = 80
 MARK_THRESHOLD = 70
+#: D-047: a fuzzy match reached from a curated variant, not the canonical term,
+#: is applied only at this score or above; below it, it is a low mark.
+VARIANT_APPLY_THRESHOLD = 85
 
 #: D-005: fuzzy similarity needs 6+ characters on both sides and similar lengths.
 MIN_FUZZY_LEN = 6
@@ -85,11 +88,15 @@ def tokenize(text: str, boundaries: frozenset[str] | str) -> list[Token]:
     return marked
 
 
-def band_for(rule: str, score: float) -> str:
-    """D-011: which confidence band a proposal falls in."""
+def band_for(rule: str, score: float, from_variant: bool = False) -> str:
+    """D-011: which confidence band a proposal falls in.
+
+    D-047: fuzzy from a curated variant needs `VARIANT_APPLY_THRESHOLD`.
+    """
     if rule != term_rule("fuzzy"):
         return BAND_HIGH  # a unit rule, a listed variant or an alias
-    return BAND_MEDIUM if score >= APPLY_THRESHOLD else BAND_LOW
+    apply_at = VARIANT_APPLY_THRESHOLD if from_variant else APPLY_THRESHOLD
+    return BAND_MEDIUM if score >= apply_at else BAND_LOW
 
 
 #: D-028: the class whose terms never enter fuzzy matching.
@@ -301,14 +308,23 @@ def find_annotations(
                 )
             continue
 
-        score, term, candidate = max(
-            (
-                (_score(folded_span, c.folded, fuzzy), c.term, c.folded)
-                for c, fuzzy in scored
-            ),
-            default=(0, None, None),
+        def ranked(c, fuzzy):
+            """D-047: a variant's fuzzy match under its threshold ranks as a mark."""
+            score = _score(folded_span, c.folded, fuzzy)
+            rank = score
+            if (
+                c.origin == "variant"
+                and folded_span != c.folded
+                and APPLY_THRESHOLD <= score < VARIANT_APPLY_THRESHOLD
+            ):
+                rank = APPLY_THRESHOLD - 1
+            return rank, score, c.term, c.folded
+
+        rank, score, term, candidate = max(
+            (ranked(c, fuzzy) for c, fuzzy in scored),
+            default=(0, 0, None, None),
         )
-        if score < threshold:
+        if rank < threshold:
             continue
         # D-013: a pair the user has turned down is never proposed again.
         if pack.is_rejected(folded_span, term):
@@ -359,7 +375,7 @@ def find_annotations(
                 replacement=term,
                 term=term,
                 rule=rule,
-                band=band_for(rule, score),
+                band=band_for(rule, score, from_variant=origin == "variant"),
                 score=int(score),
                 pack_version=pack.version,
             )
