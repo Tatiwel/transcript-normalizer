@@ -7,8 +7,11 @@
 # 0.2.3 acrescenta variantes de preço teto que o fuzzy nao alcanca (abaixo de 80).
 # 0.2.4 acrescenta o que 4wCtn8BWR4o mostrou: evitida, dividendio, preço alvo e
 # dívida líquida. preço alvo fica sem variante: `preço alto` sao duas palavras comuns (D-032).
+# 0.3.0 acrescenta os termos de 4tTmY8Buask (linhas conferido do gold) e tira `bicho`
+# (EBITDA) e `dividend` (dividendo), palavras que o gold mostra com outro sentido (D-032).
+# Ficam de fora `apos` (é `após` sem acento) e `Portes`, `porta`, `portas`, `Port`, `sel`.
 language: pt-BR
-version: 0.2.4
+version: 0.3.0
 
 terms:
   - term: CEMIG
@@ -50,7 +53,7 @@ terms:
     variants: [Geração de Dentes]
   - term: EBITDA
     class: indicador
-    variants: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bicho, bitera, beita, beit, evitida]
+    variants: [Ebítida, Ebíta, EBA, web ebita, web ebit, ebígita, Ebida, bit, bitera, beita, beit, evitida]
     collocations: [dívida líquida sobre EBITDA, margem EBITDA]
   - term: OPEX
     class: indicador
@@ -73,7 +76,7 @@ terms:
     variants: [debentories, debentor, deementories]
   - term: dividendo
     class: indicador
-    variants: [dividend, dividenda]
+    variants: [dividenda]
   - term: preço teto
     class: indicador
     aliases: [preços teto, preços tetos]
@@ -168,9 +171,11 @@ terms:
     variants: [tagon, tagona, tegong]
   - term: Selic
     class: indicador
-    variants: [CELIC]
+    variants: [CELIC, Selica]
   - term: dividend yield
     class: indicador
+    # `dividendio` is ambiguous: dividend yield in 4wCtn8BWR4o 13:26, dividendo
+    # (mínimo) in 4tTmY8Buask 6:03 and 6:25. Only context tells them apart (D-046).
     variants: [dividend y, dividend y build, dividendio]
   - term: preço alvo
     class: indicador
@@ -182,6 +187,59 @@ terms:
   - term: Charlie Munger
     class: pessoa
     variants: [Charlie Mander]
+  - term: BR Partners
+    class: companhia
+    aliases: [BRBI11, Partners]
+    variants: [Portness, BR Portness, Portess, Portance, BR Portance, Berry Portene, B Partners, pornet, Wortness, Portudo, Portinas, Portizar, Portou]
+  - term: drawdown
+    class: indicador
+    variants: [drown down]
+  - term: small cap
+    class: conceito
+    aliases: [small caps]
+    variants: [smoke cap]
+  - term: Décio Bazin
+    class: pessoa
+    aliases: [Bazin]
+    variants: [Dio Bazin]
+  - term: M&A
+    class: conceito
+    aliases: [fusões e aquisições]
+    variants: [Emines, MNAs]
+  - term: IPO
+    class: conceito
+    aliases: [IPOs, oferta pública inicial]
+    variants: [apo]
+  - term: Benchimol
+    class: pessoa
+    variants: [Bench Mall]
+  - term: BTG Pactual
+    class: companhia
+    aliases: [BTG]
+    variants: [B3G Part]
+  - term: Adapta Valuer
+    class: ferramenta
+    variants: [adapta valor, adapta Vala, Valverdra]
+  - term: Auren
+    class: companhia
+    variants: [Aurem]
+  - term: securitizadora
+    class: conceito
+    variants: [securizadora]
+  - term: commodities
+    class: conceito
+    variants: [commodit]
+  - term: payout
+    class: indicador
+  - term: LPA
+    class: indicador
+  - term: DPA
+    class: indicador
+  - term: P/VP
+    class: indicador
+    aliases: [P/B]
+  - term: partnership
+    class: conceito
 unit_rules:
   - pattern: "numero + (B | bit | bi | be)"
     replacement: "numero bi"

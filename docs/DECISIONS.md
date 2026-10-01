@@ -296,6 +296,27 @@ This supersedes D-024's "a comma does not count" for pt-BR only. The generic lan
 
 Measured on the 4tTmY8Buask run with the bundled pack 0.2.4, no learned layer: eight proposals crossed a comma. Three were medium band and applied (`preço, valor` and `preço, não` → preço alvo at 85 and 84, `isso, Amigo` → CEMIG at 80), and five were low marks. None is left. Applied annotations go from 46 to 43 and corrections from 7 to 4. That run's caption is the translated `pt` track (`automatica (pt)`) D-045 is about, fetched before D-045. The fixtures do not move against their frozen packs, so no bound changes. Against 0.2.4, 4wCtn8BWR4o goes from 4 to 3 false positives (`preço, você` → preço alvo is gone), and R2Qgz8tFWVI and wxgFO_fyfXg do not move. No hit is lost anywhere.
 
+## D-046 Fourth fixture: a new sector, and one misrecognition with two meanings
+
+Fourth fixture, new sector (investment bank), same speaker as the third. With pack 0.2.4 the tool found 4 of 81 expected corrections and produced 8 false positives; the 77 misses were all missing pack data, dominated by one company name in 18 misrecognitions. First case of one misrecognition meaning two different terms by context (`dividendio`: dividend yield in 4wCtn8BWR4o, dividendo mínimo in 4tTmY8Buask), recorded as the concrete motivation for the collocation layer (open).
+
+The caption is the platform's `pt-orig` track (D-045). The gold has 121 rows: 79 conferido, 36 alias, 4 certo, 2 manter. 83 rows expect a correction, and two of those have no term (`realo`, `portas` → pelo menos), so 81 are in scope with the 36 alias rows: 117. The 40 hits are the 36 alias rows plus 4 corrections (`dividendield`, `freeat` twice, `SEMIG`). The company is BR Partners: 50 rows, 18 distinct forms after folding. Among the misses, "pack data" includes data that was there but wrong: `dividend` was a variant of dividendo, while this gold has it as dividend yield. Also counted are five forms D-005 and D-032 keep out of any pack (`RO`, `sel`, `Port`, `porta`, `portas`). The touched manter row is 19:46 `bicho`, then an EBITDA variant. Bounds against the frozen pack 0.2.4: in scope 117, hits >= 40, false positives <= 8, one touched manter row.
+
+Pack 0.3.0 adds the conferido terms of the gold: BR Partners, drawdown, small cap, Décio Bazin, M&A, IPO, Benchimol, BTG Pactual, Adapta Valuer, Auren, securitizadora and commodities. It also adds payout, LPA, DPA, P/VP (alias P/B) and partnership, and `Selica` for Selic. It removes `bicho` from EBITDA and `dividend` from dividendo (D-032). `dividendio` stays on dividend yield, with the ambiguity noted in the pack. Two variants of the gold stay out under D-032: `apos`, which folds to `após`, and `Portes`, the plural of `porte`.
+
+Measured against 0.3.0, no learned layer (hits / misses / false positives):
+
+| fixture | 0.2.4 | 0.3.0 |
+|---|---|---|
+| 4tTmY8Buask | 40 / 77 / 8 | 103 / 14 / 10 |
+| 4wCtn8BWR4o | 40 / 0 / 3 | 40 / 0 / 15 |
+| R2Qgz8tFWVI | 147 / 20 / 22 | 146 / 21 / 28 |
+| wxgFO_fyfXg | 214 / 11 / 18 | 211 / 14 / 19 |
+
+The removals cost four hits elsewhere. R2Qgz8tFWVI 28:44 `sobre bicho` is EBITDA there, a second context-dependent misrecognition. wxgFO_fyfXg 33:17, 33:25 and 39:32 have gold rows `dividend` → dividendo, inside spans the same gold also marks `dividend y` → dividend yield.
+
+Most of the new false positives are curated variants reaching ordinary words fuzzily at 80 to 86. `Portizar` reaches `aportar` (×5) and `amortizar`. `Portess` reaches `por essa`, `por esse` and `por três`, `Portudo` reaches `oportuno`, and `Portinas` reaches `portas`. `Selica` reaches `eólica`, `securizadora` reaches `seguradora`, `Dio Bazin` reaches `do bazinho`, and `adapta Vala` reaches `adaptar a`. `commodit` corrects the singular `commodity` (×2) to the plural. Seven of 4wCtn8BWR4o's twelve new false positives are spellings of the channel's tool (`AdaptaValor`, `adaptavala`, `DAPTA Valdre`), likely gaps in that fixture's gold, not checked. Only the frozen packs are bounds, so none of this blocks.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
