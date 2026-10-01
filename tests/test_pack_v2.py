@@ -14,8 +14,13 @@ from transcript_normalizer.runs import BUNDLED_PACKS
 ROOT = Path(__file__).resolve().parents[1]
 PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
 FROZEN = sorted((ROOT / "fixtures").glob("*/pack.yaml"))
-#: The third fixture froze packs/ as it was when it was added.
-FROZEN_VERSIONS = {"R2Qgz8tFWVI": "0.1.0", "wxgFO_fyfXg": "0.1.0", "4wCtn8BWR4o": "0.2.3"}
+#: The third and fourth fixtures froze the curated pack as it was when each was added.
+FROZEN_VERSIONS = {
+    "R2Qgz8tFWVI": "0.1.0",
+    "wxgFO_fyfXg": "0.1.0",
+    "4wCtn8BWR4o": "0.2.3",
+    "4tTmY8Buask": "0.2.4",
+}
 
 
 @pytest.fixture(scope="module")

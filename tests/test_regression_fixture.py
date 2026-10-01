@@ -45,6 +45,12 @@ BOUNDS = {
     # the two 0:19 `Dividend` -> dividendo inside `Dividend Yield` (7 -> 5);
     # D-041 makes those two alias rows hits (35 -> 37).
     "4wCtn8BWR4o": Bounds(in_scope=40, min_hits=37, max_false_positives=5),
+    # Same speaker as 4wCtn8BWR4o, new sector; platform `pt-orig` caption (D-045),
+    # frozen pack 0.2.4. 36 of the 40 hits are alias rows; 4 of 81 corrections.
+    # The touched `manter` row is 19:46 `bicho`, an EBITDA variant in 0.2.4.
+    "4tTmY8Buask": Bounds(
+        in_scope=117, min_hits=40, max_false_positives=8, max_manter_touched=1
+    ),
 }
 
 FIXTURES = fixtures(FIXTURES_ROOT)
