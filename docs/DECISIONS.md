@@ -349,6 +349,23 @@ Pack 0.3.1 adds `commodity` as an alias of commodities: the singular is not an e
 
 Bounds, frozen packs (hits / false positives): R2Qgz8tFWVI 150 / 14 (was 18), 4wCtn8BWR4o 37 / 4 with 45 in scope (was 37 / 5 with 40), wxgFO_fyfXg 104 / 59 with 222 in scope (was 107 / 58 with 225, the gold change). 4tTmY8Buask does not move. Bundled 0.3.1: 4tTmY8Buask 103 / 7, 4wCtn8BWR4o 44 / 2, R2Qgz8tFWVI 146 / 17, wxgFO_fyfXg 211 / 9.
 
+## D-048 The evaluator scores what is applied
+
+The evaluator scores only the annotations that survive `resolve_overlaps`, exactly the set rendered into normalized.txt. Before, it scored every proposal, so a proposal that lost its span to a longer or better one counted as a false positive, though it never reached the output. Measured: wxgFO_fyfXg went from 58 to 67 false positives when D-047 dropped three gold rows. Each dropped row's `dividend` correction also brought its overlapping `o dividend`, `de dividend` and `dividend y`.
+
+The rule applies everywhere `evaluate` is called: the regression test, `scripts/measure.py`, and the manter check, which now sees only the resolved set too. A proposal that loses its span is neither a hit nor a false positive. This replaces the "as exp2 did" scoring that `evaluate_fixture` and the regression test had kept. Matching and its numbers are unchanged.
+
+Measured, hits / false positives, before → after:
+
+| fixture | frozen | bundled 0.3.1 |
+|---|---|---|
+| 4tTmY8Buask | 40 / 8 → 40 / 6 | 103 / 7 → 102 / 6 |
+| 4wCtn8BWR4o | 37 / 4 → 37 / 4 | 44 / 2 → 44 / 2 |
+| R2Qgz8tFWVI | 150 / 14 → 150 / 14 | 146 / 17 → 146 / 15 |
+| wxgFO_fyfXg | 104 / 59 → 104 / 53 | 211 / 9 → 211 / 9 |
+
+What went out: `de dividend` → dividendo ×2 on 4tTmY8Buask (both packs), `bit` → EBITDA ×2 on R2Qgz8tFWVI with 0.3.1, and on wxgFO_fyfXg (frozen) `dividend y` ×3, `de dividend` ×2 and `o dividend`. 4tTmY8Buask with 0.3.1 loses one hit, which the output never had: at 3:34 the rendered annotation is `dividend` → dividendo (94, from the canonical term), which wins the span from the proposal for dividend yield. That annotation is now the false positive. No manter count moves. New bounds: 4tTmY8Buask false positives <= 6, wxgFO_fyfXg <= 53.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

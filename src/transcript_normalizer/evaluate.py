@@ -25,6 +25,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .core.matcher import resolve_overlaps
 from .core.pack import Learned, Pack, load_pack
 from .core.standoff import Annotation
 from .core.text import Transcript, read_caption
@@ -148,8 +149,12 @@ def evaluate(
 
     `normalize` is the pack's language normalization (D-033); the generic one
     is only a default for callers that have no pack.
+
+    D-048: only what survives overlap resolution is scored, the set rendered
+    into normalized.txt. A proposal that loses its span to a longer or better
+    one changes nothing in the output and is neither a hit nor a false positive.
     """
-    applied = [a for a in annotations if a.applied]
+    applied = [a for a in resolve_overlaps(annotations) if a.applied]
     corrections = [a for a in applied if is_correction(a)]
     aliases = [a for a in applied if is_alias(a)]
 
@@ -264,8 +269,7 @@ def evaluate(
 def evaluate_fixture(fixture: Fixture, pack: Pack | None = None) -> Result:
     """Run the matcher over a fixture and score it. `pack` overrides the frozen one.
 
-    Scoring sees every proposal, not the overlap-resolved set the CLI writes,
-    as exp2 did: the regression numbers have always been measured that way.
+    `evaluate` resolves overlaps first (D-048), so this scores what the CLI writes.
     """
     from .core.matcher import find_annotations
 

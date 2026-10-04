@@ -3,6 +3,7 @@
 `experiments/exp2_units_and_threshold.py` is the reference behaviour. The only
 deliberate difference is D-007: matching runs over the joined text, so an
 annotation can straddle a caption break and is credited to every line it touches.
+Since D-048 only the overlap-resolved set is scored, the set normalized.txt shows.
 Every fixture is scored by D-026's one rule; see `transcript_normalizer.evaluate`.
 
 Any change in the numbers asserted here must be a conscious commit that also
@@ -44,11 +45,11 @@ BOUNDS = {
     # D-031: one above the pre-D-030 57, again `tira` -> TIR. The touched
     # `manter` row is 15:54, by `divide` (85; `divide a` is a mark since D-047).
     # D-047 also drops the three `dividend -> dividendo` gold rows (225 -> 222,
-    # 107 -> 104): the frozen pack's three `dividend` corrections and their six
-    # overlapping spans become false positives (58 -> 67), and the variant
-    # threshold of D-047 takes eight others out (67 -> 59).
+    # 107 -> 104) and its variant threshold takes eight false positives out.
+    # D-048 scores the resolved set: the six overlapping `o dividend`,
+    # `de dividend` and `dividend y` proposals no longer count (59 -> 53).
     "wxgFO_fyfXg": Bounds(
-        in_scope=222, min_hits=104, max_false_positives=59, max_manter_touched=1
+        in_scope=222, min_hits=104, max_false_positives=53, max_manter_touched=1
     ),
     # Whisper medium, not platform captions; frozen pack 0.2.3. D-040 took out
     # the two 0:19 `Dividend` -> dividendo inside `Dividend Yield` (7 -> 5);
@@ -59,8 +60,9 @@ BOUNDS = {
     # Same speaker as 4wCtn8BWR4o, new sector; platform `pt-orig` caption (D-045),
     # frozen pack 0.2.4. 36 of the 40 hits are alias rows; 4 of 81 corrections.
     # The touched `manter` row is 19:46 `bicho`, an EBITDA variant in 0.2.4.
+    # D-048: the two `de dividend` proposals lose to `dividend` itself (8 -> 6).
     "4tTmY8Buask": Bounds(
-        in_scope=117, min_hits=40, max_false_positives=8, max_manter_touched=1
+        in_scope=117, min_hits=40, max_false_positives=6, max_manter_touched=1
     ),
 }
 
