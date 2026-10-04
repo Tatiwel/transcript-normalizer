@@ -2,6 +2,8 @@
 
 Domain-term normalization for ASR transcripts and auto-captions.
 
+**New here?** Read the guide: [docs/GUIDE.md](docs/GUIDE.md) (English) or [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) (português). It covers installing, a first run, reading the outputs, the confirmation loop and writing a pack for your own field.
+
 ## The problem
 
 Automatic captions and speech recognition systematically garble domain vocabulary: company names, acronyms, indicators, units. In a Brazilian finance video, `CEMIG` came out as `SEMIG`, `SEMIC`, `CIC`, `sem amig`, `esse amigo`; `EBITDA` came out as `Ebítida`, `web ebita`, `bicho`; `Geração Dividendos` (the channel's own name) came out as `Geração de Dentes`.
