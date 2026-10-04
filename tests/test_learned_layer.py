@@ -24,7 +24,7 @@ def mixed_group_as_designed(monkeypatch):
     D-047 demoted `dos 10` and `nesse ramo` (fuzzy from a variant, under 85) to
     marks, which leaves two, too few for y/n/y/s or rest-no to mean anything,
     so the variant threshold is held at the canonical one here. D-050's
-    phonetic source would add a fifth (`como gestão`), so it is off here.
+    phonetic source is off too, so none of its proposals reshape the group.
     """
     monkeypatch.setattr(matcher, "VARIANT_APPLY_THRESHOLD", matcher.APPLY_THRESHOLD)
     monkeypatch.setattr(matcher, "PHONETIC_THRESHOLD", 101)

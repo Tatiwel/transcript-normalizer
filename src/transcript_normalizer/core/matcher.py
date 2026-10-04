@@ -109,8 +109,9 @@ UNIT_CLASS = "unidade"
 PHONETIC_CLASSES = frozenset({"companhia", "pessoa"})
 PHONETIC_THRESHOLD = 85
 PHONETIC_NGRAM_SIZES = (1, 2)
-#: A skeleton shorter than this (`prt`) matches too many words.
-MIN_SKELETON_LEN = 4
+#: A skeleton shorter than this matches too many words: at 4, `Cemig GT`
+#: (`smjt`) reached `como gestão` and `mesmo jeito` (D-050, amended).
+MIN_SKELETON_LEN = 5
 
 
 def contains_words(span: str, part: str) -> bool:
