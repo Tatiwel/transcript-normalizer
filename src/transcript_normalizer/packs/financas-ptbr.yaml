@@ -11,8 +11,12 @@
 # (EBITDA) e `dividend` (dividendo), palavras que o gold mostra com outro sentido (D-032).
 # Ficam de fora `apos` (é `após` sem acento) e `Portes`, `porta`, `portas`, `Port`, `sel`.
 # 0.3.1 acrescenta `commodity` como alias de commodities: o singular não é erro (D-047).
+# 0.3.2 acrescenta `dividend` como alias de dividend yield: a forma curta do locutor
+# (3 de 3 ocorrências conferidas em 4tTmY8Buask). Custo medido: em R2Qgz8tFWVI 15:59
+# `dividend` é dividendo, e em wxgFO_fyfXg o alias, já escrito dentro de `dividend y`,
+# bloqueia essa variante pela regra de D-030 (3 acertos perdidos).
 language: pt-BR
-version: 0.3.1
+version: 0.3.2
 
 terms:
   - term: CEMIG
@@ -175,6 +179,7 @@ terms:
     variants: [CELIC, Selica]
   - term: dividend yield
     class: indicador
+    aliases: [dividend]
     # `dividendio` is ambiguous: dividend yield in 4wCtn8BWR4o 13:26, dividendo
     # (mínimo) in 4tTmY8Buask 6:03 and 6:25. Only context tells them apart (D-046).
     variants: [dividend y, dividend y build, dividendio]
