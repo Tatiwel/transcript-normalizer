@@ -15,8 +15,10 @@
 # (3 de 3 ocorrências conferidas em 4tTmY8Buask). Custo medido: em R2Qgz8tFWVI 15:59
 # `dividend` é dividendo, e em wxgFO_fyfXg o alias, já escrito dentro de `dividend y`,
 # bloqueia essa variante pela regra de D-030 (3 acertos perdidos).
+# 0.3.3 acrescenta `Partens` e `partner` a BR Partners (4tTmY8Buask 7:48 e 11:39).
+# `A Partens` nao entra: artigo mais nome, duas palavras.
 language: pt-BR
-version: 0.3.2
+version: 0.3.3
 
 terms:
   - term: CEMIG
@@ -196,7 +198,7 @@ terms:
   - term: BR Partners
     class: companhia
     aliases: [BRBI11, Partners]
-    variants: [Portness, BR Portness, Portess, Portance, BR Portance, Berry Portene, B Partners, pornet, Wortness, Portudo, Portinas, Portizar, Portou]
+    variants: [Portness, BR Portness, Portess, Portance, BR Portance, Berry Portene, B Partners, pornet, Wortness, Portudo, Portinas, Portizar, Portou, Partens, partner]
   - term: drawdown
     class: indicador
     variants: [drown down]
