@@ -3,6 +3,7 @@
     transcript-normalizer [normalize] <legenda.txt> --pack <pack.yaml>
     transcript-normalizer fetch <url>
     transcript-normalizer list
+    transcript-normalizer               (on a terminal: the interactive menu, D-051)
 
 `normalize` is the default, so a caption file may be given straight away.
 """
@@ -533,8 +534,19 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def is_interactive() -> bool:
+    """D-051: a person at a terminal, not a script or a pipe."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    # D-051: no arguments on a terminal opens the menu; anywhere else argparse
+    # prints the usage and exits 2, as it always has.
+    if not argv and is_interactive():
+        from .interactive import run
+
+        return run()
     # `normalize` is the default: a bare caption file still works.
     if argv and argv[0] not in COMMANDS and not argv[0].startswith("-"):
         argv.insert(0, "normalize")

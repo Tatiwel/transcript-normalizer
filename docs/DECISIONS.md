@@ -395,6 +395,22 @@ Gained: 4tTmY8Buask 7:48 `A Partens` and 11:39 `partner e` → BR Partners (90),
 
 Amended: the minimum skeleton length is 5, not 4. A name, alias or window whose skeleton has fewer than 5 letters is skipped. Measured: the three CEMIG false positives with the frozen packs (`como gestão` in R2Qgz8tFWVI, `mesmo jeito` ×2 in wxgFO_fyfXg) all went through the alias `Cemig GT`, whose skeleton `smjt` has four letters. At 5 they disappear and no gain is lost. `Warn Buffet` stays (frozen wxgFO_fyfXg). `Partens` and `partner` stay with 0.3.2, at 108 / 4, the pack where the phonetic source produced them; since 0.3.3 they are variants. Hits / false positives at 4 → 5: frozen R2Qgz8tFWVI 150 / 15 → 150 / 14 and wxgFO_fyfXg 105 / 55 → 105 / 53. Nothing else moves, frozen or with the bundled 0.3.3 (4tTmY8Buask 108 / 4, 4wCtn8BWR4o 44 / 2, R2Qgz8tFWVI 145 / 16, wxgFO_fyfXg 211 / 10). The bounds go back to false positives <= 14 and <= 53. With 0.3.3 the source's two remaining false positives are `para três` and `por três` → BR Partners (`prtrs`, five letters).
 
+## D-051 Interactive mode
+
+Running `transcript-normalizer` with no arguments on a TTY opens an interactive menu; every menu action calls the same functions the subcommands call, so nothing is reachable only through the menu, and scripted use (subcommands, non-TTY) is unchanged. Built with rich only; no new dependency.
+
+The menu, in `interactive.py`, runs each action through `cli.main` with the argument list a person would type:
+
+1. Fetch: `fetch <path>` for a local file. For a url, `fetch <url> --caption-only` first, and if that fails, the question "run with local speech recognition? [y/n]", then `fetch <url> --whisper`. On the command line the chain falls through on its own (D-036). The menu asks first, because the next step downloads the audio and can take minutes.
+2. Normalize a run: the `list` table, numbered, then `<run>/legenda.txt`, then "review pending now?" if needs-review/pending.txt exists.
+3. Review pending: `normalize <run>/legenda.txt --confirm`.
+4. Show a run's outputs: the run's files and the first 20 lines of normalized.txt.
+5. List runs: `list`.
+6. Help: one paragraph, pointing to docs/GUIDE.md.
+7. `q` quits.
+
+After each action the menu comes back. `q`, end of input or Ctrl+C at the menu quits. An error, an exit code other than 0, or an exception in an action is printed in the menu, never as a traceback. "TTY" means both stdin and stdout are terminals. Without them, no arguments is argparse's usage error, exit 2, as before. rich is optional here as it is for fetch: without it the menu is plain text. Tested with scripted stdin and the fake yt-dlp and transcriber: fetch, normalize, review; a bad url; no caption, then local speech recognition; show, list, help; an unexpected exception; `q`, and end of input.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
