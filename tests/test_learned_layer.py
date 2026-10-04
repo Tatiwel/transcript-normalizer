@@ -23,9 +23,11 @@ def mixed_group_as_designed(monkeypatch):
     They script answers against the fixture's CEMIG group of four variants.
     D-047 demoted `dos 10` and `nesse ramo` (fuzzy from a variant, under 85) to
     marks, which leaves two, too few for y/n/y/s or rest-no to mean anything,
-    so the variant threshold is held at the canonical one here.
+    so the variant threshold is held at the canonical one here. D-050's
+    phonetic source would add a fifth (`como gestão`), so it is off here.
     """
     monkeypatch.setattr(matcher, "VARIANT_APPLY_THRESHOLD", matcher.APPLY_THRESHOLD)
+    monkeypatch.setattr(matcher, "PHONETIC_THRESHOLD", 101)
 
 CONFIRMED_SEMIGA = (
     "version: 1\n"

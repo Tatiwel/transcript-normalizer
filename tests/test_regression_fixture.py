@@ -41,15 +41,18 @@ BOUNDS = {
     # (`autocapex`, `Sabespe`, `segundo trio`). Two above the pre-D-030 16: the
     # variant `tira` -> TIR, which the frozen pack keeps (D-032 is packs/ only).
     # D-047 (variant fuzzy needs 85): `dos 10` x2, `nesse ramo`, `de eBit` (18 -> 14).
-    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=14),
+    # D-050's phonetic source adds `como gestão` -> CEMIG (via `Cemig GT`) (14 -> 15).
+    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=15),
     # D-031: one above the pre-D-030 57, again `tira` -> TIR. The touched
     # `manter` row is 15:54, by `divide` (85; `divide a` is a mark since D-047).
     # D-047 also drops the three `dividend -> dividendo` gold rows (225 -> 222,
     # 107 -> 104) and its variant threshold takes eight false positives out.
     # D-048 scores the resolved set: the six overlapping `o dividend`,
     # `de dividend` and `dividend y` proposals no longer count (59 -> 53).
+    # D-050: the phonetic source gets back 36:41 `Warn Buffet` (104 -> 105), the
+    # hit D-024 lost, and adds `mesmo jeito` -> CEMIG twice (53 -> 55).
     "wxgFO_fyfXg": Bounds(
-        in_scope=222, min_hits=104, max_false_positives=53, max_manter_touched=1
+        in_scope=222, min_hits=105, max_false_positives=55, max_manter_touched=1
     ),
     # Whisper medium, not platform captions; frozen pack 0.2.3. D-040 took out
     # the two 0:19 `Dividend` -> dividendo inside `Dividend Yield` (7 -> 5);

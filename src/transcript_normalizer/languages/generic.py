@@ -17,6 +17,9 @@ _NOT_WORD = re.compile(r"[^\w$]+")
 
 sentence_boundaries: frozenset[str] = frozenset(".?!;")
 
+#: D-050: no phonetic source without a language that defines one.
+skeleton = None
+
 
 def normalize(text: str) -> str:
     s = unicodedata.normalize("NFD", unicodedata.normalize("NFC", text).lower())

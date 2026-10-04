@@ -93,6 +93,8 @@ def band_for(rule: str, score: float, from_variant: bool = False) -> str:
 
     D-047: fuzzy from a curated variant needs `VARIANT_APPLY_THRESHOLD`.
     """
+    if rule == term_rule("phonetic"):
+        return BAND_MEDIUM  # D-050: applied flagged, asked, never high
     if rule != term_rule("fuzzy"):
         return BAND_HIGH  # a unit rule, a listed variant or an alias
     apply_at = VARIANT_APPLY_THRESHOLD if from_variant else APPLY_THRESHOLD
@@ -101,6 +103,14 @@ def band_for(rule: str, score: float, from_variant: bool = False) -> str:
 
 #: D-028: the class whose terms never enter fuzzy matching.
 UNIT_CLASS = "unidade"
+
+#: D-050: the phonetic source. Names only, never high band, never over a span
+#: the exact and fuzzy sources already resolved.
+PHONETIC_CLASSES = frozenset({"companhia", "pessoa"})
+PHONETIC_THRESHOLD = 85
+PHONETIC_NGRAM_SIZES = (1, 2)
+#: A skeleton shorter than this (`prt`) matches too many words.
+MIN_SKELETON_LEN = 4
 
 
 def contains_words(span: str, part: str) -> bool:
@@ -373,7 +383,72 @@ def find_annotations(
                 pack_version=pack.version,
             )
         )
+    annotations += phonetic_proposals(text, tokens, pack, annotations)
     return annotations
+
+
+def phonetic_proposals(
+    text: str, tokens: list[Token], pack: Pack, found: list[Annotation]
+) -> list[Annotation]:
+    """D-050: the fourth source, a consonant-skeleton similarity for names.
+
+    Runs only when the pack's language defines a skeleton, only against the
+    canonical names and aliases of companhia and pessoa terms, and only on
+    1-2 word windows that no applied annotation of the other sources covers.
+    """
+    skeleton = getattr(pack.language, "skeleton", None)
+    if skeleton is None:
+        return []
+    klass = {t.term: t.klass for t in pack.terms}
+    names = [
+        (c.term, skeleton(c.folded))
+        for c in pack.candidates
+        if c.origin in ("term", "alias") and klass.get(c.term) in PHONETIC_CLASSES
+    ]
+    names = [(term, code) for term, code in names if len(code) >= MIN_SKELETON_LEN]
+    if not names:
+        return []
+    taken = [(a.start, a.end) for a in resolve_overlaps(found) if a.applied]
+    norm = pack.language.normalize
+    def best(original: str) -> tuple[float, str | None]:
+        code = skeleton(original)
+        if len(code) < MIN_SKELETON_LEN:
+            return 0, None
+        return max((fuzz.ratio(code, c), t) for t, c in names)
+
+    single = [best(text[t.start : t.end]) for t in tokens]
+    out: list[Annotation] = []
+    for n in PHONETIC_NGRAM_SIZES:
+        for i in range(len(tokens) - n + 1):
+            window = tokens[i : i + n]
+            if any(t.closes_sentence for t in window[:-1]):
+                continue  # D-024, D-044
+            start, end = window[0].start, window[-1].end
+            if any(start < e and s < end for s, e in taken):
+                continue
+            original = text[start:end]
+            score, term = single[i] if n == 1 else best(original)
+            # A word that adds nothing to the skeleton (`a`, `caiu` after an
+            # `s`) must not ride along and be replaced with the name.
+            if n > 1 and score <= max(single[k][0] for k in range(i, i + n)):
+                continue
+            if score < PHONETIC_THRESHOLD or pack.is_rejected(norm(original), term):
+                continue
+            rule = term_rule("phonetic")
+            out.append(
+                Annotation(
+                    start=start,
+                    end=end,
+                    original=original,
+                    replacement=term,
+                    term=term,
+                    rule=rule,
+                    band=band_for(rule, score),
+                    score=int(score),
+                    pack_version=pack.version,
+                )
+            )
+    return out
 
 
 def resolve_overlaps(annotations: list[Annotation]) -> list[Annotation]:

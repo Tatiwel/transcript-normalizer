@@ -8,6 +8,9 @@ A language module is a plain Python module that provides:
   be an inflection of (D-031a). `set()` when it is not inflected.
 - `unit_rules() -> list[UnitRule]`: the deterministic unit layer (D-006).
 - `sentence_boundaries`: the punctuation a word n-gram never runs across (D-024).
+- `skeleton`: a function `text -> str` that keeps what a name sounds like and
+  drops what a recognizer gets wrong (D-050), or `None`, which turns the
+  phonetic source off for the language.
 
 The core calls these and nothing else; it holds no rule of any language.
 """
@@ -15,7 +18,7 @@ The core calls these and nothing else; it holds no rule of any language.
 from __future__ import annotations
 
 import re
-from typing import NamedTuple, Protocol, runtime_checkable
+from typing import Callable, NamedTuple, Protocol, runtime_checkable
 
 
 class UnitRule(NamedTuple):
@@ -38,6 +41,7 @@ class UnitRule(NamedTuple):
 @runtime_checkable
 class Language(Protocol):
     sentence_boundaries: frozenset[str]
+    skeleton: Callable[[str], str] | None
 
     def normalize(self, text: str) -> str: ...
 

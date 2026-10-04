@@ -40,7 +40,7 @@ def register(code: str, module: ModuleType) -> None:
     if not isinstance(module, Language):
         missing = [
             name
-            for name in ("normalize", "inflections", "unit_rules", "sentence_boundaries")
+            for name in ("normalize", "inflections", "unit_rules", "sentence_boundaries", "skeleton")
             if not hasattr(module, name)
         ]
         raise TypeError(f"{module.__name__} does not implement the language protocol: {missing}")

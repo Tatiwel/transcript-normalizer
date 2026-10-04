@@ -37,7 +37,7 @@ class Annotation:
     original: str
     replacement: str
     term: str
-    rule: str  # "unit" | "term:variant" | "term:alias" | "term:exact" | "term:fuzzy"
+    rule: str  # "unit" | "term:variant" | "term:alias" | "term:exact" | "term:fuzzy" | "term:phonetic"
     band: str  # "high" | "medium" | "low"
     score: int
     pack_version: str

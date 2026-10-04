@@ -60,3 +60,25 @@ def unit_rules() -> list[UnitRule]:
 
 #: D-024; D-044 adds the comma. A comma inside a token (`11,5`) is a decimal separator.
 sentence_boundaries: frozenset[str] = frozenset(".?!;,")
+
+
+# ------------------------------------------------------------------ skeleton
+
+_CONSONANT = "bcdfghjklmnpqrstvwxz"
+
+
+def skeleton(text: str) -> str:
+    """D-050: a pt-BR consonant skeleton, for the phonetic source.
+
+    Folded as `normalize` folds, spaces dropped (`BR Portness` sounds like
+    `brportness`). Then s/c/ç -> s, g/j -> j, and l or u before a consonant ->
+    `w` (vocalized; a letter of its own so the vowel pass keeps it). The vowels
+    go and doubled letters collapse: what is left is what a recognizer rarely
+    gets wrong in a name, and the vowels it often does.
+    """
+    s = normalize(text).replace(" ", "")
+    s = re.sub(rf"[lu](?=[{_CONSONANT}])", "w", s)
+    s = re.sub(r"[sc]", "s", s)
+    s = re.sub(r"[gj]", "j", s)
+    s = re.sub(r"[aeiouy]", "", s)
+    return re.sub(r"(.)\1+", r"\1", s)

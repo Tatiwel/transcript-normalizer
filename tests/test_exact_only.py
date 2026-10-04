@@ -79,7 +79,9 @@ def terms(pack, line):
 def test_a_near_miss_of_an_alias_is_not_proposed(tiny):
     pack = load_pack(tiny, learned=Learned())
     assert terms(pack, "a zeta prime chegou") == [("zeta prime", "term:alias")]
-    assert terms(pack, "a zeta primes chegou") == []  # would be ~95 fuzzy
+    # Not fuzzy (would be ~95). Since D-050 the phonetic source, which compares
+    # names (aliases included) of companhia terms, proposes it in the medium band.
+    assert terms(pack, "a zeta primes chegou") == [("zeta primes", "term:phonetic")]
 
 
 def test_a_near_miss_of_a_pack_variant_still_is(tiny):

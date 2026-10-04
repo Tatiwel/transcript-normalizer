@@ -376,6 +376,23 @@ Measured with the old gold, before → after (hits / false positives). With the 
 
 Gold, authorized, fixtures/4tTmY8Buask/gold.csv. The rows 3:34 and 9:19 `dividend` are now alias rows of dividend yield, with `correct` equal to `wrong`: the speaker's short form, and the text stays. Two conferido rows for BR Partners are added, each checked on its line: 7:48 `A Partens` ("A Partens, em 2025, ano passado, ela terminou o ano") and 11:39 `partner` ("eu tenho partner e é minha segunda maior posição de small caps"). After the gold change: frozen 0.2.4 has 119 in scope, 40 hits and 6 false positives, and its bound moves to 119 in scope. Bundled 0.3.2 has 106 hits and 4 false positives, with 38 aliases recognized.
 
+## D-050 A phonetic skeleton is the fourth matching source, for names
+
+A pt-BR consonant-skeleton similarity (drop vowels, collapse doubles, s/c/ç→s, g/j→j, l/u before consonant→u) runs as a fourth matching source, only for terms of class companhia and pessoa, only on spans the exact and fuzzy sources did not resolve, threshold 85 on rapidfuzz ratio of skeletons, always medium band (applied flagged, asked in --confirm), never high. Measured on a BR Partners hold-out (exp3): recovers 6 of 18 misrecognized forms and 25 of 50 rows for 4 false positives across four fixtures, two of which were real mentions missing from the gold. Epitran por-Latn recovered nothing beyond the baseline (vowel differences dominate IPA distance). Closes D-010.
+
+The rule is `term:phonetic`. The skeleton lives in `languages/pt_br.py` as `skeleton(text)`, part of the language protocol (D-033): a module sets it to a function or to `None`. The generic module sets `None`, so the source is off there. The vocalized l/u is written `w`, so the vowel pass that follows keeps it. The source compares 1- and 2-word windows, within sentences (D-024, D-044), against the canonical names and aliases of companhia and pessoa terms whose skeleton has 4 letters or more. A window is skipped if any applied annotation of the other sources overlaps it, after overlap resolution. A rejected pair is not proposed. One addition to exp3: a 2-word window is proposed only if it scores higher than each of its words alone. Otherwise a word that adds nothing to the skeleton rides along and is replaced with the name: `a Portness`, or `Portinas caiu` (`caiu` folds into the trailing `s`). The fixture numbers are the same with and without it.
+
+Measured, hits / false positives, before → after:
+
+| fixture | frozen | bundled 0.3.2 |
+|---|---|---|
+| 4tTmY8Buask | 40 / 6 → 40 / 6 | 106 / 4 → 108 / 4 |
+| 4wCtn8BWR4o | 37 / 4 → 37 / 4 | 44 / 2 → 44 / 2 |
+| R2Qgz8tFWVI | 150 / 14 → 150 / 15 | 145 / 15 → 145 / 16 |
+| wxgFO_fyfXg | 104 / 53 → 105 / 55 | 211 / 9 → 211 / 10 |
+
+Gained: 4tTmY8Buask 7:48 `A Partens` and 11:39 `partner e` → BR Partners (90), the two rows D-049 added. wxgFO_fyfXg 36:41 `Warn Buffet` → Warren Buffett (100) with the frozen pack, the hit D-024 lost. Added false positives: `para três` (R2Qgz8tFWVI) and `por três` (wxgFO_fyfXg) → BR Partners with 0.3.2 (`prtrs` against `prtnrs`, 90). With the frozen packs, `como gestão` (R2Qgz8tFWVI) and `mesmo jeito` ×2 (wxgFO_fyfXg) → CEMIG (88). Both go through the alias `Cemig GT`, whose skeleton is four letters (`smjt`). The frozen bounds move with the measurement: R2Qgz8tFWVI false positives <= 15, wxgFO_fyfXg hits >= 105 and false positives <= 55. Three tests account for the new medium-band proposals. The confirmation-loop tests turn the source off, as they hold D-047's threshold, to keep their scripted group.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

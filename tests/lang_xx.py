@@ -14,6 +14,8 @@ CODE = "xx"
 
 sentence_boundaries = frozenset("|")
 
+skeleton = None  # D-050: optional; None turns the phonetic source off
+
 
 def normalize(text):
     return generic.normalize(text)
