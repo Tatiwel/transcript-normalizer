@@ -14,7 +14,7 @@
 3:22,dividendos,dividendos,dividendo,indicador,alias
 3:22,realo,realinhado,,fala comum,conferido
 3:31,preço teto,preço teto,preço teto,indicador,alias
-3:34,dividend,dividend yield,dividend yield,indicador,conferido
+3:34,dividend,dividend,dividend yield,indicador,alias
 3:34,Wortness,Partners,BR Partners,companhia,conferido
 3:39,Dio,Décio Bazin,Décio Bazin,pessoa,conferido
 3:44,dividendos,dividendos,dividendo,indicador,alias
@@ -41,6 +41,7 @@
 6:56,Portess,Partners,BR Partners,companhia,conferido
 7:07,portas,Partners,BR Partners,companhia,conferido
 7:19,Portou,Partners,BR Partners,companhia,conferido
+7:48,A Partens,Partners,BR Partners,companhia,conferido
 8:14,dividendo,dividendo,dividendo,indicador,alias
 8:28,dividendo,dividendo,dividendo,indicador,alias
 8:35,Portness,Partners,BR Partners,companhia,conferido
@@ -49,7 +50,7 @@
 8:46,Portness,Partners,BR Partners,companhia,conferido
 8:51,dividendos,dividendos,dividendo,indicador,alias
 9:08,Portes,Partners,BR Partners,companhia,conferido
-9:19,dividend,dividend yield,dividend yield,indicador,conferido
+9:19,dividend,dividend,dividend yield,indicador,alias
 9:24,dividendo,dividendo,dividendo,indicador,alias
 9:37,dividendo,dividendo,dividendo,indicador,alias
 9:39,dividendo,dividendo,dividendo,indicador,alias
@@ -60,6 +61,7 @@
 11:04,Portness,Partners,BR Partners,companhia,conferido
 11:12,portas,pelo menos,,fala comum,conferido
 11:29,preço alvo,preço alvo,preço alvo,indicador,alias
+11:39,partner,Partners,BR Partners,companhia,conferido
 12:04,preço teto,preço teto,preço teto,indicador,alias
 12:20,dividendos,dividendos,dividendo,indicador,alias
 12:28,dividendos,dividendos,dividendo,indicador,alias

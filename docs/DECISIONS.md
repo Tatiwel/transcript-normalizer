@@ -366,6 +366,16 @@ Measured, hits / false positives, before → after:
 
 What went out: `de dividend` → dividendo ×2 on 4tTmY8Buask (both packs), `bit` → EBITDA ×2 on R2Qgz8tFWVI with 0.3.1, and on wxgFO_fyfXg (frozen) `dividend y` ×3, `de dividend` ×2 and `o dividend`. 4tTmY8Buask with 0.3.1 loses one hit, which the output never had: at 3:34 the rendered annotation is `dividend` → dividendo (94, from the canonical term), which wins the span from the proposal for dividend yield. That annotation is now the false positive. No manter count moves. New bounds: 4tTmY8Buask false positives <= 6, wxgFO_fyfXg <= 53.
 
+## D-049 The spelled-out guard means covered, not contained
+
+D-030's guard skips a candidate when an exact name of its term (canonical, alias, or D-031a's inflection of either) is spelled out in the span. It now skips only when that exact span covers the whole window, equal or larger. A window that is longer and merely contains the name stays eligible, and the longer span wins in overlap resolution. Measured: in wxgFO_fyfXg the alias `dividend` (0.3.2) blocked the variant `dividend y` → dividend yield three times.
+
+"Covers" is positional, over the exact-name spans D-040 already records: the window's tokens lie inside an exact name of the same term. A window shorter than a name is now skipped too (`Value` inside `Enterprise Value`). Before, it was not, because it does not contain the whole name. A longer fuzzy window around a name (`o Enterprise Value`, 94) becomes a proposal again. It loses its span to the name's own recognition (100, D-041) in overlap resolution, so neither normalized.txt nor the scores (D-048) see it.
+
+Measured with the old gold, before → after (hits / false positives). With the bundled 0.3.2, wxgFO_fyfXg goes from 208 / 9 to 211 / 9: the three `dividend y` and `dividend y build` rows. 4tTmY8Buask goes from 102 / 4 to 104 / 4, through variants that contain an alias: `Dio Bazin` (alias `Bazin`) and `B Partners` (alias `Partners`). R2Qgz8tFWVI and 4wCtn8BWR4o do not move, and no fixture moves against its frozen pack. The strict expected failure of 0.3.2 in tests/test_inflection.py is a test again.
+
+Gold, authorized, fixtures/4tTmY8Buask/gold.csv. The rows 3:34 and 9:19 `dividend` are now alias rows of dividend yield, with `correct` equal to `wrong`: the speaker's short form, and the text stays. Two conferido rows for BR Partners are added, each checked on its line: 7:48 `A Partens` ("A Partens, em 2025, ano passado, ela terminou o ano") and 11:39 `partner` ("eu tenho partner e é minha segunda maior posição de small caps"). After the gold change: frozen 0.2.4 has 119 in scope, 40 hits and 6 false positives, and its bound moves to 119 in scope. Bundled 0.3.2 has 106 hits and 4 false positives, with 38 aliases recognized.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

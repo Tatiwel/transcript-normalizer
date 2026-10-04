@@ -2,7 +2,7 @@
 
 import pytest
 
-from transcript_normalizer import find_annotations, load_pack, parse_caption
+from transcript_normalizer import find_annotations, load_pack, parse_caption, resolve_overlaps
 from transcript_normalizer.core.matcher import contains_words
 from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.runs import BUNDLED_PACKS
@@ -31,9 +31,16 @@ def test_enterprise_valuey_is_a_variant_not_the_term_spelled_out(v2):
 
 
 def test_the_term_spelled_out_is_still_left_alone(v2):
-    """Not corrected; since D-041, recognized."""
-    found = [a for a in applied(v2, "o DEC e o Enterprise Value") if a[1] in ("DEC", "Enterprise Value")]
-    assert found == [("DEC", "DEC", "term:exact"), ("Enterprise Value", "Enterprise Value", "term:exact")]
+    """Not corrected; since D-041, recognized.
+
+    D-049: the longer window `o Enterprise Value` is a proposal again (fuzzy,
+    94), and loses its span to the name itself (100) in overlap resolution.
+    """
+    found = resolve_overlaps(find_annotations(parse_caption("0:01 o DEC e o Enterprise Value"), v2))
+    assert [(a.original, a.term, a.rule) for a in found if a.applied] == [
+        ("DEC", "DEC", "term:exact"),
+        ("Enterprise Value", "Enterprise Value", "term:exact"),
+    ]
 
 
 @pytest.mark.parametrize(

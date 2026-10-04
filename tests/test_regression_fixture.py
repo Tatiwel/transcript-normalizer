@@ -61,8 +61,9 @@ BOUNDS = {
     # frozen pack 0.2.4. 36 of the 40 hits are alias rows; 4 of 81 corrections.
     # The touched `manter` row is 19:46 `bicho`, an EBITDA variant in 0.2.4.
     # D-048: the two `de dividend` proposals lose to `dividend` itself (8 -> 6).
+    # D-049's gold change adds two BR Partners rows (117 -> 119) that 0.2.4 misses.
     "4tTmY8Buask": Bounds(
-        in_scope=117, min_hits=40, max_false_positives=6, max_manter_touched=1
+        in_scope=119, min_hits=40, max_false_positives=6, max_manter_touched=1
     ),
 }
 

@@ -184,13 +184,6 @@ def find_annotations(
     origins = {}
     for c in pack.candidates:
         origins.setdefault((c.term, c.folded), c.origin)
-    folded_term = {t.term: norm(t.term) for t in pack.terms}
-    # Every other name the term is spelled out by: curated and learned aliases.
-    folded_aliases: dict[str, list[str]] = {t.term: [] for t in pack.terms}
-    for c in pack.candidates:
-        if c.origin == "alias":
-            folded_aliases[c.term].append(c.folded)
-
     # D-031a: a word whose base form (per the language) is a single-word term or
     # alias is that term spelled out. An explicit entry of any term wins, and
     # among bases the earliest candidate of the pack does.
@@ -236,13 +229,6 @@ def find_annotations(
                 found.add(owner)
         return found
 
-    def spelled_out(folded_span: str, term: str) -> bool:
-        """The term, an alias or (D-031a) an inflection of either, as whole words."""
-        if contains_words(folded_span, folded_term[term]):
-            return True
-        if any(contains_words(folded_span, a) for a in folded_aliases[term]):
-            return True
-        return any(inflection_of(word) == term for word in folded_span.split())
 
     tokens = tokenize(text, language.sentence_boundaries)
 
@@ -276,6 +262,10 @@ def find_annotations(
             names.add(owner)
         if names:
             exact_names.append((i, i + len(window), names))
+
+    def covered_by_its_own_name(i: int, j: int, term: str) -> bool:
+        """D-049: an exact name of this term spans the whole window, or more."""
+        return any(s <= i and j <= e and term in names for s, e, names in exact_names)
 
     def inside_a_longer_name(i: int, j: int, term: str) -> bool:
         return any(
@@ -353,7 +343,10 @@ def find_annotations(
 
         # The term (or one of its aliases) is already spelled out here: nothing to
         # correct. D-030: as whole words, so `deck` is not `dec` spelled out.
-        if spelled_out(folded_span, term):
+        # D-049: only when the name covers the whole window; a longer window
+        # that merely contains it stays eligible, and the longer span wins in
+        # overlap resolution (`dividend y` over the alias `dividend`).
+        if covered_by_its_own_name(i, i + len(window), term):
             continue
         rule = term_rule(origin if folded_span == candidate else "fuzzy")
         # D-031 (b), as D-034 amends it: a fuzzy span that overlaps, either
