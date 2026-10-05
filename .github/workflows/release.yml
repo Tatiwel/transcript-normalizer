@@ -82,9 +82,6 @@ jobs:
     env:
       VERSION: ${{ needs.check.outputs.version }}
       FLAVOR: ${{ matrix.flavor }}
-      # Which ffmpeg build to bundle in `full`. "latest" moves; for a release
-      # you can reproduce, pin a dated autobuild tag of BtbN/FFmpeg-Builds.
-      FFMPEG_BUILD: latest
     steps:
       - uses: actions/checkout@v4
 
@@ -107,8 +104,6 @@ jobs:
           name="transcript-normalizer-$VERSION-$os-$FLAVOR"
           echo "NAME=$name" >> "$GITHUB_ENV"
           echo "ASSET=$name.$ext" >> "$GITHUB_ENV"
-          # PyInstaller separates source and destination with ';' on Windows.
-          if [ "$RUNNER_OS" = Windows ]; then echo "SEP=;" >> "$GITHUB_ENV"; else echo "SEP=:" >> "$GITHUB_ENV"; fi
 
       # A clean virtual environment with the package, the extra this flavor
       # needs, and PyInstaller. `lite` takes [captions] (yt-dlp, curl_cffi,
@@ -118,30 +113,6 @@ jobs:
           uv venv
           if [ "$FLAVOR" = lite ]; then extra=captions; else extra=ingest; fi
           uv pip install pyinstaller ".[$extra]"
-
-      # Only `full`, only where an LGPL static build exists (Linux, Windows):
-      # fetch ffmpeg and keep the binary for PyInstaller to bundle. Source and
-      # license are in docs/THIRD_PARTY.md. There is no LGPL macOS build from
-      # this source, so the macOS `full` executable carries no ffmpeg.
-      - name: ffmpeg (LGPL build)
-        if: matrix.flavor == 'full' && runner.os != 'macOS'
-        run: |
-          base="https://github.com/BtbN/FFmpeg-Builds/releases/download/$FFMPEG_BUILD"
-          mkdir -p ffmpeg
-          if [ "$RUNNER_OS" = Windows ]; then
-            curl -sSL -o ffmpeg.zip "$base/ffmpeg-master-latest-win64-lgpl.zip"
-            7z x -bd -offmpeg-src ffmpeg.zip > /dev/null   # 7-Zip is on every Windows runner
-            bin=ffmpeg.exe
-          else
-            curl -sSL -o ffmpeg.tar.xz "$base/ffmpeg-master-latest-linux64-lgpl.tar.xz"
-            mkdir ffmpeg-src && tar -xJf ffmpeg.tar.xz -C ffmpeg-src
-            bin=ffmpeg
-          fi
-          cp ffmpeg-src/*/bin/$bin ffmpeg/
-          ./ffmpeg/$bin -version | head -1   # the build actually runs here
-          # "source<SEP>destination": put it at the top of the bundle, which
-          # packaging/entry.py puts first on PATH.
-          echo "FFMPEG_ARGS=--add-binary ffmpeg/$bin${SEP}." >> "$GITHUB_ENV"
 
       # Build one executable file. What each flag is for:
       #   --onefile              one file to download and double-click
@@ -154,7 +125,10 @@ jobs:
       #   --collect-submodules yt_dlp
       #                          yt-dlp loads its site extractors by name
       #   --collect-all ...      (full) the speech stack: compiled libraries
-      #                          and data files PyInstaller would miss
+      #                          and data files PyInstaller would miss. No
+      #                          ffmpeg program: faster-whisper decodes audio
+      #                          through PyAV, which carries its own FFmpeg
+      #                          libraries (D-052, amended)
       - name: Build executable
         run: |
           full_args=""
@@ -167,7 +141,7 @@ jobs:
             --collect-submodules transcript_normalizer \
             --collect-data transcript_normalizer \
             --collect-submodules yt_dlp \
-            $full_args ${FFMPEG_ARGS:-} \
+            $full_args \
             packaging/entry.py
 
       # Prove the executable starts, finds its bundled pack and language module,

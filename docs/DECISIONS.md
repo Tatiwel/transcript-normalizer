@@ -419,6 +419,8 @@ Two artefacts from one codebase. (1) The Python package: `pip install transcript
 
 `runs.base_dir()` is the one place that decides. Outside the executable it is the current directory, as D-015 and D-017 say, and nothing is created. Frozen (`sys.frozen`, which PyInstaller sets), it is `platformdirs.user_documents_dir()/transcript-normalizer/`, with `runs/` and `packs/` created on first use. `TRANSCRIPT_NORMALIZER_HOME` moves it, for the tests and for a portable copy. `runs_root()` and `packs_root()` build on it, so fetch, normalize, list, the learned layer and the menu all follow without further change. The default pack is still the bundled one (D-043), unless the data directory's `packs/` holds a `financas-ptbr.yaml`. platformdirs joins the core dependencies: it is small and pure Python. The menu's first line is `your files: <path>` when frozen, and `working in: <path>` otherwise.
 
+Amended: no ffmpeg is bundled. Nothing in the project invokes an ffmpeg binary. `fetch` keeps the audio as it was downloaded, and faster-whisper decodes it through PyAV, which carries its own FFmpeg libraries. The release workflow no longer downloads an LGPL ffmpeg build. `packaging/entry.py` no longer puts the bundle on PATH. docs/THIRD_PARTY.md keeps only the Python packages the executables carry, and the note that the model weights are not bundled.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

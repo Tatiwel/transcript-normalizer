@@ -239,7 +239,7 @@ def caption_args(url: str, code: str, source: str, target: Path) -> list[str]:
 
     Deliberately no conversion flag: that hands the job to ffmpeg, and the
     caption path should not need a system binary. WebVTT is converted in Python
-    by `subtitles.vtt_to_lines`. ffmpeg only comes into it for --whisper.
+    by `subtitles.vtt_to_lines`. Nothing calls ffmpeg: faster-whisper decodes audio through PyAV.
     """
     return [
         "--write-subs" if source == MANUAL else "--write-auto-subs",
