@@ -69,4 +69,4 @@ def test_the_menu_says_where_the_files_are(frozen, monkeypatch, capsys):
     monkeypatch.setattr(cli, "is_interactive", lambda: True)
     monkeypatch.setattr("sys.stdin", __import__("io").StringIO("q\n"))
     assert cli.main([]) == 0
-    assert f"your files: {frozen}" in capsys.readouterr().out
+    assert f"Your files: {frozen}" in capsys.readouterr().out

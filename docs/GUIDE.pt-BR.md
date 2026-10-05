@@ -15,7 +15,7 @@ Ela nunca muda o que o falante disse; corrige o que o reconhecedor ouviu. Daí a
 
 ## 2. Instalação
 
-**Só quero usar.** Baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). O `lite` (uns 40 MB) pega a legenda da plataforma; o `full` (algumas centenas de MB) também transcreve áudio no seu computador, e baixa o modelo de fala na primeira vez em que faz isso. Windows: dois cliques no `.exe`; o arquivo não é assinado, então, se o Windows disser que protegeu o computador, escolha *Mais informações* e depois *Executar assim mesmo*. macOS (Apple Silicon): descompacte e, na primeira vez, clique com o botão direito e escolha *Abrir*. Linux: extraia e rode pelo terminal. O programa abre o menu (seção 3). Seus arquivos vão para `Documentos/transcript-normalizer/` (`runs/` e `packs/`), e a primeira linha do menu diz onde (D-052).
+**Só quero usar.** Baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). O `lite` (uns 40 MB) pega a legenda da plataforma; o `full` (algumas centenas de MB) também transcreve áudio no seu computador; na primeira vez, baixa um modelo de fala de 1,5 GB. A página da Release tem uma tabela dizendo qual arquivo é qual. Windows: dois cliques no `.exe`; o arquivo não é assinado, então, se o Windows disser que protegeu o computador, escolha *Mais informações* e depois *Executar assim mesmo*. macOS (Apple Silicon): descompacte e, na primeira vez, clique com o botão direito e escolha *Abrir*. Linux: extraia e rode pelo terminal. O programa abre o menu (seção 3). Seus arquivos vão para `Documentos/transcript-normalizer/` (`runs/` e `packs/`), e a primeira linha do menu diz onde (D-052).
 
 **Uso Python.**
 
@@ -40,48 +40,40 @@ Em qualquer caso: não é preciso ffmpeg (o faster-whisper decodifica o áudio s
 
 ## 3. Primeiro uso, de dois jeitos
 
-**O menu.** Dê dois cliques no programa, ou digite `transcript-normalizer`, sem mais nada, num terminal:
+**O menu.** Dê dois cliques no programa, ou digite `transcript-normalizer`, sem mais nada, num terminal. Com o extra `[menu]` (todo executável tem) você navega pelas setas. O menu está em inglês:
 
 ```
-your files: /home/ana/Documentos/transcript-normalizer
-╭────────────────────────── transcript-normalizer ───────────────────────────╮
-│ 1. Fetch a video or file   download a caption, or transcribe audio locally │
-│ 2. Normalize a run         fix domain terms in a fetched caption           │
-│ 3. Review pending          answer what the tool was unsure about           │
-│ 4. Show a run's outputs    where the files are, first lines of the result  │
-│ 5. List runs               everything under runs/                          │
-│ 6. Help                    what each action does and its command           │
-│ q. Quit                                                                    │
-╰────────────────────────────────────────────────────────────────────────────╯
-(a number; ? for help, ?N for one item; q to quit)
+transcript-normalizer 0.4.1
+Your files: /home/ana/Documentos/transcript-normalizer
+Typical flow: 1 fetch → 2 normalize → 3 review
+Keyboard: ↑↓ move · enter confirm · esc back · ? explain
+? What would you like to do?
+ » Fetch a video or file   download a caption, or transcribe audio locally
+   Normalize a run         fix domain terms in a fetched caption
+   Review pending          answer what the tool was unsure about
+   Show a run's outputs    where the files are, first lines of the result
+   List runs               everything under runs/
+   Help                    what each action does and its command
+   Quit
 ```
 
-Baixe um vídeo (1), normalize (2) e responda o que ficou em dúvida (3). Cada item do menu executa um dos comandos abaixo; o que você aprende no menu vale num script (D-051). O menu e a ajuda estão em inglês. `?2` mostra o que o item 2 faz e o comando equivalente:
+Cada passo oferece o seguinte: depois de baixar, "Next: normalize this run now?"; depois de normalizar, três contadores e "Next: review the 6 uncertain one(s) now?". O resultado já serve sem a revisão; revisar melhora o próximo vídeo. Esc ou entrada vazia em qualquer pergunta volta, e `?` explica as opções. Sem o extra, ou fora de um terminal, as mesmas perguntas aparecem como linhas numeradas. Cada item do menu executa um dos comandos abaixo; o que você faz no menu vale num script (D-051, D-053). O que a normalização mostra no menu, para o vídeo abaixo:
 
 ```
-  2. Normalize a run  pick a run by number; shows the report, then offers the
-                      review if anything is pending
-                      `transcript-normalizer runs/<id>/legenda.txt`
+corrected 24  (semiga → CEMIG, Semig → CEMIG)
+recognized 65  (terms already spelled right, left as they are)
+to confirm 6  (the tool was unsure; your answer is remembered)
+result: runs/4wCtn8BWR4o/normalized.txt
 ```
 
-`transcript-normalizer help` (ou `--help`, ou o item 6 do menu) imprime a referência inteira, em seções: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE. Uma delas:
-
-```
-THE REVIEW LOOP
-  y  the recognizer garbled the term: correct it from now on
-  n  not this term: never propose it again
-  l  this term, said that way: recognize it, never change it
-  s  not sure: asked again next time; two seconds of doubt is a skip
-  a  yes to this form and the remaining forms of the same term
-  r  no to this form and the remaining forms of the same term
-```
+`transcript-normalizer help` (ou `--help`, ou o item 6 do menu) imprime a referência inteira, em seções: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE.
 
 **Os três comandos.**
 
 ```
 transcript-normalizer fetch https://youtu.be/4wCtn8BWR4o
 transcript-normalizer runs/4wCtn8BWR4o/legenda.txt
-transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --confirm
+transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 ```
 
 O `fetch` pega a legenda da plataforma (a faixa no idioma original, nunca uma tradução automática, D-045) e, se não houver, transcreve o áudio localmente (D-036). Também aceita um arquivo de áudio ou vídeo: `transcript-normalizer fetch aula.mp4`. O segundo comando normaliza; o terceiro faz o mesmo e depois pergunta o que ficou em dúvida. `transcript-normalizer list` mostra o que você já tem. Parte do que o segundo imprime para o vídeo acima:
@@ -135,27 +127,28 @@ O `annotations.json` tem um registro por mudança, apontando posições de carac
 
 `kind` é `correction` ou `alias`. `band` é o grau de certeza: **high** (uma forma já listada: aplicada), **medium** (um palpite próximo: aplicado e listado em `pending.txt` para você confirmar), **low** (uma semelhança fraca: só registrada, nunca aplicada) (D-011).
 
-## 5. A rodada de confirmação
+## 5. Revisando o que ficou em dúvida
 
-`--confirm` (ou o item 3 do menu) pergunta sobre cada palpite da faixa média, uma forma por vez, com as linhas em que ela aparece:
+O item 3 do menu, ou `--review`, mostra uma tela por termo: as formas que a ferramenta achou que são aquele termo, cada uma com quantas vezes aparece e uma linha onde aparece. Marque as que são de fato o reconhecedor errando o termo (barra de espaço, depois Enter); as que ficarem desmarcadas são rejeitadas e não voltam. Aqui, `a DAPTA Valdre` é a ferramenta do canal, `Adapta Valuer`:
 
 ```
-Oswaldo Cruz  (1 occurrence)
+Which of these are the recognizer mishearing "Adapta Valuer"?
+  pick the ones that should read Adapta Valuer; the others are rejected
+  a. [ ] AdaptaValor      1 occurrence · 18:16  …uma nova aba também aqui da «AdaptaValor», análise
+  b. [ ] Adaptavalda      1 occurrence · 1:04  …aba mais recente aqui da «Adaptavalda», entramos aqui
+  c. [ ] a DAPTA Valdre   1 occurrence · 5:03  …É o que eu sempre te falo, «a DAPTA Valdre»
+  d. [ ] adaptavala       1 occurrence · 18:42  de R, tudo isso na «adaptavala».
+```
+
+Se você marcou alguma, uma segunda tela pergunta quais delas o falante disse assim mesmo (um ticker, um plural, um apelido): essas ficam como foram ditas e só são reconhecidas (D-020). **Se precisar pensar mais de dois segundos num termo, aperte Esc:** ele fica pendente e volta na próxima vez; resposta errada fica gravada. As respostas são salvas a cada termo (D-037), em `packs/<nome-do-pacote>.learned.yaml`, a sua camada pessoal, nunca no pacote (D-013).
+
+O `--confirm` pergunta a mesma coisa uma forma por vez, com `y` (é o termo), `n` (não é), `l` (é, dito assim), `s` (pular), `a` ou `r` (sim ou não para as formas que faltam do termo):
+
+```
   Osvaldo Cruz  (1 occurrence)
     0:20  a metformina ainda é a primeira escolha, segundo o Osvaldo Cruz
     Osvaldo Cruz -> Oswaldo Cruz? [y]es / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no:
 ```
-
-| resposta | quando usar |
-|---|---|
-| `y` | o reconhecedor errou o termo; corrigir daqui para a frente |
-| `n` | não é esse termo; nunca mais propor |
-| `l` | é esse termo, e o falante disse assim mesmo; reconhecer, nunca mudar |
-| `s` | você não tem certeza |
-| `a` | sim para esta forma e para todas as que faltam do mesmo termo |
-| `r` | não para esta forma e para todas as que faltam do mesmo termo |
-
-**Se precisar pensar mais de dois segundos, pule.** Pergunta pulada volta na próxima vez; resposta errada fica gravada. Cada resposta é salva na hora, então um Ctrl+C não perde nada (D-037). Elas vão para `packs/<nome-do-pacote>.learned.yaml`, a sua camada pessoal, nunca para o pacote (D-013).
 
 ## 6. A sua área
 
@@ -206,7 +199,7 @@ transcript-normalizer aula.txt --pack packs/biomed-ptbr.yaml
   metiformina (1 occurrence) -> metformina
 ```
 
-As suas respostas na rodada de confirmação vão crescendo `packs/biomed-ptbr.learned.yaml`. Quando uma entrada aprendida se provar, passe-a à mão para o pacote e suba a versão; a seção 2 de [CONTRIBUTING.md](../CONTRIBUTING.md) tem as regras de curadoria e mostra como medir um pacote.
+As suas respostas na revisão vão crescendo `packs/biomed-ptbr.learned.yaml`. Quando uma entrada aprendida se provar, passe-a à mão para o pacote e suba a versão; a seção 2 de [CONTRIBUTING.md](../CONTRIBUTING.md) tem as regras de curadoria e mostra como medir um pacote.
 
 ## 7. Outro idioma
 
@@ -244,5 +237,5 @@ Os limites, sem rodeio:
 - **run**: o diretório `runs/<id-do-vídeo>/`, com a transcrição de um vídeo e tudo o que saiu dela.
 - **fixture**: um vídeo guardado no repositório com a transcrição, um pacote congelado e um gabarito, para medir.
 - **gold** (gabarito): a resposta conferida à mão de uma fixture: cada lugar que deve mudar e cada lugar que não pode.
-- **camada aprendida** (learned layer): as suas respostas da rodada de confirmação, em `packs/<pacote>.learned.yaml`; pessoal, nunca distribuída.
+- **camada aprendida** (learned layer): as suas respostas da revisão (`--review` ou `--confirm`), em `packs/<pacote>.learned.yaml`; pessoal, nunca distribuída.
 - **stand-off**: guardar as mudanças como registros à parte que apontam para o texto original, em vez de editá-lo.

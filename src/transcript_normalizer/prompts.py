@@ -1,0 +1,347 @@
+"""Asking the person at the terminal (D-053).
+
+Four questions: `select` (one of a list), `multi_select` (any of a list),
+`confirm` (yes or no) and `text` (a line). Two implementations stand behind them:
+questionary, with arrow keys and a space bar, when it is installed and stdout is a
+terminal; plain numbered or lettered text everywhere else, which is also what
+the tests drive. The core never imports this module.
+
+Every question shows a hint (what it expects) and a key legend. Empty input or
+Esc means "go back": the function returns None. `?` prints one line per option
+and asks again.
+
+Colour, via rich, one colour per meaning (`mark` and `say`): yellow for what
+needs the user, green for success, red for refusals and errors, blue for paths
+and term names, dim for hints, bold for titles. No colour when stdout is not a
+terminal or rich is missing.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import re
+import sys
+from dataclasses import dataclass
+
+# ------------------------------------------------------------------ colour
+
+STYLES = {
+    "need": "yellow",
+    "ok": "green",
+    "bad": "red",
+    "path": "blue",
+    "hint": "dim",
+    "title": "bold",
+}
+
+
+@dataclass(frozen=True)
+class Marked:
+    text: str
+    meaning: str
+
+
+def mark(text, meaning: str) -> Marked:
+    return Marked(str(text), meaning)
+
+
+_console = None
+
+
+def console():
+    """A rich console when colour makes sense here, else None."""
+    global _console
+    if not sys.stdout.isatty() or importlib.util.find_spec("rich") is None:
+        return None
+    if _console is None or _console.file is not sys.stdout:
+        from rich.console import Console
+
+        _console = Console(highlight=False, soft_wrap=True)
+    return _console
+
+
+def say(*parts) -> None:
+    """One line made of plain strings and `mark`ed pieces."""
+    rich = console()
+    if rich is None:
+        print("".join(p.text if isinstance(p, Marked) else str(p) for p in parts))
+        return
+    from rich.markup import escape
+
+    rich.print("".join(
+        f"[{STYLES[p.meaning]}]{escape(p.text)}[/]" if isinstance(p, Marked) else escape(str(p))
+        for p in parts
+    ))
+
+
+# ------------------------------------------------------------------ options
+
+
+@dataclass(frozen=True)
+class Option:
+    label: str
+    description: str = ""
+    examples: tuple[str, ...] = ()
+    value: object = None
+    key: str = ""  # what to type in plain text; a number when empty
+
+    @property
+    def result(self):
+        return self.label if self.value is None else self.value
+
+
+def explain(options: list[Option]) -> None:
+    """`?`: one line per option."""
+    for o in options:
+        say("  ", mark(o.label, "need"), f": {o.description}" if o.description else "")
+        for line in o.examples:
+            say(mark(f"      {line}", "hint"))
+
+
+def interactive_terminal() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def use_questionary() -> bool:
+    return interactive_terminal() and importlib.util.find_spec("questionary") is not None
+
+
+def legend(kind: str = "select") -> str:
+    """The key legend under a question."""
+    if use_questionary():
+        keys = {
+            "select": "↑↓ move · enter confirm · esc back · ? explain",
+            "multi": "↑↓ move · space select · enter confirm · esc back · ? explain",
+            "confirm": "y / n · enter takes the default · esc back",
+            "text": "type, then enter · empty or esc goes back · ? alone explains",
+        }
+    else:
+        keys = {
+            "select": "a number or letter shown, then enter · empty goes back · ? explains",
+            "multi": "letters (e.g. a c), - for none, then enter · empty goes back · ? explains",
+            "confirm": "y or n, then enter · enter alone takes the default",
+            "text": "type, then enter · empty goes back · ? alone explains",
+        }
+    return keys[kind]
+
+
+def _header(title: str, hint: str, kind: str) -> None:
+    say(mark(title, "title"))
+    if hint:
+        say(mark(f"  {hint}", "hint"))
+    say(mark(f"  keys: {legend(kind)}", "hint"))
+
+
+# ------------------------------------------------------------------ the four questions
+
+
+def select(title: str, options: list[Option], hint: str = ""):
+    """One option's `result`, or None for back."""
+    return (_Questionary if use_questionary() else _Plain).select(title, list(options), hint)
+
+
+def multi_select(title: str, options: list[Option], preselected=(), hint: str = ""):
+    """The `result` of every option chosen (possibly none), or None for back."""
+    return (_Questionary if use_questionary() else _Plain).multi_select(
+        title, list(options), set(preselected), hint
+    )
+
+
+def confirm(title: str, default: bool = True, hint: str = ""):
+    """True or False; None for back."""
+    return (_Questionary if use_questionary() else _Plain).confirm(title, default, hint)
+
+
+def text(title: str, hint: str = ""):
+    """A stripped line, or None for back."""
+    return (_Questionary if use_questionary() else _Plain).text(title, hint)
+
+
+# ------------------------------------------------------------------ plain text
+
+
+def _read(prompt: str = "> ") -> str | None:
+    try:
+        return input(prompt).strip()
+    except EOFError:
+        return None
+
+
+def _letters(n: int) -> list[str]:
+    if n <= 26:
+        return [chr(ord("a") + i) for i in range(n)]
+    return [str(i + 1) for i in range(n)]
+
+
+class _Plain:
+    @staticmethod
+    def select(title, options, hint):
+        _header(title, hint, "select")
+        keys = [o.key or str(i) for i, o in enumerate(options, 1)]
+        width = max(len(o.label) for o in options)
+        for key, o in zip(keys, options):
+            label = o.label.ljust(width) if o.description else o.label
+            say(f"  {key:>2}. ", mark(label, "need"), f"   {o.description}" if o.description else "")
+        while True:
+            answer = _read()
+            if not answer:
+                return None
+            if answer == "?":
+                explain(options)
+                continue
+            if answer.lower() in keys:
+                return options[keys.index(answer.lower())].result
+            say(mark(f"  {answer!r} is not one of {', '.join(keys)}", "bad"))
+
+    @staticmethod
+    def multi_select(title, options, preselected, hint):
+        _header(title, hint, "multi")
+        keys = _letters(len(options))
+        width = max(len(o.label) for o in options)
+        for key, o in zip(keys, options):
+            box = "[x]" if o.result in preselected else "[ ]"
+            label = o.label.ljust(width) if o.description else o.label
+            say(f"  {key}. {box} ", mark(label, "need"), f"   {o.description}" if o.description else "")
+        while True:
+            answer = _read()
+            if not answer:
+                return None
+            if answer == "?":
+                explain(options)
+                continue
+            if answer == "-":
+                return []
+            tokens = re.split(r"[\s,]+", answer.lower())
+            if len(tokens) == 1 and all(c in keys for c in tokens[0]) and len(keys) <= 26:
+                tokens = list(tokens[0])
+            if all(t in keys for t in tokens):
+                picked = {keys.index(t) for t in tokens}
+                return [o.result for i, o in enumerate(options) if i in picked]
+            say(mark(f"  {answer!r}: use the letters shown, or - for none", "bad"))
+
+    @staticmethod
+    def confirm(title, default, hint):
+        if hint:
+            say(mark(f"  {hint}", "hint"))
+        suffix = "[Y/n]" if default else "[y/N]"
+        while True:
+            try:
+                answer = input(f"{title} {suffix} ").strip().lower()
+            except EOFError:
+                return None
+            if not answer:
+                return default
+            if answer in ("y", "yes", "s", "sim"):
+                return True
+            if answer in ("n", "no", "não", "nao"):
+                return False
+            say(mark("  y or n", "bad"))
+
+    @staticmethod
+    def text(title, hint):
+        _header(title, hint, "text")
+        while True:
+            answer = _read()
+            if answer == "?":
+                say(mark(f"  {hint}", "hint"))
+                continue
+            return answer or None
+
+
+# ------------------------------------------------------------------ questionary
+
+_BACK = object()
+_EXPLAIN = object()
+
+
+def _bind(question, explainable: bool = True):
+    """Esc goes back; `?` explains. A no-op on anything without an application."""
+    app = getattr(question, "application", None)
+    if app is None:
+        return question
+    from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
+
+    keys = KeyBindings()
+
+    @keys.add("escape", eager=True)
+    def _(event):
+        event.app.exit(result=_BACK)
+
+    if explainable:
+        @keys.add("?")
+        def _(event):
+            event.app.exit(result=_EXPLAIN)
+
+    app.key_bindings = merge_key_bindings([app.key_bindings, keys]) if app.key_bindings else keys
+    return question
+
+
+class _Questionary:
+    @staticmethod
+    def _choices(options, preselected=()):
+        import questionary
+
+        width = max(len(o.label) for o in options)
+        return [
+            questionary.Choice(
+                title=f"{o.label.ljust(width)}   {o.description}".rstrip(),
+                value=i,
+                checked=o.result in preselected,
+            )
+            for i, o in enumerate(options)
+        ]
+
+    @staticmethod
+    def select(title, options, hint):
+        import questionary
+
+        while True:
+            if hint:
+                say(mark(f"  {hint}", "hint"))
+            answer = _bind(questionary.select(
+                title, choices=_Questionary._choices(options), instruction=legend("select")
+            )).unsafe_ask()
+            if answer is _EXPLAIN:
+                explain(options)
+                continue
+            return None if answer is _BACK or answer is None else options[answer].result
+
+    @staticmethod
+    def multi_select(title, options, preselected, hint):
+        import questionary
+
+        while True:
+            if hint:
+                say(mark(f"  {hint}", "hint"))
+            answer = _bind(questionary.checkbox(
+                title, choices=_Questionary._choices(options, preselected), instruction=legend("multi")
+            )).unsafe_ask()
+            if answer is _EXPLAIN:
+                explain(options)
+                continue
+            if answer is _BACK or answer is None:
+                return None
+            return [options[i].result for i in answer]
+
+    @staticmethod
+    def confirm(title, default, hint):
+        import questionary
+
+        if hint:
+            say(mark(f"  {hint}", "hint"))
+        answer = _bind(questionary.confirm(title, default=default), explainable=False).unsafe_ask()
+        return None if answer is _BACK else answer
+
+    @staticmethod
+    def text(title, hint):
+        import questionary
+
+        while True:
+            # `?` is not bound here: it belongs in URLs. `?` alone explains.
+            answer = _bind(questionary.text(title, instruction=legend("text")), explainable=False).unsafe_ask()
+            if answer is _BACK or answer is None:
+                return None
+            if answer.strip() == "?":
+                say(mark(f"  {hint}", "hint"))
+                continue
+            return answer.strip() or None

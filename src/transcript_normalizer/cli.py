@@ -338,6 +338,113 @@ def _ask_all(transcript, groups, session: Session, save) -> None:
                 save(learned)
 
 
+# ------------------------------------------------------------------ D-053
+
+
+def print_summary(annotations: list[Annotation], normalized: Path) -> None:
+    """The menu's view of a run: three counters and where the result is.
+
+    `report.txt` keeps the full report; this is what `--summary` prints instead.
+    """
+    from .prompts import mark, say
+
+    fixed = [a for a in annotations if a.band == BAND_HIGH and a.is_correction]
+    recognized = [a for a in annotations if a.band == BAND_HIGH and a.is_alias]
+    doubtful = sum(len(variant_groups(group)) for _, group in confirm_groups(annotations))
+    pairs = list(dict.fromkeys(f"{a.original} → {a.replacement}" for a in fixed))[:2]
+    say(mark(f"corrected {len(fixed)}", "ok"), f"  ({', '.join(pairs)})" if pairs else "")
+    say(mark(f"recognized {len(recognized)}", "title"), "  (terms already spelled right, left as they are)")
+    say(mark(f"to confirm {doubtful}", "need"), "  (the tool was unsure; your answer is remembered)")
+    say("result: ", mark(normalized, "path"))
+
+
+#: How much of an example line the review screen shows around the form.
+EXAMPLE_WIDTH = 72
+
+
+def highlighted_example(transcript: Transcript, annotation: Annotation) -> str:
+    """One example line, the form in «guillemets», cut to fit one row."""
+    lines = transcript.spans(annotation.start, annotation.end)
+    stamp = lines[0].timestamp
+    text = " ".join(" ".join(l.text for l in lines).split())
+    form = annotation.original
+    at = text.find(form)
+    if at < 0:
+        return f"{stamp}  {text[:EXAMPLE_WIDTH]}"
+    text = f"{text[:at]}«{form}»{text[at + len(form):]}"
+    start = max(0, min(at - 25, len(text) - EXAMPLE_WIDTH))
+    if start:  # begin at a word, not in the middle of one
+        space = text.find(" ", start, at)
+        start = space + 1 if space >= 0 else start
+    clip = text[start : start + EXAMPLE_WIDTH]
+    return f"{stamp}  {'…' if start else ''}{clip}{'…' if start + EXAMPLE_WIDTH < len(text) else ''}"
+
+
+def review_terms(
+    transcript: Transcript,
+    annotations: list[Annotation],
+    learned: Learned,
+    save=None,
+) -> Session:
+    """D-053: the review one term per screen, as a multi-select.
+
+    Selected forms are the recognizer mishearing the term: confirmed. The rest
+    are rejected. Of the selected, a second question takes those the speaker
+    really said that way: aliases instead of variants (D-020). Esc on a term
+    leaves all its forms pending. The learned layer is saved after each term.
+    """
+    from .prompts import Option, multi_select
+
+    session = Session(learned)
+    groups = confirm_groups(annotations)
+    if not groups:
+        print("nothing to confirm.")
+        return session
+    try:
+        for term, group in groups:
+            forms = variant_groups(group)
+            options = [
+                Option(
+                    variant,
+                    f"{occurrences(len(found))} · {highlighted_example(transcript, found[0])}",
+                    value=variant,
+                )
+                for variant, found in forms
+            ]
+            chosen = multi_select(
+                f'Which of these are the recognizer mishearing "{term}"?',
+                options,
+                hint=f"pick the ones that should read {term}; the others are rejected",
+            )
+            if chosen is None:
+                for variant, _ in forms:
+                    session.outcomes[(term, variant)] = "s"
+                continue
+            aliases = []
+            if chosen:
+                aliases = multi_select(
+                    f'Any of these are "{term}" said another way (keep the text, just recognise it)?',
+                    [o for o in options if o.result in chosen],
+                    hint="a ticker, a plural, a nickname: the speaker's own words. - if none",
+                ) or []
+            for variant, _ in forms:
+                if variant in aliases:
+                    session.learned = session.learned.alias(term, variant)
+                    session.outcomes[(term, variant)] = "l"
+                elif variant in chosen:
+                    session.learned = session.learned.confirm(term, variant)
+                    session.outcomes[(term, variant)] = "y"
+                else:
+                    session.learned = session.learned.reject(variant, term)
+                    session.outcomes[(term, variant)] = "n"
+                session.kept += 1
+            if save is not None:
+                save(session.learned)  # D-037, per term
+    except KeyboardInterrupt:
+        session.interrupted = True
+    return session
+
+
 def review_path(out_dir: Path, name: str) -> Path:
     directory = needs_review_dir(out_dir)
     directory.mkdir(parents=True, exist_ok=True)
@@ -409,22 +516,26 @@ def run_normalize(args: argparse.Namespace) -> int:
     text = "\n".join(lines) + "\n"
 
     (out_dir / REPORT_FILE).write_text(text, encoding="utf-8")
-    print(text, end="")
+    if args.summary:
+        print_summary(annotations, normalized)
+    else:
+        print(text, end="")
 
     if args.gold_draft_used:
         print("--gold-draft is now --corrections (D-023)", file=sys.stderr)
 
-    if args.confirm:
+    if args.confirm or args.review:
         # D-013 and D-017: the learned layer under packs/, never pack.yaml.
-        # D-037: saved after every answer, not once at the end.
-        session = confirm_loop(
+        # D-037: saved after every answer (--confirm) or every term (--review).
+        ask_all = review_terms if args.review else confirm_loop
+        session = ask_all(
             transcript, annotations, pack.learned, save=lambda learned: save_learned(learned, learned_at)
         )
         pending, count = write_pending(out_dir, transcript, annotations, session.outcomes)
         if session.interrupted:
             print(
                 f"\ninterrupted: {session.kept} answer(s) kept in {learned_at}; "
-                f"run --confirm again to go on from there"
+                f"run {'--review' if args.review else '--confirm'} again to go on from there"
             )
             return 130
         if not session.learned.is_empty():
@@ -494,10 +605,21 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--gold-draft", dest="gold_draft_used", action="store_true", help=argparse.SUPPRESS
     )
-    parser.add_argument(
+    asking = parser.add_mutually_exclusive_group()
+    asking.add_argument(
         "--confirm",
         action="store_true",
-        help="review the medium band and record the answers in the learned layer (D-013)",
+        help="review the medium band form by form and record the answers in the learned layer (D-013)",
+    )
+    asking.add_argument(
+        "--review",
+        action="store_true",
+        help="the same, one screen per term: pick the forms that are the term (D-053)",
+    )
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="print three counters instead of the full report; report.txt is unchanged",
     )
     parser.add_argument(
         "--allow-generic",

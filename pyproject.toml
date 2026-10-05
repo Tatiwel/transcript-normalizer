@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "transcript-normalizer"
-version = "0.4.0"
+version = "0.4.1"
 description = "Domain-term normalization for ASR transcripts and auto-captions"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,13 +26,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# D-053: `menu` is the interactive menu's arrow keys and colour.
 # D-052: `captions` is fetch with platform captions only (the `lite` executable);
-# `ingest` adds local speech recognition (the `full` executable).
+# `ingest` adds local speech recognition (the `full` executable). Both carry `menu`.
+menu = [
+    "rich>=13.0",
+    "questionary>=2.0",
+]
 captions = [
+    "transcript-normalizer[menu]",
     # 2024.03.10 is the first release with --impersonate, which curl_cffi enables.
     "yt-dlp>=2024.3.10",
     "curl_cffi>=0.7",
-    "rich>=13.0",
 ]
 ingest = [
     "transcript-normalizer[captions]",

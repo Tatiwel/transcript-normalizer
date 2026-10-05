@@ -421,6 +421,14 @@ Two artefacts from one codebase. (1) The Python package: `pip install transcript
 
 Amended: no ffmpeg is bundled. Nothing in the project invokes an ffmpeg binary. `fetch` keeps the audio as it was downloaded, and faster-whisper decodes it through PyAV, which carries its own FFmpeg libraries. The release workflow no longer downloads an LGPL ffmpeg build. `packaging/entry.py` no longer puts the bundle on PATH. docs/THIRD_PARTY.md keeps only the Python packages the executables carry, and the note that the model weights are not bundled.
 
+## D-053 A prompts adapter, and a menu with less friction
+
+Interactive input (arrow-key lists, multi-select) lives behind a prompts adapter with two implementations: questionary when installed and stdout is a TTY, plain numbered/lettered text otherwise. The core never imports either. Tests drive the plain implementation; a few tests patch questionary's ask functions.
+
+The adapter, `prompts.py`, asks four kinds of question: `select`, `multi_select`, `confirm` and `text`. Each shows a hint and a key legend. Empty input or Esc goes back, and `?` explains each option and asks again. On `text`, `?` explains only as the whole answer, since URLs contain `?`. On `confirm`, empty input takes the default rather than going back. In plain text a select option can carry its own key (`q` for Quit), and a multi-select takes letters, with `-` for none. rich and questionary form the `[menu]` extra. `[captions]` includes it, so `[ingest]` and both executables do too.
+
+The menu opens with the version, where the files are, the typical flow and the keys. Runs are picked from a list (id, date, title). Each step offers the next as "Next: …?", with yes as the default. It still runs everything through `cli.main`, using two new options of `normalize` that the command line has too. `--summary` prints three counters instead of the report (report.txt is unchanged). `--review` is the review one term per screen: a multi-select of the doubtful forms (selected forms are confirmed, the rest rejected), then a second multi-select of which of those are aliases. Esc leaves the term pending. The learned layer is written after each term (D-037). `--confirm` keeps the per-form loop of D-019. Colour goes through rich, one colour per meaning (yellow: needs you; green: done; red: errors; blue: paths and terms; dim: hints; bold: titles and counters), and only on a terminal. In the `lite` executable, a fetch that would need local speech recognition says that this build cannot transcribe audio and points to the full build, instead of giving pip advice. The `?N` of D-051's amendment is gone: `?` on any question does its job. Built and run locally as a `lite` executable on Linux: the arrow-key menu, the version and the colours all show up frozen.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -106,8 +106,9 @@ jobs:
           echo "ASSET=$name.$ext" >> "$GITHUB_ENV"
 
       # A clean virtual environment with the package, the extra this flavor
-      # needs, and PyInstaller. `lite` takes [captions] (yt-dlp, curl_cffi,
-      # rich); `full` takes [ingest] (the same, plus faster-whisper).
+      # needs, and PyInstaller. `lite` takes [captions] (yt-dlp, curl_cffi, and
+      # [menu]: rich and questionary); `full` takes [ingest] (the same, plus
+      # faster-whisper).
       - name: Install
         run: |
           uv venv
@@ -124,6 +125,8 @@ jobs:
       #                          the bundled pack, a YAML file (D-043)
       #   --collect-submodules yt_dlp
       #                          yt-dlp loads its site extractors by name
+      #   --copy-metadata transcript-normalizer
+      #                          the version the menu's first screen shows
       #   --collect-all ...      (full) the speech stack: compiled libraries
       #                          and data files PyInstaller would miss. No
       #                          ffmpeg program: faster-whisper decodes audio
@@ -141,6 +144,7 @@ jobs:
             --collect-submodules transcript_normalizer \
             --collect-data transcript_normalizer \
             --collect-submodules yt_dlp \
+            --copy-metadata transcript-normalizer \
             $full_args \
             packaging/entry.py
 
@@ -185,12 +189,16 @@ jobs:
           path: assets
           merge-multiple: true
 
-      # The release text: the CHANGELOG section for this version, then a
-      # checksum per file, so a user can check that a download is intact
-      # (`sha256sum <file>`, or `certutil -hashfile <file> SHA256` on Windows).
+      # The release text, in three parts:
+      #   1. "Which file do I download?", in English and Portuguese, from
+      #      packaging/release-header.md, with this version filled in;
+      #   2. the CHANGELOG section for this version;
+      #   3. a checksum per file, so a user can check that a download is intact
+      #      (`sha256sum <file>`, or `certutil -hashfile <file> SHA256` on Windows).
       - name: Release notes
         run: |
-          awk -v v="## $VERSION" '$0==v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
+          sed "s/VERSION/$VERSION/g" packaging/release-header.md > notes.md
+          awk -v v="## $VERSION" '$0==v {on=1; next} /^## / {on=0} on' CHANGELOG.md >> notes.md
           {
             echo
             echo "### SHA-256"

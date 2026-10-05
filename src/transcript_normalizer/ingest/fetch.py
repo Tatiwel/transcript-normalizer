@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..catalog import write_meta
-from ..runs import runs_root
+from ..runs import is_frozen, runs_root
 from .console import Output
 from .header import Metadata, caption_header, speech_header
 from .subtitles import subtitle_to_lines
@@ -118,7 +118,22 @@ def missing_extra(*modules: str) -> list[str]:
     return [REQUIRES[m] for m in modules if importlib.util.find_spec(m) is None]
 
 
+#: D-053: the `lite` executable has no speech recognition, and pip advice is no
+#: use to someone who downloaded a program.
+LITE_BUILD = (
+    "This is the lite build; it cannot transcribe audio. "
+    "Download the full build from the Releases page."
+)
+
+
+def is_lite_build() -> bool:
+    return is_frozen() and importlib.util.find_spec("faster_whisper") is None
+
+
 def report_missing(missing: list[str]) -> int:
+    if is_lite_build() and REQUIRES["faster_whisper"] in missing:
+        print(LITE_BUILD, file=sys.stderr)
+        return 2
     print(
         f"fetch needs the `ingest` extra, which is not installed "
         f"(missing: {', '.join(missing)}).\n"
@@ -418,6 +433,8 @@ def step_speech(
     """Step 2: local speech recognition. Raises FetchError."""
     missing = missing_extra("faster_whisper")
     if missing:
+        if is_lite_build():
+            raise FetchError(LITE_BUILD)
         raise FetchError(f"local speech recognition needs {', '.join(missing)} (the ingest extra)")
     audio = download_audio(args.url, target, out)
     out.info(f"audio: {audio}")

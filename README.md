@@ -6,7 +6,7 @@ Domain-term normalization for ASR transcripts and auto-captions.
 - **Use Python:** `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"`.
 - **Want to contribute:** `git clone https://github.com/Tatiwel/transcript-normalizer`, `uv sync --extra ingest`, then [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**New here?** Read the guide: [docs/GUIDE.md](docs/GUIDE.md) (English) or [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) (português). It covers installing, a first run, reading the outputs, the confirmation loop and writing a pack for your own field.
+**New here?** Read the guide: [docs/GUIDE.md](docs/GUIDE.md) (English) or [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) (português). It covers installing, a first run, reading the outputs, reviewing what the tool was unsure about and writing a pack for your own field.
 
 ## The problem
 
@@ -27,7 +27,7 @@ The tool never asks "does this word exist?". It asks "does this stretch of text 
 
 ```
 transcript-normalizer fetch <url | file> [--caption-only | --whisper]
-transcript-normalizer <legenda.txt> [--pack <pack.yaml>] [--corrections] [--confirm]
+transcript-normalizer <legenda.txt> [--pack <pack.yaml>] [--corrections] [--review | --confirm] [--summary]
 transcript-normalizer list
 transcript-normalizer            # on a terminal, with no arguments: an interactive menu (D-051)
 ```

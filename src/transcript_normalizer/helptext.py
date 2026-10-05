@@ -1,4 +1,4 @@
-"""The help text (D-051): `transcript-normalizer help`, `--help`, menu item 6, `?N`.
+"""The help text (D-051): `transcript-normalizer help`, `--help`, menu item 6.
 
 Sections, one line per entry, aligned, like `gh help`. Plain text, so a pipe or
 a test reads the same thing a terminal shows; long entries wrap at the width
@@ -32,11 +32,11 @@ ACTIONS = (
            "asks for a URL or a path; platform caption first, local speech recognition if you agree",
            f"{PROG} fetch <url|file>"),
     Action("2", "Normalize a run", "fix domain terms in a fetched caption",
-           "pick a run by number; shows the report, then offers the review if anything is pending",
-           f"{PROG} runs/<id>/legenda.txt"),
+           "pick a run; shows three counters, then offers the review if anything is pending",
+           f"{PROG} runs/<id>/legenda.txt --summary"),
     Action("3", "Review pending", "answer what the tool was unsure about",
-           "pick a run; asks about each medium-band guess, one form at a time",
-           f"{PROG} runs/<id>/legenda.txt --confirm"),
+           "pick a run; one screen per term: pick the forms that are the term",
+           f"{PROG} runs/<id>/legenda.txt --review"),
     Action("4", "Show a run's outputs", "where the files are, first lines of the result",
            "pick a run; lists its files and the first 20 lines of normalized.txt",
            "ls runs/<id>/"),
@@ -44,7 +44,7 @@ ACTIONS = (
            "id, publication date and title of every run",
            f"{PROG} list"),
     Action("6", "Help", "what each action does and its command",
-           "this help, also `?` in the menu; `?N` shows one action's entry",
+           "this help; `?` on any question explains its options",
            f"{PROG} help"),
 )
 QUIT = Action("q", "Quit", "", "", "")
@@ -59,7 +59,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
         ]),
         ("COMMANDS", [
             ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally"),
-            ("normalize <legenda.txt>", "fix domain terms; --confirm to review, --pack to use your own pack"),
+            ("normalize <legenda.txt>", "fix domain terms; --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack"),
             ("list", "every run under runs/, with its date and title"),
             ("help", "this help; `<command> --help` lists a command's options"),
         ]),
@@ -72,6 +72,8 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("runs/<id>/needs-review/", "what still needs your answer (pending.txt)"),
         ]),
         ("THE REVIEW LOOP", [
+            ("--review", "one screen per term: select (space) the forms that are the term, then enter; the others are rejected; then say which of those the speaker really said that way (aliases). The menu reviews this way"),
+            ("--confirm", "one question per form, answered with one of:"),
             ("y", "the recognizer garbled the term: correct it from now on"),
             ("n", "not this term: never propose it again"),
             ("l", "this term, said that way: recognize it, never change it"),
@@ -90,6 +92,16 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("CONTRIBUTING.md", "adding a language, building a pack, measuring it"),
         ]),
     ]
+
+
+def version() -> str:
+    """The installed version, from the package metadata."""
+    from importlib.metadata import PackageNotFoundError, version as installed
+
+    try:
+        return installed("transcript-normalizer")
+    except PackageNotFoundError:
+        return "(version unknown)"
 
 
 def width() -> int:
@@ -135,15 +147,6 @@ def render(cols: int | None = None) -> str:
     for title, rows in sections():
         out += [title, *entries(rows, cols), ""]
     return "\n".join(out).rstrip() + "\n"
-
-
-def action_entry(key: str, cols: int | None = None) -> str | None:
-    """`?N` in the menu: one action's entry and its command."""
-    cols = cols or width()
-    action = next((a for a in ACTIONS if a.key == key), None)
-    if action is None:
-        return None
-    return "\n".join(entries([(f"{action.key}. {action.label}", action.help, action.command)], cols))
 
 
 def wrap_block(text: str, cols: int | None = None, margin: int = MARGIN) -> str:

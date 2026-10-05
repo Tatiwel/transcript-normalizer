@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1
+
+- A lower-friction menu (D-053): arrow keys and multi-select with the new `[menu]` extra (rich, questionary), numbered text without it. A first screen with the version, where your files are and the typical flow. Runs are picked from a list, and each step offers the next one. Esc or empty input goes back, and `?` explains any question.
+- `normalize --review`: the review one term per screen. Select the forms that are the term; the rest are rejected; then say which of those the speaker really said that way. The menu reviews this way. `--confirm` keeps the per-form loop.
+- `normalize --summary`: three counters (corrected, recognized, to confirm) and where the result is, instead of the full report. The menu uses it.
+- Colour on a terminal, one colour per meaning. Plain text everywhere else.
+- The `lite` executable says it cannot transcribe audio and points to the full build.
+- The release page starts with "Which file do I download?", in English and Portuguese.
+
 ## 0.4.0
 
 - An interactive menu: `transcript-normalizer` with no arguments, on a terminal. Every item runs a subcommand, so nothing is reachable only through the menu. `help`, `--help` and `?` print one sectioned reference, and `?N` prints one item's entry (D-051).
