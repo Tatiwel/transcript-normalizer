@@ -2,6 +2,11 @@
 
 For three readers at once: you want cleaner transcripts and nothing else; you study another field and want to teach the tool your vocabulary (biomedicine is the running example); you are a developer. Each section is short. Decision numbers like (D-020) point into [DECISIONS.md](DECISIONS.md), where the reasons and the measurements live. A Brazilian Portuguese version is in [GUIDE.pt-BR.md](GUIDE.pt-BR.md).
 
+**Start here** (section 2 has the details):
+- *I just want to use it:* download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it.
+- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"`.
+- *I want to contribute:* `git clone https://github.com/Tatiwel/transcript-normalizer`, then [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## 1. What it does, and what it does not
 
 Automatic captions and speech recognition mishear the vocabulary of a field. A finance video gets `SEMIG` for CEMIG and `evitida` for EBITDA; a pharmacology lecture gets `metiformina` for metformina. The tool knows the terms you give it, a **pack**, and finds the places where the transcript got one of them wrong. Text that resembles nothing in the pack is never touched, so a finance pack cannot damage a biology lecture (D-001).
@@ -10,21 +15,35 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 
 ## 2. Install
 
+**I just want to use it.** Download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). `lite` (about 40 MB) gets the platform's captions; `full` (several hundred MB) can also transcribe audio on your computer, and downloads its speech model the first time it does. Windows: double-click the `.exe`; the file is not signed, so if Windows says it protected your PC, choose *More info*, then *Run anyway*. macOS (Apple silicon): unzip, then right-click and *Open* the first time. Linux: extract it and run it from a terminal. It opens the menu (section 3). Your files go to `Documents/transcript-normalizer/` (`runs/` and `packs/`), and the menu's first line says where (D-052).
+
+**I use Python.**
+
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.3.0"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"
 ```
 
-`v0.3.0` is the latest tag. The interactive menu and the phonetic matching described here came after it; until the next tag, install from `@main` instead.
+Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory. The package is not on PyPI yet; the wheel is also attached to each Release.
 
-- **The `[ingest]` extra** brings what `fetch` needs to get a transcript: yt-dlp (platform captions), faster-whisper (speech recognition on your own machine) and rich (progress bars). Without it you can still normalize a caption file you already have.
-- **ffmpeg** is needed only when audio is transcribed (a local file, or `--whisper`). Captions taken from the platform do not need it.
-- **A JavaScript runtime** (Deno, for example) is something recent yt-dlp versions need in order to read YouTube. If YouTube downloads fail with a message about JavaScript, install one.
+**I want to contribute.**
+
+```
+git clone https://github.com/Tatiwel/transcript-normalizer
+cd transcript-normalizer
+uv sync --extra ingest
+uv run pytest -q
+```
+
+Then read [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+Whichever way: no ffmpeg is needed (faster-whisper decodes audio itself). To read YouTube, recent yt-dlp versions need a JavaScript runtime such as Deno; if YouTube downloads fail with a message about JavaScript, install one.
 
 ## 3. First run, two ways
 
-**The menu.** Type `transcript-normalizer` with nothing after it, in a terminal:
+**The menu.** Double-click the program, or type `transcript-normalizer` with nothing after it in a terminal:
 
 ```
+your files: /home/ana/Documents/transcript-normalizer
 ╭────────────────────────── transcript-normalizer ───────────────────────────╮
 │ 1. Fetch a video or file   download a caption, or transcribe audio locally │
 │ 2. Normalize a run         fix domain terms in a fetched caption           │
@@ -34,6 +53,7 @@ pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/tran
 │ 6. Help                    what each action does and its command           │
 │ q. Quit                                                                    │
 ╰────────────────────────────────────────────────────────────────────────────╯
+(a number; ? for help, ?N for one item; q to quit)
 ```
 
 Fetch a video (1), normalize it (2), and answer the questions it is unsure about (3). Every menu item runs one of the commands below, so anything you learn in the menu works in a script (D-051). `?2` shows what item 2 does and the command it runs:

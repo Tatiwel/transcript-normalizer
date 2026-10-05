@@ -170,3 +170,15 @@ def test_show_wraps_long_lines_with_a_margin(tmp_path, monkeypatch, capsys):
     body = [line for line in shown.splitlines()[1:] if line.strip()]
     assert body and all(line.startswith("  ") and len(line) <= 30 for line in body)
     assert any(line.startswith("        ") for line in body)  # a wrapped line keeps the text column
+
+
+def test_a_bare_question_mark_is_the_whole_help(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["?", "q"])
+    assert "(a number; ? for help, ?N for one item; q to quit)" in out
+    lines = [line.removeprefix("> ") for line in out.splitlines()]
+    assert all(header in lines for header in SECTIONS)
+
+
+def test_the_first_screen_says_where_it_works(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["q"])
+    assert out.splitlines()[0] == f"working in: {tmp_path}"

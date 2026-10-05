@@ -44,7 +44,7 @@ ACTIONS = (
            "id, publication date and title of every run",
            f"{PROG} list"),
     Action("6", "Help", "what each action does and its command",
-           "this help; `?N` in the menu shows one action's entry",
+           "this help, also `?` in the menu; `?N` shows one action's entry",
            f"{PROG} help"),
 )
 QUIT = Action("q", "Quit", "", "", "")

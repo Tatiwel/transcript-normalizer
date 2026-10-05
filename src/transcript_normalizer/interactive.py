@@ -49,7 +49,7 @@ class Screen:
         else:
             print("== transcript-normalizer")
             print("\n".join(menu_lines()))
-        print("(a number, `?` and a number for its help, or q)")
+        print("(a number; ? for help, ?N for one item; q to quit)")
 
     def separator(self) -> None:
         """A blank line and a dim rule, so one action's output ends visibly."""
@@ -210,6 +210,9 @@ def run() -> int:
             choice = ask("> ")
             if choice is None or choice.lower() in ("q", "quit"):
                 return 0
+            if choice == "?":
+                help_text(screen)
+                continue
             if choice.startswith("?"):
                 entry = helptext.action_entry(choice[1:].strip())
                 if entry is None:

@@ -2,6 +2,11 @@
 
 Este guia serve a três leitores ao mesmo tempo: quem só quer transcrições mais limpas; quem estuda outra área e quer ensinar o próprio vocabulário à ferramenta (o exemplo que acompanha o texto é biomedicina); e quem desenvolve. Cada seção é curta. Números como (D-020) remetem a [DECISIONS.md](DECISIONS.md), onde estão os motivos e as medições. A versão em inglês está em [GUIDE.md](GUIDE.md).
 
+**Comece por aqui** (os detalhes estão na seção 2):
+- *Só quero usar:* baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) e dê dois cliques.
+- *Uso Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"`.
+- *Quero contribuir:* `git clone https://github.com/Tatiwel/transcript-normalizer` e depois [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## 1. O que faz, e o que não faz
 
 Legenda automática e reconhecimento de fala erram justamente o vocabulário de cada área. Num vídeo de finanças, CEMIG vira `SEMIG` e EBITDA vira `evitida`; numa aula de farmacologia, metformina vira `metiformina`. A ferramenta conhece os termos que você entrega a ela, num **pacote** (o arquivo de termos), e aponta os lugares em que a transcrição errou um deles. Trecho que não se parece com nada do pacote nunca é tocado: um pacote de finanças não estraga uma aula de biologia (D-001).
@@ -10,21 +15,35 @@ Ela nunca muda o que o falante disse; corrige o que o reconhecedor ouviu. Daí a
 
 ## 2. Instalação
 
+**Só quero usar.** Baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). O `lite` (uns 40 MB) pega a legenda da plataforma; o `full` (algumas centenas de MB) também transcreve áudio no seu computador, e baixa o modelo de fala na primeira vez em que faz isso. Windows: dois cliques no `.exe`; o arquivo não é assinado, então, se o Windows disser que protegeu o computador, escolha *Mais informações* e depois *Executar assim mesmo*. macOS (Apple Silicon): descompacte e, na primeira vez, clique com o botão direito e escolha *Abrir*. Linux: extraia e rode pelo terminal. O programa abre o menu (seção 3). Seus arquivos vão para `Documentos/transcript-normalizer/` (`runs/` e `packs/`), e a primeira linha do menu diz onde (D-052).
+
+**Uso Python.**
+
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.3.0"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"
 ```
 
-`v0.3.0` é a tag mais recente. O menu interativo e a comparação fonética descritos aqui vieram depois dela; até a próxima tag, instale de `@main`.
+Sem extra, vem só o normalizador (poucos MB): para chamar do seu próprio programa, ou normalizar legendas que você já tem. `[captions]` acrescenta o `fetch` com legendas das plataformas (yt-dlp); `[ingest]` acrescenta também o reconhecimento de fala local (faster-whisper). Os arquivos ficam no diretório atual. O pacote ainda não está no PyPI; o wheel também vai anexado a cada Release.
 
-- **O extra `[ingest]`** traz o que o `fetch` usa para obter a transcrição: yt-dlp (legendas das plataformas), faster-whisper (reconhecimento de fala no seu próprio computador) e rich (barras de progresso). Sem ele, você ainda normaliza uma legenda que já tem.
-- **ffmpeg** só é necessário quando há transcrição de áudio (arquivo local, ou `--whisper`). Legenda baixada da plataforma dispensa.
-- **Um runtime de JavaScript** (o Deno, por exemplo) é exigido pelas versões recentes do yt-dlp para ler o YouTube. Se o download do YouTube falhar com uma mensagem sobre JavaScript, instale um.
+**Quero contribuir.**
+
+```
+git clone https://github.com/Tatiwel/transcript-normalizer
+cd transcript-normalizer
+uv sync --extra ingest
+uv run pytest -q
+```
+
+Depois, leia [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+Em qualquer caso: não é preciso ffmpeg (o faster-whisper decodifica o áudio sozinho). Para ler o YouTube, as versões recentes do yt-dlp exigem um runtime de JavaScript, como o Deno; se o download do YouTube falhar com uma mensagem sobre JavaScript, instale um.
 
 ## 3. Primeiro uso, de dois jeitos
 
-**O menu.** Digite `transcript-normalizer`, sem mais nada, num terminal:
+**O menu.** Dê dois cliques no programa, ou digite `transcript-normalizer`, sem mais nada, num terminal:
 
 ```
+your files: /home/ana/Documentos/transcript-normalizer
 ╭────────────────────────── transcript-normalizer ───────────────────────────╮
 │ 1. Fetch a video or file   download a caption, or transcribe audio locally │
 │ 2. Normalize a run         fix domain terms in a fetched caption           │
@@ -34,6 +53,7 @@ pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/tran
 │ 6. Help                    what each action does and its command           │
 │ q. Quit                                                                    │
 ╰────────────────────────────────────────────────────────────────────────────╯
+(a number; ? for help, ?N for one item; q to quit)
 ```
 
 Baixe um vídeo (1), normalize (2) e responda o que ficou em dúvida (3). Cada item do menu executa um dos comandos abaixo; o que você aprende no menu vale num script (D-051). O menu e a ajuda estão em inglês. `?2` mostra o que o item 2 faz e o comando equivalente:
