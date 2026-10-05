@@ -15,7 +15,15 @@ from pathlib import Path
 from . import helptext
 from .catalog import list_runs
 from .helptext import ACTIONS as ITEMS, QUIT
-from .runs import CAPTION_FILE, NORMALIZED_FILE, PENDING_FILE, needs_review_dir, runs_root
+from .runs import (
+    CAPTION_FILE,
+    NORMALIZED_FILE,
+    PENDING_FILE,
+    base_dir,
+    is_frozen,
+    needs_review_dir,
+    runs_root,
+)
 
 #: How much of normalized.txt "Show a run's outputs" prints.
 PREVIEW_LINES = 20
@@ -191,6 +199,9 @@ ACTIONS = {"1": fetch, "2": normalize, "3": review, "4": show, "5": listing, "6"
 def run() -> int:
     """The menu loop: until `q`, end of input, or Ctrl+C."""
     screen = Screen()
+    # D-052: the executable keeps your files in the documents directory; say where.
+    where = "your files" if is_frozen() else "working in"
+    screen.say(f"{where}: {base_dir()}")
     first = True
     try:
         while True:

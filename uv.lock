@@ -608,6 +608,15 @@ wheels = [
 ]
 
 [[package]]
+name = "platformdirs"
+version = "4.12.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/23/4a86fc741c38c5b69792a4ef954b281afa69bea9f083f881de1b0d23bc07/platformdirs-4.12.3.tar.gz", hash = "sha256:427fc0bb321ae0c5b037fa03238ca74820437be162e78b4848c4d4055b9b766c", size = 59538, upload-time = "2026-10-03T23:40:46.595Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/9b/6ce1ead737fe496611bda600c263b9a11ae7bd8f41bb13f9bd7e0a2c37a4/platformdirs-4.12.3-py3-none-any.whl", hash = "sha256:080f3b39423b5abfca9a23d84c4e9795f54d395cd8459867a8ded44084fcd5f8", size = 32493, upload-time = "2026-10-03T23:40:45.104Z" },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -887,6 +896,7 @@ name = "transcript-normalizer"
 version = "0.3.0"
 source = { editable = "." }
 dependencies = [
+    { name = "platformdirs" },
     { name = "pyyaml" },
     { name = "rapidfuzz" },
 ]
@@ -909,6 +919,7 @@ dev = [
 requires-dist = [
     { name = "curl-cffi", marker = "extra == 'ingest'", specifier = ">=0.7" },
     { name = "faster-whisper", marker = "extra == 'ingest'", specifier = ">=1.0" },
+    { name = "platformdirs", specifier = ">=4.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rapidfuzz", specifier = ">=3.0" },
     { name = "rich", marker = "extra == 'ingest'", specifier = ">=13.0" },

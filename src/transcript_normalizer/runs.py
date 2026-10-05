@@ -8,7 +8,9 @@ written beside an input or into `fixtures/`.
 
 from __future__ import annotations
 
+import os
 import re
+import sys
 from pathlib import Path
 
 RUNS_DIR = "runs"
@@ -47,15 +49,51 @@ META_FILE = "meta.yaml"
 CAPTION_FILE = "legenda.txt"
 
 
+#: D-052: the standalone executable keeps the user's files here, under the
+#: platform's documents directory; this variable moves it (tests, portable use).
+APP_NAME = "transcript-normalizer"
+DATA_DIR_ENV = "TRANSCRIPT_NORMALIZER_HOME"
+
+
+def is_frozen() -> bool:
+    """Running as the PyInstaller executable, not as an installed package."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def data_dir() -> Path:
+    """D-052: `~/Documents/transcript-normalizer/`, or the platform's equivalent."""
+    override = os.environ.get(DATA_DIR_ENV)
+    if override:
+        return Path(override).expanduser()
+    import platformdirs
+
+    return Path(platformdirs.user_documents_dir()) / APP_NAME
+
+
+def base_dir() -> Path:
+    """Where runs/ and packs/ live.
+
+    The current directory, as always (D-015, D-017), except in the executable:
+    double-clicked, its current directory is wherever the system chose, so it
+    uses the data directory instead, created with both folders on first use.
+    """
+    if not is_frozen():
+        return Path.cwd()
+    base = data_dir()
+    for folder in (RUNS_DIR, PACKS_DIR):
+        (base / folder).mkdir(parents=True, exist_ok=True)
+    return base
+
+
 def runs_root() -> Path:
-    return Path.cwd() / RUNS_DIR
+    return base_dir() / RUNS_DIR
 
 
 def packs_root() -> Path:
-    return Path.cwd() / PACKS_DIR
+    return base_dir() / PACKS_DIR
 
 
-#: The packs that ship inside the package. The repo's `packs/` links to them.
+#: The packs that ship inside the package (D-043).
 BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
 
 
