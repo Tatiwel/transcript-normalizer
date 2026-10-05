@@ -1,0 +1,42 @@
+# Continuous integration: run the test suite on every push and pull request,
+# on the three operating systems the executables are built for (D-052).
+#
+# A workflow is a list of jobs; a job is a list of steps that run, in order, on
+# a fresh virtual machine ("runner") that GitHub provides and throws away after.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    # `matrix` runs this one job definition once per combination below:
+    # 3 systems x 2 Python versions = 6 runs, side by side.
+    strategy:
+      fail-fast: false # a failure on one system should not cancel the others
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12"] # the versions pyproject.toml declares
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Put the repository's files on the runner.
+      - uses: actions/checkout@v4
+
+      # Install uv, the tool the project already uses locally, and the Python
+      # version of this run of the matrix.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Install the package and the dev group (pytest, rich) from uv.lock, so CI
+      # tests the same versions a developer has. No [ingest] extra: the tests
+      # replace yt-dlp and faster-whisper with fakes (tests/fetch_fakes.py).
+      - name: Install
+        run: uv sync --locked
+
+      # The regression test, the fixtures and everything else.
+      - name: Test
+        run: uv run pytest -q

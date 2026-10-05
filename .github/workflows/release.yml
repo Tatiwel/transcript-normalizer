@@ -1,0 +1,236 @@
+# Release: when a tag like v0.4.0 is pushed, build everything D-052 promises
+# and attach it to a GitHub Release for that tag:
+#
+#   - the Python package (wheel and sdist), for `pip install`;
+#   - a standalone executable per system, in two builds:
+#       lite: fetch with platform captions only, small;
+#       full: local speech recognition included, large;
+#   - a sha256 checksum of every file, and the CHANGELOG section as the text.
+#
+# Jobs run in parallel unless one `needs` another. The order here is:
+#   check -> (package, executable x 6) -> release
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+# The release job creates a Release and uploads files to it, which needs write
+# access to the repository's contents. Nothing else is granted.
+permissions:
+  contents: write
+
+defaults:
+  run:
+    # One shell everywhere, so every `run:` below is the same script on
+    # Windows as on Linux and macOS (Git for Windows provides bash).
+    shell: bash
+
+jobs:
+  # ---------------------------------------------------------------- 0. check
+  check:
+    # Stop early if the tag and the code disagree: tag v0.4.0 must be version
+    # 0.4.0 in pyproject.toml, and CHANGELOG.md must have a `## 0.4.0` section.
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        name: Tag, pyproject and CHANGELOG agree
+        run: |
+          tag="${GITHUB_REF_NAME#v}"  # v0.4.0 -> 0.4.0
+          declared=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          if [ "$tag" != "$declared" ]; then
+            echo "::error::tag $GITHUB_REF_NAME but pyproject.toml says $declared"
+            exit 1
+          fi
+          if ! grep -q "^## $tag\$" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## $tag' section"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------- 1. package
+  package:
+    # The wheel and the source distribution, exactly as `uv build` makes them
+    # locally. They are what `pip install` would download.
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build wheel and sdist
+        run: uv build
+      # Hand the files to the release job. Artifacts are how jobs pass files:
+      # each job runs on its own machine and shares nothing else.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: dist/*
+
+  # ---------------------------------------------------------------- 2-3. executables
+  executable:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        flavor: [lite, full]
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      FLAVOR: ${{ matrix.flavor }}
+      # Which ffmpeg build to bundle in `full`. "latest" moves; for a release
+      # you can reproduce, pin a dated autobuild tag of BtbN/FFmpeg-Builds.
+      FFMPEG_BUILD: latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # PyInstaller packs the Python interpreter of the runner into the
+      # executable, so this version is the one users get.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      # Names used below: the system as users know it, and the file extension.
+      # Linux and macOS executables are archived so the "can run" permission
+      # survives the download; Windows needs no archive.
+      - name: Names
+        run: |
+          case "$RUNNER_OS" in
+            Windows) os=windows; ext=exe ;;
+            Linux)   os=linux;   ext=tar.gz ;;
+            macOS)   os=macos;   ext=zip ;;
+          esac
+          name="transcript-normalizer-$VERSION-$os-$FLAVOR"
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          echo "ASSET=$name.$ext" >> "$GITHUB_ENV"
+          # PyInstaller separates source and destination with ';' on Windows.
+          if [ "$RUNNER_OS" = Windows ]; then echo "SEP=;" >> "$GITHUB_ENV"; else echo "SEP=:" >> "$GITHUB_ENV"; fi
+
+      # A clean virtual environment with the package, the extra this flavor
+      # needs, and PyInstaller. `lite` takes [captions] (yt-dlp, curl_cffi,
+      # rich); `full` takes [ingest] (the same, plus faster-whisper).
+      - name: Install
+        run: |
+          uv venv
+          if [ "$FLAVOR" = lite ]; then extra=captions; else extra=ingest; fi
+          uv pip install pyinstaller ".[$extra]"
+
+      # Only `full`, only where an LGPL static build exists (Linux, Windows):
+      # fetch ffmpeg and keep the binary for PyInstaller to bundle. Source and
+      # license are in docs/THIRD_PARTY.md. There is no LGPL macOS build from
+      # this source, so the macOS `full` executable carries no ffmpeg.
+      - name: ffmpeg (LGPL build)
+        if: matrix.flavor == 'full' && runner.os != 'macOS'
+        run: |
+          base="https://github.com/BtbN/FFmpeg-Builds/releases/download/$FFMPEG_BUILD"
+          mkdir -p ffmpeg
+          if [ "$RUNNER_OS" = Windows ]; then
+            curl -sSL -o ffmpeg.zip "$base/ffmpeg-master-latest-win64-lgpl.zip"
+            7z x -bd -offmpeg-src ffmpeg.zip > /dev/null   # 7-Zip is on every Windows runner
+            bin=ffmpeg.exe
+          else
+            curl -sSL -o ffmpeg.tar.xz "$base/ffmpeg-master-latest-linux64-lgpl.tar.xz"
+            mkdir ffmpeg-src && tar -xJf ffmpeg.tar.xz -C ffmpeg-src
+            bin=ffmpeg
+          fi
+          cp ffmpeg-src/*/bin/$bin ffmpeg/
+          ./ffmpeg/$bin -version | head -1   # the build actually runs here
+          # "source<SEP>destination": put it at the top of the bundle, which
+          # packaging/entry.py puts first on PATH.
+          echo "FFMPEG_ARGS=--add-binary ffmpeg/$bin${SEP}." >> "$GITHUB_ENV"
+
+      # Build one executable file. What each flag is for:
+      #   --onefile              one file to download and double-click
+      #   --console              a terminal window, which the menu needs
+      #   --collect-submodules transcript_normalizer
+      #                          language modules are imported by name at run
+      #                          time (D-033), which PyInstaller cannot see
+      #   --collect-data transcript_normalizer
+      #                          the bundled pack, a YAML file (D-043)
+      #   --collect-submodules yt_dlp
+      #                          yt-dlp loads its site extractors by name
+      #   --collect-all ...      (full) the speech stack: compiled libraries
+      #                          and data files PyInstaller would miss
+      - name: Build executable
+        run: |
+          full_args=""
+          if [ "$FLAVOR" = full ]; then
+            for pkg in faster_whisper ctranslate2 onnxruntime av tokenizers; do
+              full_args="$full_args --collect-all $pkg"
+            done
+          fi
+          uv run --no-sync pyinstaller --onefile --console --name "$NAME" \
+            --collect-submodules transcript_normalizer \
+            --collect-data transcript_normalizer \
+            --collect-submodules yt_dlp \
+            $full_args ${FFMPEG_ARGS:-} \
+            packaging/entry.py
+
+      # Prove the executable starts, finds its bundled pack and language module,
+      # and writes into the data directory (D-052), before anyone downloads it.
+      - name: Smoke test
+        run: |
+          exe="dist/$NAME"; [ "$RUNNER_OS" = Windows ] && exe="$exe.exe"
+          "$exe" help
+          export TRANSCRIPT_NORMALIZER_HOME="$RUNNER_TEMP/tn-home"
+          "$exe" fixtures/R2Qgz8tFWVI/legenda.txt
+          test -f "$TRANSCRIPT_NORMALIZER_HOME/runs/R2Qgz8tFWVI/normalized.txt"
+
+      # The file users download, named transcript-normalizer-<version>-<os>-<flavor>.<ext>.
+      - name: Archive
+        run: |
+          mkdir -p out
+          case "$RUNNER_OS" in
+            Windows) cp "dist/$NAME.exe" "out/$ASSET" ;;
+            Linux)   tar -czf "out/$ASSET" -C dist "$NAME" ;;
+            macOS)   (cd dist && zip -q "../out/$ASSET" "$NAME") ;;
+          esac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: out/*
+
+  # ---------------------------------------------------------------- 4. release
+  release:
+    # Waits for everything above; if any build failed, there is no release.
+    needs: [check, package, executable]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Every artifact from the jobs above, into one folder.
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+
+      # The release text: the CHANGELOG section for this version, then a
+      # checksum per file, so a user can check that a download is intact
+      # (`sha256sum <file>`, or `certutil -hashfile <file> SHA256` on Windows).
+      - name: Release notes
+        run: |
+          awk -v v="## $VERSION" '$0==v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
+          {
+            echo
+            echo "### SHA-256"
+            echo
+            echo '```'
+            (cd assets && sha256sum *)
+            echo '```'
+          } >> notes.md
+          cat notes.md
+
+      # Create the Release for this tag and attach every file. `gh` is
+      # GitHub's command-line tool, already on the runner; GH_TOKEN lets it act
+      # for this repository with the permission granted at the top.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" assets/* --title "$GITHUB_REF_NAME" --notes-file notes.md

@@ -902,6 +902,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+captions = [
+    { name = "curl-cffi" },
+    { name = "rich" },
+    { name = "yt-dlp" },
+]
 ingest = [
     { name = "curl-cffi" },
     { name = "faster-whisper" },
@@ -917,15 +922,16 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "curl-cffi", marker = "extra == 'ingest'", specifier = ">=0.7" },
+    { name = "curl-cffi", marker = "extra == 'captions'", specifier = ">=0.7" },
     { name = "faster-whisper", marker = "extra == 'ingest'", specifier = ">=1.0" },
     { name = "platformdirs", specifier = ">=4.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rapidfuzz", specifier = ">=3.0" },
-    { name = "rich", marker = "extra == 'ingest'", specifier = ">=13.0" },
-    { name = "yt-dlp", marker = "extra == 'ingest'", specifier = ">=2024.3.10" },
+    { name = "rich", marker = "extra == 'captions'", specifier = ">=13.0" },
+    { name = "transcript-normalizer", extras = ["captions"], marker = "extra == 'ingest'" },
+    { name = "yt-dlp", marker = "extra == 'captions'", specifier = ">=2024.3.10" },
 ]
-provides-extras = ["ingest"]
+provides-extras = ["captions", "ingest"]
 
 [package.metadata.requires-dev]
 dev = [

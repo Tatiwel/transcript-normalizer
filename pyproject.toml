@@ -26,12 +26,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ingest = [
+# D-052: `captions` is fetch with platform captions only (the `lite` executable);
+# `ingest` adds local speech recognition (the `full` executable).
+captions = [
     # 2024.03.10 is the first release with --impersonate, which curl_cffi enables.
     "yt-dlp>=2024.3.10",
     "curl_cffi>=0.7",
-    "faster-whisper>=1.0",
     "rich>=13.0",
+]
+ingest = [
+    "transcript-normalizer[captions]",
+    "faster-whisper>=1.0",
 ]
 
 [project.urls]
