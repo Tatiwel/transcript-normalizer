@@ -12,28 +12,10 @@ import importlib.util
 import sys
 from pathlib import Path
 
+from . import helptext
 from .catalog import list_runs
+from .helptext import ACTIONS as ITEMS, QUIT
 from .runs import CAPTION_FILE, NORMALIZED_FILE, PENDING_FILE, needs_review_dir, runs_root
-
-ITEMS = (
-    ("1", "Fetch a video or file"),
-    ("2", "Normalize a run"),
-    ("3", "Review pending"),
-    ("4", "Show a run's outputs"),
-    ("5", "List runs"),
-    ("6", "Help"),
-    ("q", "Quit"),
-)
-
-HELP = (
-    "transcript-normalizer fixes what a speech recognizer misheard in domain "
-    "vocabulary (company names, acronyms, indicators, units) and never changes "
-    "what the speaker said. Fetch a caption (or transcribe a file), normalize it "
-    "against a domain pack, and review what the tool was unsure about; your "
-    "answers are remembered for the next video. Every menu action is also a "
-    "command (`fetch`, `normalize`, `normalize --confirm`, `list`). "
-    "The full guide is docs/GUIDE.md."
-)
 
 #: How much of normalized.txt "Show a run's outputs" prints.
 PREVIEW_LINES = 20
@@ -49,15 +31,25 @@ class Screen:
 
             self.console = Console(highlight=False)
 
-    def menu(self) -> None:
-        lines = [f"{key}. {label}" for key, label in ITEMS]
+    def menu(self, first: bool = False) -> None:
+        if not first:
+            self.separator()
         if self.console:
             from rich.panel import Panel
 
-            self.console.print(Panel("\n".join(lines), title="transcript-normalizer", expand=False))
+            self.console.print(Panel("\n".join(menu_lines()), title="transcript-normalizer", expand=False))
         else:
-            print("\n== transcript-normalizer")
-            print("\n".join(lines))
+            print("== transcript-normalizer")
+            print("\n".join(menu_lines()))
+        print("(a number, `?` and a number for its help, or q)")
+
+    def separator(self) -> None:
+        """A blank line and a dim rule, so one action's output ends visibly."""
+        print()
+        if self.console:
+            self.console.rule(style="dim")
+        else:
+            print("─" * min(helptext.width(), 60))
 
     def say(self, text: str) -> None:
         print(text)
@@ -67,6 +59,13 @@ class Screen:
             self.console.print(f"[bold red]error:[/] {text}")
         else:
             print(f"error: {text}")
+
+
+def menu_lines() -> list[str]:
+    """`N. Label` and its description, aligned."""
+    left = max(len(f"{a.key}. {a.label}") for a in ITEMS)
+    lines = [f"{a.key}. {a.label}".ljust(left) + f"   {a.description}" for a in ITEMS]
+    return lines + [f"{QUIT.key}. {QUIT.label}"]
 
 
 def ask(prompt: str) -> str | None:
@@ -175,8 +174,7 @@ def show(screen: Screen) -> None:
         return
     lines = normalized.read_text(encoding="utf-8").splitlines()
     screen.say(f"\n{NORMALIZED_FILE}, first {min(PREVIEW_LINES, len(lines))} of {len(lines)} lines:")
-    for line in lines[:PREVIEW_LINES]:
-        screen.say(f"  {line}")
+    screen.say(helptext.wrap_block("\n".join(lines[:PREVIEW_LINES])))
 
 
 def listing(screen: Screen) -> None:
@@ -184,7 +182,7 @@ def listing(screen: Screen) -> None:
 
 
 def help_text(screen: Screen) -> None:
-    screen.say(HELP)
+    run_command(["help"])
 
 
 ACTIONS = {"1": fetch, "2": normalize, "3": review, "4": show, "5": listing, "6": help_text}
@@ -193,12 +191,21 @@ ACTIONS = {"1": fetch, "2": normalize, "3": review, "4": show, "5": listing, "6"
 def run() -> int:
     """The menu loop: until `q`, end of input, or Ctrl+C."""
     screen = Screen()
+    first = True
     try:
         while True:
-            screen.menu()
+            screen.menu(first)
+            first = False
             choice = ask("> ")
             if choice is None or choice.lower() in ("q", "quit"):
                 return 0
+            if choice.startswith("?"):
+                entry = helptext.action_entry(choice[1:].strip())
+                if entry is None:
+                    screen.error(f"{choice!r}: `?` and a number from the menu, e.g. ?2")
+                else:
+                    screen.say(entry)
+                continue
             action = ACTIONS.get(choice)
             if action is None:
                 screen.error(f"{choice!r} is not on the menu")

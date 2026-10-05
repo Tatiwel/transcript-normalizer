@@ -25,18 +25,36 @@ pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/tran
 **The menu.** Type `transcript-normalizer` with nothing after it, in a terminal:
 
 ```
-╭─ transcript-normalizer ──╮
-│ 1. Fetch a video or file │
-│ 2. Normalize a run       │
-│ 3. Review pending        │
-│ 4. Show a run's outputs  │
-│ 5. List runs             │
-│ 6. Help                  │
-│ q. Quit                  │
-╰──────────────────────────╯
+╭────────────────────────── transcript-normalizer ───────────────────────────╮
+│ 1. Fetch a video or file   download a caption, or transcribe audio locally │
+│ 2. Normalize a run         fix domain terms in a fetched caption           │
+│ 3. Review pending          answer what the tool was unsure about           │
+│ 4. Show a run's outputs    where the files are, first lines of the result  │
+│ 5. List runs               everything under runs/                          │
+│ 6. Help                    what each action does and its command           │
+│ q. Quit                                                                    │
+╰────────────────────────────────────────────────────────────────────────────╯
 ```
 
-Fetch a video (1), normalize it (2), and answer the questions it is unsure about (3). Every menu item runs one of the commands below, so anything you learn in the menu works in a script (D-051).
+Fetch a video (1), normalize it (2), and answer the questions it is unsure about (3). Every menu item runs one of the commands below, so anything you learn in the menu works in a script (D-051). `?2` shows what item 2 does and the command it runs:
+
+```
+  2. Normalize a run  pick a run by number; shows the report, then offers the
+                      review if anything is pending
+                      `transcript-normalizer runs/<id>/legenda.txt`
+```
+
+`transcript-normalizer help` (or `--help`, or menu item 6) prints the whole reference in sections: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE. One of them:
+
+```
+THE REVIEW LOOP
+  y  the recognizer garbled the term: correct it from now on
+  n  not this term: never propose it again
+  l  this term, said that way: recognize it, never change it
+  s  not sure: asked again next time; two seconds of doubt is a skip
+  a  yes to this form and the remaining forms of the same term
+  r  no to this form and the remaining forms of the same term
+```
 
 **The three commands.**
 

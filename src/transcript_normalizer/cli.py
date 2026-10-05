@@ -3,6 +3,7 @@
     transcript-normalizer [normalize] <legenda.txt> --pack <pack.yaml>
     transcript-normalizer fetch <url>
     transcript-normalizer list
+    transcript-normalizer help          (also --help; the same text as menu item 6)
     transcript-normalizer               (on a terminal: the interactive menu, D-051)
 
 `normalize` is the default, so a caption file may be given straight away.
@@ -50,7 +51,7 @@ from .runs import (
 )
 
 PROG = "transcript-normalizer"
-COMMANDS = ("normalize", "fetch", "list")
+COMMANDS = ("normalize", "fetch", "list", "help")
 
 #: How many example lines the confirmation loop shows per variant (D-019).
 EXAMPLES_PER_VARIANT = 3
@@ -447,6 +448,14 @@ def run_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_help(args: argparse.Namespace | None = None) -> int:
+    """D-051: sectioned help, the same for `help`, `--help` and the menu."""
+    from .helptext import render
+
+    print(render(), end="")
+    return 0
+
+
 def shown(path: Path) -> str:
     """A path relative to the current directory when it is under it."""
     try:
@@ -531,6 +540,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     listing.set_defaults(run=run_list)
 
+    helping = commands.add_parser("help", help="how to use the tool, by section")
+    helping.set_defaults(run=run_help)
+
     return parser
 
 
@@ -547,6 +559,9 @@ def main(argv: list[str] | None = None) -> int:
         from .interactive import run
 
         return run()
+    # The top-level --help is the sectioned help; `<command> --help` stays argparse's.
+    if argv[:1] in (["-h"], ["--help"]):
+        return run_help()
     # `normalize` is the default: a bare caption file still works.
     if argv and argv[0] not in COMMANDS and not argv[0].startswith("-"):
         argv.insert(0, "normalize")

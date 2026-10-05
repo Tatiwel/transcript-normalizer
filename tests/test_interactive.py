@@ -106,3 +106,67 @@ def test_without_a_terminal_no_arguments_is_the_usage_error(monkeypatch, capsys)
         cli.main([])
     assert stop.value.code == 2
     assert "usage: transcript-normalizer" in capsys.readouterr().err
+
+
+SECTIONS = ("USAGE", "COMMANDS", "MENU", "WHAT HAPPENS", "THE REVIEW LOOP", "EXAMPLES", "LEARN MORE")
+
+
+def test_each_menu_item_has_its_description(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["q"])
+    assert "1. Fetch a video or file   download a caption, or transcribe audio locally" in out
+    assert "2. Normalize a run         fix domain terms in a fetched caption" in out
+    assert "6. Help                    what each action does and its command" in out
+
+
+def test_question_mark_and_a_number_prints_that_entry_only(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("COLUMNS", "200")
+    code, out, fake = menu(tmp_path, monkeypatch, capsys, ["?2", "q"])
+    assert code == 0 and fake.calls == []
+    assert "2. Normalize a run  pick a run by number" in out
+    assert "`transcript-normalizer runs/<id>/legenda.txt`" in out
+    assert "Fetch a video or file  asks for" not in out  # only the one entry
+    assert "USAGE" not in out
+
+
+def test_an_unknown_question_mark_is_an_error(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["?9", "q"])
+    assert "error: '?9'" in out
+
+
+def test_actions_are_separated_by_a_rule(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["5", "q"])
+    rules = [line for line in out.splitlines() if line and set(line) == {"─"}]
+    assert len(rules) == 1  # before the second menu, not the first
+
+
+def test_menu_help_has_the_sections(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "q"])
+    lines = [line.removeprefix("> ") for line in out.splitlines()]  # piped input echoes no newline
+    for header in SECTIONS:
+        assert header in lines
+    assert "`transcript-normalizer fetch <url|file>`" in out
+
+
+@pytest.mark.parametrize("argv", [["help"], ["--help"], ["-h"]])
+def test_help_and_top_level_help_are_the_same_text(argv, monkeypatch, capsys):
+    monkeypatch.setenv("COLUMNS", "80")
+    assert cli.main(argv) == 0
+    out = capsys.readouterr().out
+    assert [line for line in out.splitlines() if line and not line.startswith(" ")] == list(SECTIONS)
+    assert max(len(line) for line in out.splitlines()) <= 80
+
+
+def test_a_command_s_own_help_is_still_argparse(capsys):
+    with pytest.raises(SystemExit) as stop:
+        cli.main(["fetch", "--help"])
+    assert stop.value.code == 0
+    assert "--caption-only" in capsys.readouterr().out
+
+
+def test_show_wraps_long_lines_with_a_margin(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("COLUMNS", "30")
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "2", "1", "n", "4", "1", "q"])
+    shown = out.split("normalized.txt, first")[1].split("─")[0]
+    body = [line for line in shown.splitlines()[1:] if line.strip()]
+    assert body and all(line.startswith("  ") and len(line) <= 30 for line in body)
+    assert any(line.startswith("        ") for line in body)  # a wrapped line keeps the text column
