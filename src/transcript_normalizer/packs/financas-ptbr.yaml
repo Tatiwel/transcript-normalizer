@@ -17,8 +17,9 @@
 # bloqueia essa variante pela regra de D-030 (3 acertos perdidos).
 # 0.3.3 acrescenta `Partens` e `partner` a BR Partners (4tTmY8Buask 7:48 e 11:39).
 # `A Partens` nao entra: artigo mais nome, duas palavras.
+# 0.3.4 tira `Ox` de OPEX: e o `oxe` nordestino, palavra comum (D-032, D-035).
 language: pt-BR
-version: 0.3.3
+version: 0.3.4
 
 terms:
   - term: CEMIG
@@ -64,7 +65,7 @@ terms:
     collocations: [dívida líquida sobre EBITDA, margem EBITDA]
   - term: OPEX
     class: indicador
-    variants: [Ox, O PX]
+    variants: [O PX]
   - term: CAPEX
     class: indicador
     variants: [capx, autocapex]

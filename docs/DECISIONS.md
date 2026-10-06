@@ -224,9 +224,13 @@ D-031(b) is overlap, not containment: a fuzzy proposal is dropped when its span 
 
 Overlap means sharing any token: the fuzzy span inside the exact one, around it, or across part of it. Exact-match spans are found before any fuzzy guess, whether or not they produce an annotation themselves: `market cap` spelled out produces none and still counts. Measured: neither fixture moves against its frozen pack; wxgFO_fyfXg against pack 0.2.2 goes from 20 to 17 false positives with no hit lost. On these fixtures "overlap" and "containment either way" score the same: every proposal whose removal changed a number was inside another term's exact span (`market` in `market cap`, `de Dentes` in `Geração de Dentes`). Overlap drops five more raw proposals that share only part of their span (`o market`, `Valuey, aí`, `o dividend`, `de dividend` twice), each either a low mark or one that overlap resolution already discarded.
 
-## D-035 Reserved
+## D-035 Out-of-domain silence test
 
-Number skipped by mistake on 2026-09-29; kept to avoid renumbering. To be used for the out-of-domain silence test (running the finance pack on a non-finance video and counting applied corrections) when it is run.
+Out-of-domain silence test. Pack financas-ptbr 0.3.3 on a 16-minute street prank video (BIrASod49XY, Tá Gravando, platform caption pt-orig, 463 lines, outdoor noise, overlapping informal speech): 2 applied corrections, both false positives (`Ox` → OPEX, the Northeastern interjection 'oxe'), 1 wrong recognition (`tir uma` → TIR, recognition only, text unchanged), 0 medium-band questions, 27 passive marks. The run is not kept as a fixture (no domain terms to grade).
+
+The number was reserved on 2026-09-29 for this test and is used for it now, on 2026-10-06. The recognition's span is `tir` alone, on the 3:47 line, which reads `tir uma`. It is the canonical name spelled out (D-041), so the text is unchanged. The two corrections are at 2:08 and 2:12 (`Ox, entende nada`). Pack 0.3.4 removes `Ox` from OPEX's variants (D-032: an ordinary word, and the Northeastern `oxe` is common in Brazilian speech). It predates D-005 and keeps `O PX`. Two other short variants from before D-005 remain in the pack, `TR` (the unit tri) and `Lu` (Leo); each should be checked against a silence run before the next pack release (CONTRIBUTING 2.4).
+
+The removal has a cost in domain, measured against the bundled pack (hits / false positives, 0.3.3 → 0.3.4). R2Qgz8tFWVI goes from 145 / 16 to 142 / 16: its three `Ox` → OPEX rows (10:59, 11:03, 11:20) are real, because there the speaker spells the term out ("Ox. O PX. O editor vai escrever aí"). 4tTmY8Buask (108 / 4), 4wCtn8BWR4o (44 / 2) and wxgFO_fyfXg (211 / 10) do not move, and no frozen bound moves. Three hits in domain are traded for two false positives out of it, because out of domain the text is someone else's speech being rewritten. Like `dividendio` and `bicho` (D-046), `Ox` is a garble whose meaning only its context gives, and the collocation layer (open) would have to decide it. With 0.3.4 the silence run applies nothing: the one remaining annotation is the `tir` recognition.
 
 ## D-036 The fetch strategy chain
 
