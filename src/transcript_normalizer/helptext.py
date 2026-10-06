@@ -62,6 +62,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("normalize <legenda.txt>", "fix domain terms; --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack"),
             ("list", "every run under runs/, with its date and title"),
             ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),
+            ("pack propose [--pack <name>]", "contribute what your reviews taught the tool: shows it, asks, then opens a prefilled issue"),
             ("help", "this help; `<command> --help` lists a command's options"),
         ]),
         ("MENU", [(f"{a.key}. {a.label}", a.help, a.command) for a in ACTIONS]),

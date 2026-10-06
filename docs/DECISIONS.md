@@ -459,6 +459,12 @@ Domain packs live in github.com/Tatiwel/transcript-normalizer-packs, one directo
 
 `packs/installed.json` records the version and sha256 of what install wrote. A `packs/<name>.yaml` that does not match it was edited here or written by the user: `update` leaves it alone, and `install` replaces it only with `--force`. A pack name must be lowercase letters, digits and hyphens, so an index cannot make install write outside packs/. An installed pack is in `packs/`, so it wins over the bundled one of the same name (`default_pack`, D-017), it is offered by the menu's "What is this video about?" (D-054), and its learned layer is the same `packs/<name>.learned.yaml` as before.
 
+## D-056 Contributing what the review taught
+
+`transcript-normalizer pack propose [--pack name]` reads the learned layer of the pack (the default pack without `--pack`) and keeps what the pack does not already have: confirmed variants and learned aliases whose form the term does not list, and every rejection, since a pack has no place for "never this" and its maintainers may still want to know. It prints them as a diff, one line per entry: term, form and decision (`+ variant`, `+ alias`, `- rejected`), never the transcript or a timestamp. It asks to confirm, default no. On a yes it writes `contributions/<pack>-<date>.yaml` (the pack, its version, the engine version, the date, the entries) under the working directory, or the data directory in the executable (D-052), and opens a prefilled issue on the packs repository (D-055) with that file's content, through `webbrowser.open`. Where there is no browser it prints the link. A file too long for a link (8000 characters) gets an issue that asks for the file to be attached. In the menu, after a review, "Contribute what you taught the tool? [y/N]" runs it, if the learned layer has anything to give.
+
+The tool sends nothing itself: the user reads the issue in the browser and submits it, under their own GitHub account. A one-click push, where the tool submits for the user, needs a server-side endpoint that holds a GitHub token, because a token in the executable is a token anyone can extract. That is deferred. The maintainers of the pack decide what enters it, by CONTRIBUTING 2.4's curation rules, which the learned layer does not apply (2.6).
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

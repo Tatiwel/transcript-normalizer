@@ -222,3 +222,7 @@ runs/
 
 # the learned layer is personal and unreviewed (D-013, D-017); the packs are not
 packs/*.learned.yaml
+
+# what `pack install` wrote (D-055) and what `pack propose` wrote (D-056)
+packs/installed.json
+contributions/

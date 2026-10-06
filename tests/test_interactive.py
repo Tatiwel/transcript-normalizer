@@ -115,6 +115,7 @@ def test_fetch_then_normalize_then_review_chained(tmp_path, monkeypatch, capsys)
         "",  # Next: review the 1 uncertain one(s) now? [Y/n] -> yes
         "a",  # Klabine is the recognizer mishearing Klabin
         "-",  # ... and not the speaker's own word
+        "",  # Contribute what you taught the tool? [y/N] -> no
         "",  # Open the folder? [y/N] -> no
         "q",
     ]
@@ -163,6 +164,7 @@ def test_review_writes_confirmed_rejected_and_aliases(tmp_path, monkeypatch, cap
         "",  # review now
         "a b",  # two of the three forms are the term ...
         "b",  # ... and the second of those is the speaker's own word
+        "",  # Contribute what you taught the tool? [y/N] -> no
         "",  # Open the folder? [y/N] -> no
         "q",
     ]

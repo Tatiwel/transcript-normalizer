@@ -3,7 +3,7 @@
     transcript-normalizer [normalize] <legenda.txt> --pack <pack.yaml>
     transcript-normalizer fetch <url>
     transcript-normalizer list
-    transcript-normalizer pack list | install <name> | update
+    transcript-normalizer pack list | install <name> | update | propose
     transcript-normalizer help          (also --help; the same text as menu item 6)
     transcript-normalizer               (on a terminal: the interactive menu, D-051)
 
@@ -754,14 +754,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     listing.set_defaults(run=run_list)
 
-    from . import registry
+    from . import contribute, registry
 
     packs = commands.add_parser(
         "pack",
-        help="list, install and update packs from the packs repository (D-055)",
+        help="list, install and update packs from the packs repository (D-055); propose what you taught the tool (D-056)",
         description=f"Domain packs from {registry.REPOSITORY}, installed into packs/.",
     )
-    registry.add_arguments(packs)
+    contribute.add_arguments(registry.add_arguments(packs))
 
     helping = commands.add_parser("help", help="how to use the tool, by section")
     helping.set_defaults(run=run_help)

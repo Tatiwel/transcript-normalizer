@@ -85,7 +85,7 @@ def test_a_typed_path_that_does_not_exist_is_an_error(tmp_path, monkeypatch, cap
 
 
 def test_normalize_then_review_prints_the_counters_once(tmp_path, monkeypatch, capsys):
-    lines = ["1", URL, "", "1", "", "a", "-", "", "q"]
+    lines = ["1", URL, "", "1", "", "a", "-", "", "", "q"]  # no contribution, no folder
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert out.count("corrected 1  (SEMIG → CEMIG)") == 1
 

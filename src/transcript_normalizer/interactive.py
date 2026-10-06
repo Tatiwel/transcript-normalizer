@@ -24,6 +24,7 @@ from .runs import (
     NORMALIZED_FILE,
     PENDING_FILE,
     base_dir,
+    default_pack,
     installed_packs,
     is_frozen,
     needs_review_dir,
@@ -292,7 +293,19 @@ def review_run(
     if code not in (0, 130):  # 130: interrupted, the answers so far are kept (D-037)
         error(f"review did not finish (exit {code})")
         return
+    offer_contribution(pack)
     offer_folder(run)
+
+
+def offer_contribution(pack: Path | None) -> None:
+    """D-056: after a review, if the learned layer has something the pack does not."""
+    from .contribute import items
+
+    pack = pack or default_pack()
+    if not items(pack):
+        return
+    if prompts.confirm("Contribute what you taught the tool?", default=False):
+        run_command(["pack", "propose", "--pack", pack.stem])
 
 
 def open_folder(path: Path) -> bool:
