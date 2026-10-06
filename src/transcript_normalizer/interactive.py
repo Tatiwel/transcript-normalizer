@@ -24,6 +24,7 @@ from .runs import (
     NORMALIZED_FILE,
     PENDING_FILE,
     base_dir,
+    installed_packs,
     is_frozen,
     needs_review_dir,
     runs_root,
@@ -148,6 +149,41 @@ def fetch() -> None:
         normalize_run(run)
 
 
+#: The answer to "What is this video about?" that no installed pack covers.
+NO_PACK = "\0none"
+
+
+def pack_line(path: Path) -> str:
+    """`pt-BR · 0.3.4 · 150 terms`: what the pack chooser shows beside a name."""
+    import yaml
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return "(unreadable)"
+    parts = [str(data.get("language") or "?"), str(data.get("version") or "?")]
+    parts.append(f"{len(data.get('terms') or ())} terms")
+    return " · ".join(parts)
+
+
+def choose_pack(question: str, allow_none: bool) -> Path | str | None:
+    """D-054: the pack for this video, NO_PACK for another area, None for back.
+
+    With `allow_none` false and one pack installed, that pack, without asking.
+    """
+    packs = installed_packs()
+    if not allow_none and len(packs) == 1:
+        return next(iter(packs.values()))
+    options = [Option(name, pack_line(path), value=path) for name, path in packs.items()]
+    if allow_none:
+        options.append(Option("none / another area", "skip normalization: no pack covers it", value=NO_PACK))
+    return prompts.select(
+        question,
+        options,
+        hint="the pack whose terms this video uses; a pack applied to another field only does harm",
+    )
+
+
 #: The option of "Normalize which run?" that asks for a path instead.
 A_FILE = "\0file"
 #: What "Normalize a run" takes as a typed path.
@@ -202,13 +238,24 @@ def normalize_run(run: Path, caption: Path | None = None) -> None:
     """Normalize, offer the review, then offer the folder."""
     from .cli import is_subtitle
 
+    from .cli import is_unfit
+
     caption = caption or caption_of(run)
     if not caption:
         return
+    pack = choose_pack("What is this video about?", allow_none=True)
+    if pack is None:
+        return
+    if pack == NO_PACK:
+        say(mark("No pack for this area, so nothing was normalized.", "need"))
+        say(mark("  `transcript-normalizer pack list` shows the packs you can install.", "hint"))
+        return
     say(mark(f"Normalizing {run.name}", "title"))
-    code = run_command(["normalize", str(caption), "--summary"])
+    code = run_command(["normalize", str(caption), "--summary", "--pack", str(pack)])
     if code != 0:
         error(f"normalize did not finish (exit {code})")
+        return
+    if is_unfit(run):  # D-054: normalize said so, and applied nothing
         return
     if is_subtitle(caption):  # converted into the run's legenda.txt
         caption = run / CAPTION_FILE
@@ -218,24 +265,30 @@ def normalize_run(run: Path, caption: Path | None = None) -> None:
     else:
         say(mark("The result is usable as it is; reviewing only makes the next run better.", "hint"))
         if prompts.confirm(f"Next: review the {count} uncertain one(s) now?", default=True):
-            review_run(run, caption, chained=True)
+            review_run(run, caption, pack, chained=True)
             return
     offer_folder(run)
 
 
 def review() -> None:
     run = choose_run("Review which run?")
-    if run:
-        review_run(run)
+    if not run:
+        return
+    pack = choose_pack("Review against which pack?", allow_none=False)
+    if pack:
+        review_run(run, pack=pack)
 
 
-def review_run(run: Path, caption: Path | None = None, chained: bool = False) -> None:
+def review_run(
+    run: Path, caption: Path | None = None, pack: Path | None = None, chained: bool = False
+) -> None:
     """The review; `chained` when normalize has just printed the counters."""
     caption = caption or caption_of(run)
     if not caption:
         return
     say(mark(f"Reviewing {run.name}", "title"))
-    code = run_command(["normalize", str(caption), "--review", "--quiet" if chained else "--summary"])
+    argv = ["normalize", str(caption), "--review", "--quiet" if chained else "--summary"]
+    code = run_command(argv + (["--pack", str(pack)] if pack else []))
     if code not in (0, 130):  # 130: interrupted, the answers so far are kept (D-037)
         error(f"review did not finish (exit {code})")
         return

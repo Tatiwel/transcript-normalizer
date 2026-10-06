@@ -47,7 +47,7 @@ def test_any_file_not_found_is_a_message_not_a_traceback(monkeypatch, capsys):
 def test_normalize_converts_a_srt_into_runs_stem(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "aula.srt").write_text(SRT, encoding="utf-8")
-    assert cli.main(["normalize", "aula.srt"]) == 0
+    assert cli.main(["normalize", "aula.srt", "--force"]) == 0
     run = tmp_path / "runs" / "aula"
     caption = (run / CAPTION_FILE).read_text(encoding="utf-8")
     assert "# Arquivo: aula.srt" in caption and "0:04 hoje a Klabine caiu bastante" in caption
@@ -60,7 +60,7 @@ def test_normalize_converts_a_srt_into_runs_stem(tmp_path, monkeypatch, capsys):
 
 def test_normalize_takes_a_typed_vtt_path(tmp_path, monkeypatch, capsys):
     shutil.copy(DATA / "menu.vtt", tmp_path / "palestra.vtt")
-    lines = ["2", str(tmp_path / "palestra.vtt"), "n", "", "q"]  # no runs yet: straight to the path
+    lines = ["2", str(tmp_path / "palestra.vtt"), "1", "n", "", "q"]  # no runs yet: straight to the path
     code, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert code == 0
     run = tmp_path / "runs" / "palestra"
@@ -70,8 +70,10 @@ def test_normalize_takes_a_typed_vtt_path(tmp_path, monkeypatch, capsys):
 
 def test_normalize_offers_a_file_beside_the_runs(tmp_path, monkeypatch, capsys):
     caption = tmp_path / "entrevista.txt"
-    caption.write_text("0:01 hoje a Klabine caiu\n0:04 e a SEMIG pagou dividendos\n", encoding="utf-8")
-    lines = ["1", URL, "n", "2", "f", str(caption), "n", "", "q"]
+    caption.write_text(
+        "0:01 hoje a Klabine caiu\n0:04 e a SEMIG pagou dividendos\n0:07 o EBITDA da Taesa\n", encoding="utf-8"
+    )
+    lines = ["1", URL, "n", "2", "f", str(caption), "1", "n", "", "q"]
     code, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert "  f. A file…" in out
     assert (tmp_path / "runs" / "entrevista" / NORMALIZED_FILE).exists()
@@ -83,14 +85,14 @@ def test_a_typed_path_that_does_not_exist_is_an_error(tmp_path, monkeypatch, cap
 
 
 def test_normalize_then_review_prints_the_counters_once(tmp_path, monkeypatch, capsys):
-    lines = ["1", URL, "", "", "a", "-", "", "q"]
+    lines = ["1", URL, "", "1", "", "a", "-", "", "q"]
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert out.count("corrected 1  (SEMIG → CEMIG)") == 1
 
 
 def test_open_the_folder_falls_back_to_printing_the_path(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(interactive, "open_folder", lambda path: False)
-    lines = ["1", URL, "", "n", "y", "q"]
+    lines = ["1", URL, "", "1", "n", "y", "q"]
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert "Open the folder? [y/N]" in out
     assert f"the folder: {tmp_path / 'runs' / fetch_fakes.VIDEO_ID}" in out
@@ -99,5 +101,5 @@ def test_open_the_folder_falls_back_to_printing_the_path(tmp_path, monkeypatch, 
 def test_open_the_folder_opens_it(tmp_path, monkeypatch, capsys):
     opened = []
     monkeypatch.setattr(interactive, "open_folder", lambda path: opened.append(path) or True)
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "", "n", "y", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "", "1", "n", "y", "q"])
     assert opened == [tmp_path / "runs" / fetch_fakes.VIDEO_ID]

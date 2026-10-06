@@ -433,6 +433,24 @@ The adapter, `prompts.py`, asks four kinds of question: `select`, `multi_select`
 
 The menu opens with the version, where the files are, the typical flow and the keys. Runs are picked from a list (id, date, title). Each step offers the next as "Next: …?", with yes as the default. It still runs everything through `cli.main`, using two new options of `normalize` that the command line has too. `--summary` prints three counters instead of the report (report.txt is unchanged). `--review` is the review one term per screen: a multi-select of the doubtful forms (selected forms are confirmed, the rest rejected), then a second multi-select of which of those are aliases. Esc leaves the term pending. The learned layer is written after each term (D-037). `--confirm` keeps the per-form loop of D-019. Colour goes through rich, one colour per meaning (yellow: needs you; green: done; red: errors; blue: paths and terms; dim: hints; bold: titles and counters), and only on a terminal. In the `lite` executable, a fetch that would need local speech recognition says that this build cannot transcribe audio and points to the full build, instead of giving pip advice. The `?N` of D-051's amendment is gone: `?` on any question does its job. Built and run locally as a `lite` executable on Linux: the arrow-key menu, the version and the colours all show up frozen.
 
+## D-054 A pack applies only where it fits
+
+Before anything is applied, normalize counts the distinct terms with at least one high-band annotation, after overlap resolution. Fewer than 3, and it prints "pack <name> does not seem to fit this transcript (N terms found); nothing applied. Use --force to apply anyway.", writes a normalized.txt identical to the input and an empty annotations.json, and asks nothing. `--force` applies anyway. The silence run of D-035 is the reason: a pack applied to someone else's speech finds the odd short form, and every correction it makes there is a false positive.
+
+Unit rules do not count: numbers and units turn up in any field. Recognitions count as well as corrections: a term spelled right is as much evidence that the video is about the domain as a term garbled. The check is in `core/fit.py`; the regression test and the evaluator do not go through it, so no bound moves. The menu asks "What is this video about?" before it normalizes: a list of the installed packs (bundled, then packs/, D-055) and "none / another area", which normalizes nothing and says so. A review started from the menu uses the one installed pack, or asks which.
+
+Measured, distinct high-band terms per caption (`scripts/measure.py runs/BIrASod49XY/legenda.txt`):
+
+| caption | frozen pack | bundled 0.3.4 | fits |
+|---|---|---|---|
+| 4tTmY8Buask | 6 | 23 | yes |
+| 4wCtn8BWR4o | 11 | 15 | yes |
+| R2Qgz8tFWVI | 29 | 35 | yes |
+| wxgFO_fyfXg | 18 | 44 | yes |
+| BIrASod49XY (prank, D-035) | - | 1 | no |
+
+The prank's one term is the `tir` recognition of D-035. The closest fixture is 4tTmY8Buask against its frozen 0.2.4 at 6; with the pack users run, the lowest is 15. Counting corrections only would also separate them (bundled: 15, 4, 26, 28 against 0), but 4wCtn8BWR4o, a video in the domain whose terms are mostly spelled right, would sit at 4, one away from the threshold. The threshold of 3 is not calibrated beyond these five captions; a short clip in the domain can fall under it, which is what `--force` is for.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

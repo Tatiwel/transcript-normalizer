@@ -72,7 +72,8 @@ def test_annotations_json_carries_the_kind(tmp_path, monkeypatch, pack_path):
     monkeypatch.chdir(tmp_path)
     caption = tmp_path / "legenda.txt"
     caption.write_text(CAPTION, encoding="utf-8")
-    assert main([str(caption), "--pack", str(pack_path)]) == 0
+    # --force: a two-term pack, which D-054 would turn down.
+    assert main([str(caption), "--pack", str(pack_path), "--force"]) == 0
 
     out = tmp_path / "runs" / "aliasesTest"
     records = json.loads((out / ANNOTATIONS_FILE).read_text(encoding="utf-8"))
@@ -117,7 +118,7 @@ def test_answering_l_records_an_alias_that_the_next_run_recognizes(
 
     # The only medium-band proposal is `preços tetos`; say it is an alias.
     monkeypatch.setattr("sys.stdin", io.StringIO("l\n"))
-    assert main([str(caption), "--pack", str(pack_path), "--confirm"]) == 0
+    assert main([str(caption), "--pack", str(pack_path), "--confirm", "--force"]) == 0
 
     learned = load_learned(learned_file(pack_path))
     assert [(t, a.alias) for t, entries in learned.aliases.items() for a in entries] == [

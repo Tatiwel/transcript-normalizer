@@ -20,6 +20,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from .core.fit import MIN_FIT_TERMS, fitting_terms
 from .core.matcher import find_annotations, resolve_overlaps
 from .core.pack import Learned, Pack, load_pack, save_learned
 from .core.render import render_normalized
@@ -497,6 +498,31 @@ def convert_subtitle(subtitle: Path, out: Path | None = None) -> Path:
     return caption
 
 
+#: D-054: what normalize says when the pack does not fit the transcript.
+NOT_FIT = (
+    "pack {name} does not seem to fit this transcript ({found} terms found); "
+    "nothing applied. Use --force to apply anyway."
+)
+
+
+def refuse_unfit(args: argparse.Namespace, transcript: Transcript, out_dir: Path, found: int) -> int:
+    """D-054: normalized.txt identical to the input, no annotations, no questions."""
+    message = NOT_FIT.format(name=args.pack.stem, found=found)
+    write_json([], out_dir / ANNOTATIONS_FILE)
+    (out_dir / NORMALIZED_FILE).write_text(render_normalized(transcript, []), encoding="utf-8")
+    keep_original(args.caption, out_dir)
+    write_pending(out_dir, transcript, [])  # removes a stale pending.txt
+    (out_dir / REPORT_FILE).write_text(f"{args.caption}: {message}\n", encoding="utf-8")
+    print(message)
+    return 0
+
+
+def is_unfit(run: Path) -> bool:
+    """Whether the run's last normalize refused for D-054 (the menu asks)."""
+    report_file = Path(run) / REPORT_FILE
+    return report_file.exists() and "does not seem to fit" in report_file.read_text(encoding="utf-8")
+
+
 def run_normalize(args: argparse.Namespace) -> int:
     if not args.caption.exists():
         print(f"no caption at {args.caption}; run fetch first", file=sys.stderr)
@@ -525,6 +551,11 @@ def run_normalize(args: argparse.Namespace) -> int:
 
     out_dir = run_dir(args.caption, args.out, transcript.header_field("URL"))
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # D-054: a pack that names fewer than three of its terms here does not fit.
+    found = len(fitting_terms(annotations))
+    if found < MIN_FIT_TERMS and not args.force:
+        return refuse_unfit(args, transcript, out_dir, found)
 
     written = [write_json(annotations, out_dir / ANNOTATIONS_FILE)]
 
@@ -668,6 +699,12 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--summary",
         action="store_true",
         help="print three counters instead of the full report; report.txt is unchanged",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help=f"apply the pack even when fewer than {MIN_FIT_TERMS} of its terms are found "
+        "with confidence (D-054)",
     )
     parser.add_argument(
         "--quiet",

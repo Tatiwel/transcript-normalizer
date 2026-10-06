@@ -67,7 +67,7 @@ def test_the_core_runs_end_to_end_with_the_generic_module(tmp_path, monkeypatch)
     monkeypatch.chdir(tmp_path)
     caption = tmp_path / "legenda.txt"
     shutil.copy(CAPTION, caption)
-    assert main([str(caption), "--pack", str(PACK), "--allow-generic"]) == 0
+    assert main([str(caption), "--pack", str(PACK), "--allow-generic", "--force"]) == 0
 
     run = tmp_path / "runs" / "xxLanguages"
     for name in ("annotations.json", "normalized.txt", "report.txt", "legenda.txt"):

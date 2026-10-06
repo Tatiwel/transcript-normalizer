@@ -108,6 +108,22 @@ def default_pack() -> Path:
     return local if local.exists() else BUNDLED_PACKS / DEFAULT_PACK
 
 
+def installed_packs() -> dict[str, Path]:
+    """Every pack there is to choose from, by name (D-054, D-055).
+
+    The bundled packs, then the `.yaml` files in packs/ (installed with `pack
+    install` or written by the user), which win over a bundled one of the
+    same name, as in `default_pack`. Learned layers are not packs.
+    """
+    found = {p.stem: p for p in sorted(BUNDLED_PACKS.glob("*.yaml"))}
+    root = packs_root()
+    if root.is_dir():
+        found.update(
+            (p.stem, p) for p in sorted(root.glob("*.yaml")) if not p.name.endswith(".learned.yaml")
+        )
+    return found
+
+
 def video_id_from_url(url: str) -> str:
     """The video id in a url, or `""` when there is no recognizable one."""
     for pattern in _URL_PATTERNS:

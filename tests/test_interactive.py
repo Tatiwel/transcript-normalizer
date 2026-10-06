@@ -111,6 +111,7 @@ def test_fetch_then_normalize_then_review_chained(tmp_path, monkeypatch, capsys)
     lines = [
         "1", URL,  # fetch: the platform caption
         "",  # Next: normalize this run now? [Y/n] -> yes
+        "1",  # What is this video about? -> financas-ptbr
         "",  # Next: review the 1 uncertain one(s) now? [Y/n] -> yes
         "a",  # Klabine is the recognizer mishearing Klabin
         "-",  # ... and not the speaker's own word
@@ -158,7 +159,7 @@ def test_a_run_is_picked_from_a_list_with_its_date_and_title(tmp_path, monkeypat
 
 def test_review_writes_confirmed_rejected_and_aliases(tmp_path, monkeypatch, capsys):
     lines = [
-        "1", URL, "",  # fetch, then normalize
+        "1", URL, "", "1",  # fetch, then normalize with financas-ptbr
         "",  # review now
         "a b",  # two of the three forms are the term ...
         "b",  # ... and the second of those is the speaker's own word
@@ -177,7 +178,7 @@ def test_review_writes_confirmed_rejected_and_aliases(tmp_path, monkeypatch, cap
 
 
 def test_esc_or_empty_on_a_term_leaves_it_pending(tmp_path, monkeypatch, capsys):
-    lines = ["1", URL, "", "", "", "", "q"]  # fetch, normalize, review, empty on the term, no folder
+    lines = ["1", URL, "", "1", "", "", "", "q"]  # fetch, normalize, review, empty on the term, no folder
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="review.vtt")
     assert learned(tmp_path).is_empty()
     assert "3 variant(s) still pending" in out
@@ -202,7 +203,7 @@ def test_a_bad_url_is_an_error_in_the_menu(tmp_path, monkeypatch, capsys):
 
 def test_show_wraps_long_lines_with_a_margin(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("COLUMNS", "30")
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "", "n", "", "4", "1", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "", "1", "n", "", "4", "1", "q"])
     shown = out.split("normalized.txt, first")[1].split("─")[0]
     body = [line for line in shown.splitlines()[1:] if line.strip()]
     assert body and all(line.startswith("  ") and len(line) <= 30 for line in body)

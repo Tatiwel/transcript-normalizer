@@ -1,6 +1,9 @@
 """Measurements that are reported, not asserted.
 
-    uv run python scripts/measure.py
+    uv run python scripts/measure.py [caption ...]
+
+Captions given on the command line are added to the pack-fit table (D-054):
+a run from another field, such as the silence run of D-035.
 
 The regression test holds each fixture to its bounds. This prints the same
 numbers side by side, and anything worth seeing that should not block a commit.
@@ -8,7 +11,11 @@ numbers side by side, and anything worth seeing that should not block a commit.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+from transcript_normalizer.core.fit import MIN_FIT_TERMS, fitting_terms
+from transcript_normalizer.core.text import read_caption
 
 from transcript_normalizer.core.matcher import MARK_THRESHOLD, find_annotations, resolve_overlaps
 from transcript_normalizer.core.pack import Learned, load_pack
@@ -72,6 +79,23 @@ def low_band(found: list[Fixture], thresholds=(60, MARK_THRESHOLD)) -> str:
     return "\n".join(out)
 
 
+def pack_fit(found: list[Fixture], extra: list[Path]) -> str:
+    """D-054: distinct high-band terms per caption, frozen and bundled pack."""
+    bundled = load_pack(PACK, learned=Learned())
+    head = f"{'caption':16s}  {'frozen':>6s}  {'bundled ' + bundled.version:>14s}  fits (>= {MIN_FIT_TERMS})"
+    out = [head, "-" * len(head)]
+    cases = [(f.name, f.load_transcript(), f.load_pack()) for f in found]
+    cases += [(path.parent.name, read_caption(path), None) for path in extra]
+    for name, transcript, frozen in cases:
+        counts = [
+            len(fitting_terms(resolve_overlaps(find_annotations(transcript, pack)))) if pack else None
+            for pack in (frozen, bundled)
+        ]
+        cells = f"{counts[0] if counts[0] is not None else '-':>6}  {counts[1]:>14d}"
+        out.append(f"{name:16s}  {cells}  {'yes' if counts[1] >= MIN_FIT_TERMS else 'no'}")
+    return "\n".join(out)
+
+
 def main() -> None:
     found = fixtures(ROOT / "fixtures")
     print("Per fixture, frozen fixture pack, no learned layer\n")
@@ -80,6 +104,8 @@ def main() -> None:
     print(pack_effect(found))
     print("\n\nLow band, lower threshold 60 vs 70 (D-029 chose 70; frozen fixture packs)\n")
     print(low_band(found))
+    print("\n\nPack fit: distinct terms with a high-band annotation, units aside (D-054)\n")
+    print(pack_fit(found, [Path(arg) for arg in sys.argv[1:]]))
 
 
 if __name__ == "__main__":
