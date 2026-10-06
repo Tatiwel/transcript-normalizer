@@ -307,3 +307,67 @@ def test_the_first_download_says_so_once(monkeypatch):
     assert fetch.model_path("medium", Output(stream=stream, fancy=False)) == "/cache/new"
     assert stream.getvalue().strip() == "downloading the speech model (about 1.5 GB, first time only)…"
     assert got["repo"] == "Systran/faster-whisper-medium" and "model.bin" in got["allow_patterns"]
+
+
+# ------------------------------------------------------------------ D-059
+
+
+def run_dir(tmp_path):
+    return tmp_path / "runs" / VIDEO_ID
+
+
+def test_a_part_file_left_by_a_crash_does_not_break_the_next_attempt(tmp_path, monkeypatch, capsys):
+    """Seen on Windows: 0.4.3's crash left audio.m4a.part; every retry answered 416."""
+    run = run_dir(tmp_path)
+    run.mkdir(parents=True)
+    (run / "audio.m4a.part").write_bytes(b"\0" * 8)
+    (run / "audio.webm").write_bytes(b"\0" * 8)
+    code, run, fake, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(), "--whisper")
+    assert code == 0
+    assert not (run / "audio.m4a.part").exists() and not (run / "audio.webm").exists()
+    audio = next(p for p in fake.params if "format" in p)
+    assert audio["continuedl"] is False
+    assert "removed an incomplete audio file from an earlier attempt" in capsys.readouterr().out
+
+
+def test_a_416_is_retried_once_from_zero(tmp_path, monkeypatch, capsys):
+    code, run, fake, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(audio=["416", "ok"]), "--whisper")
+    assert code == 0
+    assert fake.calls == ["metadata", "audio", "audio"]
+    assert not (run / "audio.m4a.part").exists()
+    assert "starting over" in capsys.readouterr().out
+
+
+def test_a_second_416_is_a_failure_and_the_attempt_is_taken_back(tmp_path, monkeypatch, capsys):
+    code, run, fake, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(audio=["416"]), "--whisper")
+    assert code == 1
+    assert fake.calls == ["metadata", "audio", "audio"]
+    assert "HTTP Error 416" in capsys.readouterr().err
+    assert not run.exists()  # the attempt created it, and left nothing behind
+
+
+def test_failing_at_both_steps_removes_what_this_attempt_wrote(tmp_path, monkeypatch, capsys):
+    run = run_dir(tmp_path)
+    run.mkdir(parents=True)
+    (run / "meta.yaml").write_text("title: an earlier run\n", encoding="utf-8")
+    code, run, _, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(caption=["broken"], audio=["fail"]))
+    assert code == 1
+    assert sorted(p.name for p in run.iterdir()) == ["meta.yaml"]  # only what was there before
+    assert (run / "meta.yaml").read_text(encoding="utf-8") == "title: an earlier run\n"
+
+
+def test_caption_only_failing_leaves_no_new_directory(tmp_path, monkeypatch):
+    code, run, _, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(caption=["broken"]), "--caption-only")
+    assert code == 1 and not run.exists()
+
+
+def test_a_transcription_crash_is_reported_and_taken_back(tmp_path, monkeypatch, capsys):
+    """0.4.3's TypeError escaped as a traceback; now it is a failure like any other."""
+    def crash(*args, **kwargs):
+        raise TypeError("open() got an unexpected keyword argument 'metadata_errors'")
+
+    monkeypatch.setattr(fetch, "transcribe", crash)
+    code, run, _, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(), "--whisper")
+    assert code == 1
+    assert "TypeError: open() got an unexpected keyword argument 'metadata_errors'" in capsys.readouterr().err
+    assert not run.exists()

@@ -496,6 +496,14 @@ Field fixes in the same release, from the same user:
 - The backoff of D-036 waited, but the rich countdown was transient: only "retrying now" stayed on screen, which read as three attempts back to back. The countdown now stays ("retrying in 4 s", then "waited 4 s, retrying"). A fake-clock test checks that the attempts start at 0, 2 and 6 s.
 - Hugging Face is silenced before the model loads: `HF_HUB_DISABLE_SYMLINKS_WARNING=1`, `HF_HUB_VERBOSITY=error`, and its UserWarnings filtered. A model not yet in the cache is downloaded by fetch itself, with one line of its own, "downloading the speech model (about 1.5 GB, first time only)…", and a rich progress bar on a terminal (none in a pipe). faster-whisper's own download shows nothing.
 
+## D-059 A failed attempt does not break the next one
+
+A run directory left by a failed attempt must not break the next one. Before step 2's audio download, fetch deletes any `audio.*` and `*.part` in the run directory and passes yt-dlp `continuedl: False`. If a download still answers HTTP 416, it deletes the partial files and retries once from zero. If fetch fails at both steps, it removes the files it created in this attempt; meta.yaml stays only if it existed before. Seen on Windows: an `audio.m4a.part` left by the 0.4.3 crash made every 0.4.4 retry fail with "HTTP Error 416: Requested range not satisfiable".
+
+"Created in this attempt" is measured. fetch notes what the run directory held before it starts, and on failure removes everything that was not there. If the attempt created the directory and it is left empty, the directory goes too. The same applies when `--caption-only` fails. A failure inside step 2 other than a FetchError is now reported in the list of failures and taken back the same way, instead of escaping as a traceback. That was what 0.4.3's `TypeError` from the decoder did. The test fake can leave a `.part` file and answer 416, and the tests cover a stale `.part`, one 416, two 416s, both steps failing next to an earlier meta.yaml, and a transcription crash.
+
+In the same release, the executable's entry point reconfigures stdout and stderr to UTF-8. yt-dlp's messages carry curly quotes ("you’re"). Written in cp1252 through a pipe on Windows and read back as UTF-8, as GitHub's log did, they showed as a replacement character. A Windows console already receives Unicode from Python, so nothing changes there.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

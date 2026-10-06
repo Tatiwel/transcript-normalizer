@@ -329,18 +329,43 @@ def download_caption(
     return found, retries
 
 
+def clear_partial_audio(target: Path) -> list[Path]:
+    """D-059: what an earlier attempt left of the audio (`audio.*`, `*.part`)."""
+    stale = sorted({*target.glob("audio.*"), *target.glob("*.part")})
+    for path in stale:
+        path.unlink(missing_ok=True)
+    return stale
+
+
+def is_range_error(message: str) -> bool:
+    """HTTP 416: a resumed download asked for bytes past the end of the file."""
+    return "HTTP Error 416" in message or "Requested range not satisfiable" in message
+
+
 def download_audio(url: str, target: Path, out: Output | None = None) -> Path:
-    """Download the audio track without converting, which needs no ffmpeg."""
-    ytdlp(
-        {
-            "format": "bestaudio[ext=m4a]/bestaudio",
-            "nopart": True,
-            "outtmpl": {"default": str(target / "audio.%(ext)s")},
-        },
-        download(url),
-        "the audio download",
-        out or Output(),
-    )
+    """Download the audio track without converting, which needs no ffmpeg.
+
+    D-059: always from zero. A file left by an earlier attempt is deleted first,
+    yt-dlp is told not to resume (`continuedl`), and an HTTP 416 still answered
+    is met once more from a clean directory.
+    """
+    out = out or Output()
+    params = {
+        "format": "bestaudio[ext=m4a]/bestaudio",
+        "nopart": True,
+        "continuedl": False,
+        "outtmpl": {"default": str(target / "audio.%(ext)s")},
+    }
+    if clear_partial_audio(target):
+        out.info("removed an incomplete audio file from an earlier attempt")
+    try:
+        ytdlp(params, download(url), "the audio download", out)
+    except FetchError as error:
+        if not is_range_error(str(error)):
+            raise
+        clear_partial_audio(target)
+        out.info("the audio download asked for a range the server does not have; starting over")
+        ytdlp(params, download(url), "the audio download", out)
     found = sorted(target.glob("audio.*"))
     if not found:
         raise FetchError("the audio download finished without error but no audio appeared")
@@ -644,6 +669,25 @@ NO_CAPTION = "This video has no caption."
 TOO_MANY_REQUESTS = "YouTube is limiting downloads right now (HTTP 429)."
 
 
+def undo_attempt(target: Path, before: set[Path], existed: bool) -> int:
+    """D-059: remove what this attempt wrote under `target`, and the directory
+    itself if the attempt created it and it is now empty. Files that were there
+    before (an earlier run's meta.yaml, say) stay. Returns how many it removed."""
+    removed = 0
+    for path in sorted(target.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        if path in before:
+            continue
+        if path.is_dir():
+            if not any(path.iterdir()):
+                path.rmdir()
+        else:
+            path.unlink(missing_ok=True)
+            removed += 1
+    if not existed and target.exists() and not any(target.iterdir()):
+        target.rmdir()
+    return removed
+
+
 def run_check() -> int:
     """`fetch --check`: one line per tool, installed or not. Always exits 0."""
     width = max(len(name) for _, name, _ in CHECKED)
@@ -701,8 +745,17 @@ def run(args: argparse.Namespace) -> int:
         return 0
 
     target = fetch_dir(meta.id, args.out)
+    # D-059: what was here before this attempt, so a failure can take back
+    # exactly what it added and leave an earlier run as it was.
+    existed = target.exists()
+    before = {p for p in target.rglob("*")} if existed else set()
     target.mkdir(parents=True, exist_ok=True)
     out.info(f"directory: {target}")
+
+    def give_back() -> None:
+        removed = undo_attempt(target, before, existed)
+        if removed:
+            out.info(f"removed {removed} file(s) this attempt had written")
 
     step = None
     failures: list[str] = []
@@ -727,6 +780,7 @@ def run(args: argparse.Namespace) -> int:
                 # Step 1 was all that was asked for: say why in plain words,
                 # without naming flags (the menu asks its next question after).
                 print(plainly, file=sys.stderr)
+                give_back()
                 return 1
             out.warn(failures[-1])
 
@@ -734,11 +788,12 @@ def run(args: argparse.Namespace) -> int:
         out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
         try:
             step = step_speech(args, meta, target, reason, out)
-        except FetchError as error:
-            failures.append(str(error))
+        except Exception as error:  # FetchError, or a decoder or model failure
+            failures.append(str(error) if isinstance(error, FetchError) else f"{type(error).__name__}: {error}")
             print("could not get a text for this video:", file=sys.stderr)
             for failure in failures:
                 print(f"  - {failure}", file=sys.stderr)
+            give_back()
             return 1
 
     caption = target / CAPTION_FILE

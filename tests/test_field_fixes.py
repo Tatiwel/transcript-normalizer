@@ -1,15 +1,13 @@
 """0.4.2: fixes from field use. Missing files, typed paths, the folder, one summary."""
 
-import io
 import shutil
 from pathlib import Path
 
 from transcript_normalizer import cli, interactive
-from transcript_normalizer.ingest import fetch
 from transcript_normalizer.runs import CAPTION_FILE, NORMALIZED_FILE
 
 from . import fetch_fakes
-from .fetch_fakes import URL, FakeYtDlp
+from .fetch_fakes import URL
 from .test_interactive import DATA, menu
 
 SRT = """1

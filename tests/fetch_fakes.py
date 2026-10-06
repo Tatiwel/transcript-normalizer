@@ -8,6 +8,7 @@ VTT = Path(__file__).resolve().parent / "data" / "rolling.vtt"
 VIDEO_ID = "abcdefghijk"
 URL = f"https://www.youtube.com/watch?v={VIDEO_ID}"
 RATE_LIMITED = "ERROR: Unable to download video subtitles for 'pt': HTTP Error 429: Too Many Requests"
+RANGE_ERROR = "ERROR: unable to download video data: HTTP Error 416: Requested range not satisfiable"
 
 
 class DownloadError(Exception):
@@ -26,10 +27,12 @@ class FakeYtDlp:
     `writesubtitles` or `writeautomaticsub`. `params` keeps every option set.
     """
 
-    def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",)):
+    def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",), audio=None):
         self.caption = list(caption)
         self.has_caption = has_caption
-        self.audio_ok = audio_ok
+        # Each audio download, in order: "ok", "416" (leaves a .part behind,
+        # D-059) or "fail". The last entry repeats.
+        self.audio = list(audio or (("ok",) if audio_ok else ("fail",)))
         self.manual = tuple(manual)
         self.automatic = tuple(automatic)
         self.calls: list[str] = []
@@ -74,7 +77,11 @@ class FakeYoutubeDL:
         target = Path(params["outtmpl"]["default"]).parent
         if "format" in params:
             platform.calls.append("audio")
-            if not platform.audio_ok:
+            outcome = platform.audio.pop(0) if len(platform.audio) > 1 else platform.audio[0]
+            if outcome == "416":
+                (target / "audio.m4a.part").write_bytes(b"\0" * 8)
+                raise DownloadError(RANGE_ERROR)
+            if outcome != "ok":
                 raise DownloadError("ERROR: audio unavailable")
             (target / "audio.m4a").write_bytes(b"\0" * 16)
             return 0

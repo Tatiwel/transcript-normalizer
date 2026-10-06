@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.5
+
+- A failed attempt no longer breaks the next one (D-059). An incomplete audio file left in the run folder (the cause of "HTTP Error 416: Requested range not satisfiable" after 0.4.3's crash) is deleted before downloading, and downloads always start from zero. A 416 is retried once. When fetch fails, it removes the files it wrote in that attempt.
+- A crash while transcribing is reported as a failure, not as a traceback.
+- The executables write UTF-8, so yt-dlp's messages keep their quotes in logs and redirected output on Windows.
+- Unused imports removed from two test files.
+
 ## 0.4.4
 
 - Fix for the full executables: transcribing failed with "open() got an unexpected keyword argument 'metadata_errors'". The build had paired faster-whisper with a newer av it does not support. Executables are now built from the lock, the two have upper bounds, and every full executable is checked to decode audio before release (D-058).
