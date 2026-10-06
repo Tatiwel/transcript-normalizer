@@ -52,7 +52,9 @@ Issues = "https://github.com/Tatiwel/transcript-normalizer/issues"
 transcript-normalizer = "transcript_normalizer.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0", "rich>=13.0"]
+# Every extra, so a plain `uv sync` in the repository keeps them: `ingest`
+# carries `captions`, which carries `menu`.
+dev = ["transcript-normalizer[ingest]", "pytest>=8.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/transcript_normalizer"]

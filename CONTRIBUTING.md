@@ -9,7 +9,7 @@ Three things people outside the project add: a language, a domain pack, and a fi
 3. [Building a fixture and measuring](#3-building-a-fixture-and-measuring)
 4. [Dependencies](#4-dependencies)
 
-Set up once with `uv sync` (and `uv sync --extra ingest` if you will fetch captions). Run the tests with `uv run pytest -q`.
+Set up once with `uv sync`. Its `dev` dependency group includes `transcript-normalizer[ingest]` (which carries `[captions]` and `[menu]`) and pytest, so every extra is installed, and a later plain `uv sync` keeps them instead of removing them. Run the tests with `uv run pytest -q`.
 
 ---
 

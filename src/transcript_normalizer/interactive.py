@@ -9,6 +9,10 @@ arrow keys with questionary, numbered text without it.
 
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from . import helptext, prompts
@@ -144,14 +148,61 @@ def fetch() -> None:
         normalize_run(run)
 
 
+#: The option of "Normalize which run?" that asks for a path instead.
+A_FILE = "\0file"
+#: What "Normalize a run" takes as a typed path.
+CAPTION_SUFFIXES = (".txt", ".srt", ".vtt")
+
+
+def typed_caption() -> Path | None:
+    """A caption file the user types the path of, or None."""
+    answer = prompts.text(
+        "Path to a caption file",
+        hint="a legenda.txt (m:ss text lines), or a .srt or .vtt subtitle; empty goes back",
+    )
+    if not answer:
+        return None
+    path = Path(answer.strip().strip("'\"")).expanduser()
+    if not path.is_file():
+        error(f"no file at {path}")
+        return None
+    if path.suffix.lower() not in CAPTION_SUFFIXES:
+        error(f"{path.name}: expected {', '.join(CAPTION_SUFFIXES)}")
+        return None
+    return path
+
+
 def normalize() -> None:
-    run = choose_run("Normalize which run?")
-    if run:
-        normalize_run(run)
+    """A run from the list, or a file typed by its path."""
+    from .cli import caption_run
+
+    runs = list_runs()
+    file_option = Option("A file…", "type the path to a .txt, .srt or .vtt", value=A_FILE, key="f")
+    if runs:
+        width = max(len(r.id) for r in runs)
+        picked = prompts.select(
+            "Normalize which run?",
+            [Option(r.id.ljust(width), f"{r.date or '-':10s}  {r.title}", value=r.id) for r in runs]
+            + [file_option],
+            hint="the video's id, its publication date and its title; f for a file",
+        )
+    else:
+        picked = A_FILE
+    if picked is None:
+        return
+    if picked != A_FILE:
+        normalize_run(runs_root() / picked)
+        return
+    caption = typed_caption()
+    if caption:
+        normalize_run(caption_run(caption), caption)
 
 
-def normalize_run(run: Path) -> None:
-    caption = caption_of(run)
+def normalize_run(run: Path, caption: Path | None = None) -> None:
+    """Normalize, offer the review, then offer the folder."""
+    from .cli import is_subtitle
+
+    caption = caption or caption_of(run)
     if not caption:
         return
     say(mark(f"Normalizing {run.name}", "title"))
@@ -159,13 +210,17 @@ def normalize_run(run: Path) -> None:
     if code != 0:
         error(f"normalize did not finish (exit {code})")
         return
+    if is_subtitle(caption):  # converted into the run's legenda.txt
+        caption = run / CAPTION_FILE
     count = pending_count(run)
     if not count:
         say(mark("Nothing to confirm. Done.", "ok"))
-        return
-    say(mark("The result is usable as it is; reviewing only makes the next run better.", "hint"))
-    if prompts.confirm(f"Next: review the {count} uncertain one(s) now?", default=True):
-        review_run(run)
+    else:
+        say(mark("The result is usable as it is; reviewing only makes the next run better.", "hint"))
+        if prompts.confirm(f"Next: review the {count} uncertain one(s) now?", default=True):
+            review_run(run, caption, chained=True)
+            return
+    offer_folder(run)
 
 
 def review() -> None:
@@ -174,14 +229,43 @@ def review() -> None:
         review_run(run)
 
 
-def review_run(run: Path) -> None:
-    caption = caption_of(run)
+def review_run(run: Path, caption: Path | None = None, chained: bool = False) -> None:
+    """The review; `chained` when normalize has just printed the counters."""
+    caption = caption or caption_of(run)
     if not caption:
         return
     say(mark(f"Reviewing {run.name}", "title"))
-    code = run_command(["normalize", str(caption), "--summary", "--review"])
+    code = run_command(["normalize", str(caption), "--review", "--quiet" if chained else "--summary"])
     if code not in (0, 130):  # 130: interrupted, the answers so far are kept (D-037)
         error(f"review did not finish (exit {code})")
+        return
+    offer_folder(run)
+
+
+def open_folder(path: Path) -> bool:
+    """The system's file manager on `path`; False when there is none to call."""
+    try:
+        if sys.platform == "win32":
+            os.startfile(path)  # noqa: S606 - Windows only
+            return True
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        if shutil.which(opener) is None:
+            return False
+        subprocess.Popen(
+            [opener, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        return True
+    except OSError:
+        return False
+
+
+def offer_folder(run: Path) -> None:
+    if not prompts.confirm("Open the folder?", default=False):
+        return
+    if open_folder(run):
+        say("opened ", mark(run, "path"))
+    else:
+        say("the folder: ", mark(run, "path"))
 
 
 def show() -> None:

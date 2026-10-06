@@ -128,3 +128,14 @@ def test_impersonation_is_asked_for_only_when_curl_cffi_is_there(monkeypatch):
     assert fetch.impersonation_args() == []
     monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
     assert fetch.impersonation_args() == ["--impersonate", "chrome"]
+
+
+def test_the_raw_subtitle_is_deleted_once_converted(tmp_path, monkeypatch):
+    code, run, _, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(caption=["ok"]))
+    assert code == 0 and (run / CAPTION_FILE).exists()
+    assert not list(run.glob("legenda.*vtt")) and not list(run.glob("legenda.*srt"))
+
+
+def test_keep_raw_keeps_the_subtitle(tmp_path, monkeypatch):
+    code, run, _, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(caption=["ok"]), "--keep-raw")
+    assert code == 0 and (run / "legenda.vtt").exists()

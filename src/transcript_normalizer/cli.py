@@ -39,6 +39,7 @@ from .languages import LanguageNotFound
 from .ingest import fetch as ingest_fetch
 from .runs import (
     ANNOTATIONS_FILE,
+    CAPTION_FILE,
     CORRECTIONS_FILE,
     NORMALIZED_FILE,
     PENDING_FILE,
@@ -459,7 +460,50 @@ def keep_original(caption: Path, out_dir: Path) -> Path:
     return target
 
 
+#: Subtitle files `normalize` converts into a run's legenda.txt first.
+SUBTITLE_SUFFIXES = (".srt", ".vtt")
+
+
+def is_subtitle(path: Path) -> bool:
+    return Path(path).suffix.lower() in SUBTITLE_SUFFIXES
+
+
+def caption_run(caption: Path, out: Path | None = None) -> Path:
+    """The run directory `normalize <caption>` writes into, without writing anything.
+
+    A .srt or .vtt goes to `runs/<stem>/`; a legenda.txt follows D-018.
+    """
+    caption = Path(caption)
+    if is_subtitle(caption):
+        return Path(out) if out is not None else runs_root() / caption.stem
+    return run_dir(caption, out, read_caption(caption).header_field("URL"))
+
+
+def convert_subtitle(subtitle: Path, out: Path | None = None) -> Path:
+    """A .srt or .vtt the user already has, as `runs/<stem>/legenda.txt`.
+
+    The same converter fetch uses, with a header that names the file. The
+    subtitle itself is left where it is.
+    """
+    from .ingest.header import file_header
+    from .ingest.subtitles import subtitle_to_lines
+
+    subtitle = Path(subtitle)
+    target = caption_run(subtitle, out)
+    target.mkdir(parents=True, exist_ok=True)
+    body = subtitle_to_lines(subtitle.read_text(encoding="utf-8-sig"), subtitle.suffix)
+    caption = target / CAPTION_FILE
+    caption.write_text(file_header(subtitle.name, subtitle.stem) + body + "\n", encoding="utf-8")
+    return caption
+
+
 def run_normalize(args: argparse.Namespace) -> int:
+    if not args.caption.exists():
+        print(f"no caption at {args.caption}; run fetch first", file=sys.stderr)
+        return 1
+    if is_subtitle(args.caption):
+        args.caption = convert_subtitle(args.caption, args.out)
+        print(f"converted to {args.caption}")
     if not args.pack.exists():
         print(f"no pack at {args.pack}", file=sys.stderr)
         if args.pack == default_pack():
@@ -518,7 +562,7 @@ def run_normalize(args: argparse.Namespace) -> int:
     (out_dir / REPORT_FILE).write_text(text, encoding="utf-8")
     if args.summary:
         print_summary(annotations, normalized)
-    else:
+    elif not args.quiet:
         print(text, end="")
 
     if args.gold_draft_used:
@@ -576,7 +620,11 @@ def shown(path: Path) -> str:
 
 
 def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("caption", type=Path, help="caption file, e.g. legenda.txt")
+    parser.add_argument(
+        "caption",
+        type=Path,
+        help="caption file: a legenda.txt, or a .srt or .vtt (converted into runs/<stem>/ first)",
+    )
     parser.add_argument(
         "--pack",
         type=Path,
@@ -620,6 +668,12 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--summary",
         action="store_true",
         help="print three counters instead of the full report; report.txt is unchanged",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="print neither the report nor the counters (the menu, when it has just shown them); "
+        "report.txt is unchanged",
     )
     parser.add_argument(
         "--allow-generic",
@@ -690,4 +744,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if getattr(args, "gold_draft_used", False):
         args.corrections = True
-    return args.run(args)
+    try:
+        return args.run(args)
+    except FileNotFoundError as error:  # a message, never a traceback
+        print(f"no file at {error.filename or error}", file=sys.stderr)
+        return 1

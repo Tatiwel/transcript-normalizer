@@ -110,3 +110,21 @@ def speech_header(
             "",
         ]
     )
+
+
+def file_header(file_name: str, title: str, converted: str | None = None) -> str:
+    """The header of a caption converted from a .srt or .vtt the user already had."""
+    return "\n".join(
+        [
+            "# Legenda convertida de arquivo, material bruto para ingestao",
+            "#",
+            "# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.",
+            f"# Titulo: {title}",
+            f"# Arquivo: {file_name}",
+            f"# Convertido em: {converted or _today()}",
+            "#",
+            "# Cada linha comeca com o timestamp mm:ss. O timestamp e a",
+            "# procedencia de qualquer afirmacao extraida daqui.",
+            "",
+        ]
+    )

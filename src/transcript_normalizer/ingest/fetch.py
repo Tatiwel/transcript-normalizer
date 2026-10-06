@@ -423,7 +423,12 @@ def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Ou
         caption_header(meta, args.url, source, code, step=step.header()) + body + "\n",
         encoding="utf-8",
     )
-    out.info(f"subtitle: {subtitle}")
+    # legenda.txt holds everything the subtitle had that the tool reads; the
+    # raw file stays only when asked for.
+    if getattr(args, "keep_raw", False):
+        out.info(f"subtitle: {subtitle}")
+    else:
+        subtitle.unlink()
     return step
 
 
@@ -482,6 +487,11 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--list", action="store_true", help="only list the caption languages available"
+    )
+    parser.add_argument(
+        "--keep-raw",
+        action="store_true",
+        help="keep the downloaded legenda.vtt or .srt; by default it is deleted once converted",
     )
 
 

@@ -35,8 +35,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      # Install the package and the dev group (pytest, rich) from uv.lock, so CI
-      # tests the same versions a developer has. No [ingest] extra: the tests
+      # Install the package and the dev group from uv.lock, so CI tests the
+      # same versions a developer has. The dev group carries every extra
+      # ([ingest], so [captions] and [menu] too) and pytest. The tests still
       # replace yt-dlp and faster-whisper with fakes (tests/fetch_fakes.py).
       - name: Install
         run: uv sync --locked
