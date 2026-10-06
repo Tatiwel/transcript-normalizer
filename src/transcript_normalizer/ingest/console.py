@@ -54,21 +54,25 @@ class Output:
     # ------------------------------------------------------------- time
 
     def countdown(self, seconds: float, message: str, sleep: Callable[[float], None]) -> None:
-        """Wait `seconds`, showing how long is left."""
+        """Wait `seconds` before a retry, saying how long, one second at a time.
+
+        The wait is real (D-036: 2 s, then 4 s); the line stays on screen, so a
+        person sees that it waited, not three attempts back to back.
+        """
         if not self._console:
-            print(f"   {message}, waiting {seconds:g}s", file=self.stream)
+            print(f"   {message}, retrying in {seconds:g} s", file=self.stream)
             sleep(seconds)
             return
         from rich.live import Live
 
         left = seconds
-        with Live(console=self._console, transient=True) as live:
+        with Live(console=self._console, transient=False, auto_refresh=False) as live:
             while left > 0:
-                live.update(f"  [yellow]{message}[/], retrying in {left:.0f}s")
+                live.update(f"  [yellow]{message}[/], retrying in {left:.0f} s", refresh=True)
                 step = min(1.0, left)
                 sleep(step)
                 left -= step
-        self._console.print(f"  [yellow]{message}[/], retrying now")
+            live.update(f"  [yellow]{message}[/], waited {seconds:g} s, retrying", refresh=True)
 
     @contextmanager
     def progress(self, total: float, description: str) -> Iterator[Callable[[float], None]]:

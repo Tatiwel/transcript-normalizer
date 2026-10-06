@@ -84,6 +84,8 @@ class Option:
     examples: tuple[str, ...] = ()
     value: object = None
     key: str = ""  # what to type in plain text; a number when empty
+    help: str = ""  # what `?` prints: a longer entry than the description
+    command: str = ""  # the equivalent command, shown under `help`
 
     @property
     def result(self):
@@ -91,11 +93,19 @@ class Option:
 
 
 def explain(options: list[Option]) -> None:
-    """`?`: one line per option."""
+    """`?`: each option's help entry, aligned like `help` (D-051), with its
+    command; the one-line description when an option has no entry."""
+    from .helptext import entries, width
+
+    rows = [(o.label, o.help or o.description, *([o.command] if o.command else [])) for o in options]
+    rows = [row for row in rows if row[1]]
+    print()
+    for line in entries(rows, width()):
+        print(line)
     for o in options:
-        say("  ", mark(o.label, "need"), f": {o.description}" if o.description else "")
         for line in o.examples:
             say(mark(f"      {line}", "hint"))
+    print()
 
 
 def interactive_terminal() -> bool:

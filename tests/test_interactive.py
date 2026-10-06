@@ -77,8 +77,13 @@ def test_a_key_not_on_the_menu_is_asked_again(tmp_path, monkeypatch, capsys):
 
 
 def test_question_mark_explains_each_option_and_asks_again(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("COLUMNS", "200")
     _, out, _ = menu(tmp_path, monkeypatch, capsys, ["?", "q"])
-    assert "  Normalize a run: fix domain terms in a fetched caption" in out
+    # The help entries (help's MENU section), not the one-line descriptions again.
+    entry = next(a for a in interactive.ITEMS if a.key == "2")
+    assert f"  {entry.label}" in out and entry.help in out
+    assert f"`{entry.command}`" in out
+    assert "  Quit" in out and "leave the menu" in out
     assert out.count("What would you like to do?") == 1  # the same question, not a new menu
 
 
@@ -338,3 +343,25 @@ def test_multi_select_and_confirm_go_through_questionary(fake_questionary):
     assert kind == "checkbox" and [c.checked for c in asked["choices"]] == [False, True, False]
     assert "space select" in asked["instruction"]
     assert kind2 == "confirm"
+
+
+def test_question_mark_in_real_questionary_explains_then_asks_again(monkeypatch, capsys):
+    """The `?` key reaches our binding through prompt_toolkit, not just the fake."""
+    questionary = pytest.importorskip("questionary")
+    import functools
+
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    monkeypatch.setenv("COLUMNS", "120")
+    monkeypatch.setattr(prompts, "interactive_terminal", lambda: True)
+    with create_pipe_input() as keys:
+        monkeypatch.setattr(questionary, "select", functools.partial(questionary.select, input=keys, output=DummyOutput()))
+        options = interactive.menu_options()
+        keys.send_text("?")  # explain
+        keys.send_text("\x1b[A\r")  # then: up (to Quit, the last), enter
+        assert prompts.select("What would you like to do?", options) == "q"
+        keys.send_text("\x1b")  # Esc goes back
+        assert prompts.select("What would you like to do?", options) is None
+    out = capsys.readouterr().out
+    assert "`transcript-normalizer fetch <url|file>`" in out and "leave the menu" in out

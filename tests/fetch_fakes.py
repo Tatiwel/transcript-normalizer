@@ -107,7 +107,7 @@ class Info:
 class FakeWhisper:
     """What faster-whisper's model returns: segments, and the audio's length."""
 
-    def __init__(self, model):
+    def __init__(self, model, out=None):
         self.model = model
 
     def transcribe(self, audio, **options):

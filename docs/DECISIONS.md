@@ -482,6 +482,20 @@ A silent logger keeps yt-dlp from printing its own copy of an error. The error c
 
 `fetch --check` prints yt-dlp, curl_cffi and faster-whisper, each with its version or "not installed", and exits 0. The versions are read from the modules, since a frozen build may lack the package metadata. The release workflow's smoke test runs it: yt-dlp must be there in both flavors, faster-whisper only in `full`. Then it runs `fetch --list https://youtu.be/4wCtn8BWR4o`. A track list or an HTTP 429 passes, and so does YouTube's bot check: datacenter runners get it, and it still comes from yt-dlp. A traceback or an argparse error fails. Checked locally against a lite executable built from this code: `fetch --check`, `fetch --list` and a full caption download (`pt-orig`, 511 lines) all work, where the 0.4.2 build failed with `invalid choice: 'yt_dlp'`.
 
+## D-058 Executables are built from the lock
+
+The release workflow builds each executable from uv.lock (`uv sync --locked --no-dev --no-editable --extra <extra>`, then PyInstaller on top), never from a fresh resolve. pyproject.toml gives faster-whisper and av upper bounds, so a fresh resolve cannot pair them wrongly either. The full executable proves, before release, that it can decode audio.
+
+The bug: in 0.4.3's full build, step 2 failed with `TypeError: open() got an unexpected keyword argument 'metadata_errors'`. It was seen by a fresh Windows user. The workflow installed with `uv pip install ".[ingest]"`, which ignores the lock and took the newest of everything. That paired faster-whisper 1.2.1, which calls `av.open(..., metadata_errors=...)`, with av 19.0.1, which no longer accepts the argument. The lock has av 18.1.0. Reproduced locally on Linux, building as the 0.4.3 workflow did: the full executable failed the same way transcribing a two-second WAV with the `tiny` model. Built from the lock as the workflow now does, the same executable decodes it, `fetch --selftest-audio` reports 32000 samples, and the transcription finishes.
+
+The bounds are `faster-whisper>=1.0,<1.3` and `av>=11,<19`. A hidden `fetch --selftest-audio FILE` decodes FILE with faster-whisper's `decode_audio` and prints the sample count: no model, no network. The release workflow runs it inside each full executable on `tests/data/two-seconds.wav` (a 440 Hz tone, 16 kHz, 2 s) and expects 32000.
+
+Field fixes in the same release, from the same user:
+- `?` on a menu question prints each option's help entry, with its command (help's MENU section). It used to print the one-line descriptions the menu already showed, which looked like a re-render. Tested against real questionary through prompt_toolkit's pipe input, not only the fake.
+- Step 1's failure on the menu's path is said in plain words, with no flags named: "YouTube is limiting downloads right now (HTTP 429).", "This video has no caption.", or yt-dlp's own message for anything else. The question about local speech recognition follows. When the menu moves on to step 2, the second fetch skips the title, channel and duration (a hidden `--no-video-info`).
+- The backoff of D-036 waited, but the rich countdown was transient: only "retrying now" stayed on screen, which read as three attempts back to back. The countdown now stays ("retrying in 4 s", then "waited 4 s, retrying"). A fake-clock test checks that the attempts start at 0, 2 and 6 s.
+- Hugging Face is silenced before the model loads: `HF_HUB_DISABLE_SYMLINKS_WARNING=1`, `HF_HUB_VERBOSITY=error`, and its UserWarnings filtered. A model not yet in the cache is downloaded by fetch itself, with one line of its own, "downloading the speech model (about 1.5 GB, first time only)…", and a rich progress bar on a terminal (none in a pipe). faster-whisper's own download shows nothing.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

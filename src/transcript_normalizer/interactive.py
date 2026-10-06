@@ -58,9 +58,10 @@ def separator() -> None:
 
 
 def menu_options() -> list[Option]:
-    return [Option(a.label, a.description, value=a.key, key=a.key) for a in ITEMS] + [
-        Option(QUIT.label, "", value=QUIT.key, key=QUIT.key)
-    ]
+    return [
+        Option(a.label, a.description, value=a.key, key=a.key, help=a.help, command=a.command)
+        for a in ITEMS
+    ] + [Option(QUIT.label, "", value=QUIT.key, key=QUIT.key, help="leave the menu")]
 
 
 def first_screen() -> None:
@@ -136,13 +137,14 @@ def fetch() -> None:
         code = run_command(["fetch", source])
     else:
         code = run_command(["fetch", source, "--caption-only"])
-        if code == 1:
+        if code == 1:  # fetch has said why, in plain words
             if not missing_extra("faster_whisper") and prompts.confirm(
-                "No platform caption could be had. Transcribe the audio on this computer instead?",
+                "Transcribe the audio on this computer instead?",
                 default=True,
                 hint="downloads the audio and runs speech recognition; this can take minutes",
             ):
-                code = run_command(["fetch", source, "--whisper"])
+                # The title, channel and duration were shown by the first call.
+                code = run_command(["fetch", source, "--whisper", "--no-video-info"])
     if code != 0:
         error(f"fetch did not finish (exit {code})")
         return

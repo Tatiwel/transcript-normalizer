@@ -105,15 +105,19 @@ jobs:
           echo "NAME=$name" >> "$GITHUB_ENV"
           echo "ASSET=$name.$ext" >> "$GITHUB_ENV"
 
-      # A clean virtual environment with the package, the extra this flavor
-      # needs, and PyInstaller. `lite` takes [captions] (yt-dlp, curl_cffi, and
-      # [menu]: rich and questionary); `full` takes [ingest] (the same, plus
-      # faster-whisper).
+      # The build environment, from uv.lock: exactly the versions the tests ran
+      # with, never a fresh resolve. `uv pip install ".[extra]"` ignored the
+      # lock and paired faster-whisper 1.2 with av 19, which broke audio
+      # decoding in 0.4.3's full build (D-058). `lite` takes [captions]
+      # (yt-dlp, curl_cffi, and [menu]: rich and questionary); `full` takes
+      # [ingest] (the same, plus faster-whisper). --no-dev leaves pytest out;
+      # --no-editable installs the package itself, not a link to src/.
+      # PyInstaller is a build tool, not a dependency, so it is added on top.
       - name: Install
         run: |
-          uv venv
           if [ "$FLAVOR" = lite ]; then extra=captions; else extra=ingest; fi
-          uv pip install pyinstaller ".[$extra]"
+          uv sync --locked --no-dev --no-editable --extra "$extra"
+          uv pip install pyinstaller
 
       # Build one executable file. What each flag is for:
       #   --onefile              one file to download and double-click
@@ -157,6 +161,15 @@ jobs:
           export TRANSCRIPT_NORMALIZER_HOME="$RUNNER_TEMP/tn-home"
           "$exe" fixtures/R2Qgz8tFWVI/legenda.txt
           test -f "$TRANSCRIPT_NORMALIZER_HOME/runs/R2Qgz8tFWVI/normalized.txt"
+
+      # D-058: the audio stack decodes inside the full executable, with no
+      # model and no network: two seconds of a 440 Hz tone, 32000 samples.
+      - name: Audio decodes (full)
+        if: matrix.flavor == 'full'
+        run: |
+          exe="dist/$NAME"; [ "$RUNNER_OS" = Windows ] && exe="$exe.exe"
+          "$exe" fetch --selftest-audio tests/data/two-seconds.wav | tee selftest.txt
+          grep -q 'decoded 32000 samples' selftest.txt
 
       # D-057: the fetch tools are inside the executable and importable.
       # yt-dlp in both flavors; faster-whisper only in `full`.

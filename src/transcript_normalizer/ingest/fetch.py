@@ -350,11 +350,75 @@ def download_audio(url: str, target: Path, out: Output | None = None) -> Path:
 # --------------------------------------------------------------------------- speech
 
 
-def load_whisper(model: str):
+#: What `fetch` says before the first download of a model, by size.
+MODEL_SIZES = {"tiny": "75 MB", "base": "145 MB", "small": "485 MB", "medium": "1.5 GB",
+               "large-v2": "3 GB", "large-v3": "3 GB"}
+
+
+def quiet_hugging_face() -> None:
+    """Hugging Face's warnings say nothing a person can act on here (symlinks on
+    Windows, unauthenticated requests). Silenced before anything imports it."""
+    import os
+    import warnings
+
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+    os.environ.setdefault("HF_HUB_VERBOSITY", "error")
+    warnings.filterwarnings("ignore", category=UserWarning, module=r"huggingface_hub(\.|$)")
+    warnings.filterwarnings("ignore", message=r".*rich is experimental.*")
+
+
+def model_path(model: str, out: Output) -> str:
+    """The model's local folder, downloading it the first time with one line of
+    our own and a progress bar. faster-whisper's own download shows nothing."""
+    from faster_whisper.utils import _MODELS, download_model  # the ingest extra
+
+    try:
+        return download_model(model, local_files_only=True)
+    except Exception:  # not in the cache yet
+        pass
+    size = MODEL_SIZES.get(model, "")
+    out.info(f"downloading the speech model ({f'about {size}, ' if size else ''}first time only)…")
+    import huggingface_hub
+
+    tqdm_class = None
+    if out.fancy:
+        from tqdm.rich import tqdm as tqdm_class  # a rich progress bar
+    else:  # a pipe or a file: no bar at all, rather than tqdm's carriage returns
+        from huggingface_hub.utils import disable_progress_bars
+
+        disable_progress_bars()
+    return huggingface_hub.snapshot_download(
+        _MODELS.get(model, model),
+        # The files faster-whisper's download_model asks for.
+        allow_patterns=["config.json", "preprocessor_config.json", "model.bin", "tokenizer.json", "vocabulary.*"],
+        tqdm_class=tqdm_class,
+    )
+
+
+def load_whisper(model: str, out: Output | None = None):
     """The faster-whisper model. Replaced in tests by a fake transcriber."""
+    quiet_hugging_face()
     from faster_whisper import WhisperModel  # the ingest extra, imported lazily
 
-    return WhisperModel(model, device="cpu", compute_type="int8")
+    return WhisperModel(model_path(model, out or Output()), device="cpu", compute_type="int8")
+
+
+def run_selftest_audio(path: Path) -> int:
+    """`fetch --selftest-audio FILE` (hidden): decode FILE the way transcription
+    does, with no model and no network. The release workflow runs it inside the
+    full executable to prove its audio stack works (D-058)."""
+    try:
+        from faster_whisper import decode_audio  # the ingest extra
+    except ImportError as error:
+        print(f"selftest: faster-whisper does not import: {error}", file=sys.stderr)
+        return 1
+    try:
+        samples = decode_audio(str(path))
+    except Exception as error:
+        print(f"selftest: decoding {path} failed: {type(error).__name__}: {error}", file=sys.stderr)
+        return 1
+    print(f"selftest: decoded {len(samples)} samples from {path.name}")
+    return 0
 
 
 def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) -> str:
@@ -367,8 +431,8 @@ def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) ->
     recognition invents, and it is mitigable.
     """
     out = out or Output()
-    out.info(f"loading speech model '{model}' (the first run downloads it)")
-    engine = load_whisper(model)
+    out.info(f"loading speech model '{model}'")
+    engine = load_whisper(model, out)
     segments, info = engine.transcribe(
         str(audio), language=lang, vad_filter=True, condition_on_previous_text=False
     )
@@ -534,6 +598,10 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--list", action="store_true", help="only list the caption languages available"
     )
+    # Hidden: for the menu, which runs fetch twice when it moves from step 1 to
+    # step 2 (D-053), and for the release workflow's smoke test (D-058).
+    parser.add_argument("--no-video-info", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--selftest-audio", metavar="FILE", type=Path, help=argparse.SUPPRESS)
     parser.add_argument(
         "--keep-raw",
         action="store_true",
@@ -571,6 +639,11 @@ def tool_version(module: str) -> str | None:
     return str(version)
 
 
+#: What step 1's failure means, said to a person (the menu's path, --caption-only).
+NO_CAPTION = "This video has no caption."
+TOO_MANY_REQUESTS = "YouTube is limiting downloads right now (HTTP 429)."
+
+
 def run_check() -> int:
     """`fetch --check`: one line per tool, installed or not. Always exits 0."""
     width = max(len(name) for _, name, _ in CHECKED)
@@ -584,6 +657,8 @@ def run(args: argparse.Namespace) -> int:
     """Fetch a caption for a video: the platform's, or local speech recognition (D-036)."""
     if args.check:
         return run_check()
+    if args.selftest_audio:
+        return run_selftest_audio(args.selftest_audio)
     if not args.url:
         print("fetch needs a video url or a file (or --check)", file=sys.stderr)
         return 2
@@ -610,10 +685,11 @@ def run(args: argparse.Namespace) -> int:
     except FetchError as error:
         print(f"could not read the video: {error}", file=sys.stderr)
         return 1
-    out.info(f"title: {meta.title}")
-    out.info(f"channel: {meta.channel}")
-    out.info(f"published: {meta.published}")
-    out.info(f"duration: {meta.duration // 60}min{meta.duration % 60:02d}s")
+    if not args.no_video_info:  # the menu's second call has shown it already
+        out.info(f"title: {meta.title}")
+        out.info(f"channel: {meta.channel}")
+        out.info(f"published: {meta.published}")
+        out.info(f"duration: {meta.duration // 60}min{meta.duration % 60:02d}s")
 
     if args.list:
         # D-045: the source track first and in full; the translations may be summarised.
@@ -638,22 +714,21 @@ def run(args: argparse.Namespace) -> int:
             step = step_caption(args, meta, target, out)
         except NoCaption as error:
             failures.append(str(error))
-            reason = "sem legenda na plataforma"
+            reason, plainly = "sem legenda na plataforma", NO_CAPTION
         except RateLimited as error:
             failures.append(str(error))
             reason = f"legenda falhou: HTTP 429 em {MAX_ATTEMPTS} tentativas"
+            plainly = TOO_MANY_REQUESTS
         except FetchError as error:
             failures.append(str(error))
-            reason = "legenda falhou"
+            reason, plainly = "legenda falhou", f"The caption could not be downloaded: {error}"
         if step is None:
-            out.warn(failures[-1])
             if args.caption_only:
-                print(
-                    f"no platform caption, and --caption-only forbids local speech "
-                    f"recognition: {failures[-1]}",
-                    file=sys.stderr,
-                )
+                # Step 1 was all that was asked for: say why in plain words,
+                # without naming flags (the menu asks its next question after).
+                print(plainly, file=sys.stderr)
                 return 1
+            out.warn(failures[-1])
 
     if step is None:
         out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.4
+
+- Fix for the full executables: transcribing failed with "open() got an unexpected keyword argument 'metadata_errors'". The build had paired faster-whisper with a newer av it does not support. Executables are now built from the lock, the two have upper bounds, and every full executable is checked to decode audio before release (D-058).
+- `?` in the menu explains each option with its help entry and command, instead of repeating the menu.
+- When the caption cannot be had, the menu says why in plain words (HTTP 429, or no caption) before asking about transcription, and does not show the video's details twice.
+- The retry countdown stays on screen ("retrying in 4 s"), so the waits between attempts are visible.
+- No Hugging Face warnings. The first model download says so in one line ("downloading the speech model (about 1.5 GB, first time only)…"), with a progress bar.
+
 ## 0.4.3
 
 - Fix for the executables: `fetch` failed in every frozen build with "invalid choice: 'yt_dlp'", because it ran yt-dlp as a subprocess of the executable itself. yt-dlp now runs in-process through its Python API (D-057).
