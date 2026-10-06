@@ -59,7 +59,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
         ]),
         ("COMMANDS", [
             ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally"),
-            ("normalize <legenda.txt>", "fix domain terms; --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack"),
+            ("normalize <legenda.txt>", "fix domain terms (a .srt or .vtt is converted first); --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack; --force when the pack does not seem to fit"),
             ("list", "every run under runs/, with its date and title"),
             ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),
             ("pack propose [--pack <name>]", "contribute what your reviews taught the tool: shows it, asks, then opens a prefilled issue"),

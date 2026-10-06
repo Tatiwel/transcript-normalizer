@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.2
+
+- Pack fit (D-054): a pack that names fewer than three of its terms with confidence does not fit the transcript, and nothing is applied: `normalized.txt` stays as the input, with a message saying so. `--force` applies anyway. The menu asks "What is this video about?" before normalizing: your packs, or "none / another area".
+- A packs repository (D-055): packs live in [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), each with its maintainers. `pack list`, `pack install <name>` (checked against the index's sha256) and `pack update`. The bundled financas-ptbr stays the offline default.
+- Contributing back (D-056): `pack propose` shows what your reviews taught the tool (term, form, decision; never the transcript), writes `contributions/<pack>-<date>.yaml` and opens a prefilled issue on the packs repository. The menu offers it after a review.
+- `normalize` on a missing file says "no caption at <path>; run fetch first" instead of a traceback; so does any missing file.
+- `normalize` takes a `.srt` or `.vtt`, converted into `runs/<stem>/legenda.txt`. The menu's "Normalize a run" takes a typed path too.
+- The menu offers "Open the folder?" after normalize or review, and prints the counters once when it goes straight from one to the other.
+- `fetch` deletes the downloaded `.vtt` or `.srt` once converted; `--keep-raw` keeps it.
+- For contributors: `uv sync` keeps every extra (the `dev` group includes `[ingest]`).
+
 ## 0.4.1
 
 - A lower-friction menu (D-053): arrow keys and multi-select with the new `[menu]` extra (rich, questionary), numbered text without it. A first screen with the version, where your files are and the typical flow. Runs are picked from a list, and each step offers the next one. Esc or empty input goes back, and `?` explains any question.

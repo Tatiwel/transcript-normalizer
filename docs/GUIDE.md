@@ -4,7 +4,7 @@ For three readers at once: you want cleaner transcripts and nothing else; you st
 
 **Start here** (section 2 has the details):
 - *I just want to use it:* download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it.
-- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"`.
+- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"`.
 - *I want to contribute:* `git clone https://github.com/Tatiwel/transcript-normalizer`, then [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 1. What it does, and what it does not
@@ -20,7 +20,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 **I use Python.**
 
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"
 ```
 
 Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory. The package is not on PyPI yet; the wheel is also attached to each Release.
@@ -30,11 +30,11 @@ Without an extra you get the normalizer alone (a few MB): call it from your own 
 ```
 git clone https://github.com/Tatiwel/transcript-normalizer
 cd transcript-normalizer
-uv sync --extra ingest
+uv sync
 uv run pytest -q
 ```
 
-Then read [CONTRIBUTING.md](../CONTRIBUTING.md).
+`uv sync` installs every extra, through the `dev` group. Then read [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Whichever way: no ffmpeg is needed (faster-whisper decodes audio itself). To read YouTube, recent yt-dlp versions need a JavaScript runtime such as Deno; if YouTube downloads fail with a message about JavaScript, install one.
 
@@ -43,7 +43,7 @@ Whichever way: no ffmpeg is needed (faster-whisper decodes audio itself). To rea
 **The menu.** Double-click the program, or type `transcript-normalizer` with nothing after it in a terminal. With the `[menu]` extra (every executable has it) you move with the arrow keys:
 
 ```
-transcript-normalizer 0.4.1
+transcript-normalizer 0.4.2
 Your files: /home/ana/Documents/transcript-normalizer
 Typical flow: 1 fetch → 2 normalize → 3 review
 Keyboard: ↑↓ move · enter confirm · esc back · ? explain
@@ -57,7 +57,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Quit
 ```
 
-Each step offers the next one: after a fetch, "Next: normalize this run now?"; after normalizing, three counters and "Next: review the 6 uncertain one(s) now?". The result is usable without the review; reviewing makes the next video better. Esc or empty input on any question goes back, and `?` explains its options. Without the extra, or without a terminal, the same questions come as numbered lines. Every menu item runs one of the commands below, so anything you do in the menu works in a script (D-051, D-053). What normalizing shows in the menu, for the video below:
+Each step offers the next one: after a fetch, "Next: normalize this run now?"; then "What is this video about?", a list of your packs and "none / another area" (section 6); after normalizing, three counters and "Next: review the 6 uncertain one(s) now?". The result is usable without the review; reviewing makes the next video better. After a review the menu offers to contribute what you taught the tool (section 6), and at the end "Open the folder?" opens the run's folder in your file manager. "Normalize a run" also takes a file you already have: choose "A file…" and type its path, a `legenda.txt` or a `.srt` or `.vtt` subtitle. Esc or empty input on any question goes back, and `?` explains its options. Without the extra, or without a terminal, the same questions come as numbered lines. Every menu item runs one of the commands below, so anything you do in the menu works in a script (D-051, D-053). What normalizing shows in the menu, for the video below:
 
 ```
 corrected 24  (semiga → CEMIG, Semig → CEMIG)
@@ -76,10 +76,10 @@ transcript-normalizer runs/4wCtn8BWR4o/legenda.txt
 transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 ```
 
-`fetch` takes the platform's caption (the original-language track, never an automatic translation, D-045) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The second command normalizes; the third does the same and then asks you about what it was unsure of. `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
+`fetch` takes the platform's caption (the original-language track, never an automatic translation, D-045) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The downloaded `.vtt` or `.srt` is deleted once converted into `legenda.txt`; `--keep-raw` keeps it. The second command normalizes, and takes a `.srt` or `.vtt` as well, which it converts into `runs/<file-name>/legenda.txt` first; the third does the same and then asks you about what it was unsure of. `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
 
 ```
-runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.3
+runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.4
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
@@ -122,7 +122,7 @@ Everything goes under `runs/<video-id>/` in the current directory; nothing is wr
 ```json
 {"start": 9141, "end": 9156, "original": "dívida alíquida", "replacement": "dívida líquida",
  "term": "dívida líquida", "rule": "term:variant", "kind": "correction", "band": "high",
- "score": 100, "applied": true, "pack_version": "0.3.3"}
+ "score": 100, "applied": true, "pack_version": "0.3.4"}
 ```
 
 `kind` is `correction` or `alias`. `band` is how sure the tool is: **high** (a listed form: applied), **medium** (a close guess: applied, and listed in `pending.txt` for you to confirm), **low** (a faint resemblance: only recorded, never applied) (D-011).
@@ -150,9 +150,27 @@ If you selected any, a second screen asks which of those the speaker really said
     Osvaldo Cruz -> Oswaldo Cruz? [y]es / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no:
 ```
 
-## 6. Your own domain
+## 6. Packs
 
-A pack is a YAML file. Here is a first biomedicine pack with six terms, one of each kind you are likely to need:
+**Which pack, and whether it fits.** A pack is for one field. Applied to a video from another field, it can only do harm: it finds the odd short word that looks like one of its terms, and every change it makes there is wrong (D-035). So before applying anything, the tool counts how many of the pack's terms it found with confidence. Fewer than three, and it changes nothing (D-054):
+
+```
+pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing applied. Use --force to apply anyway.
+```
+
+`normalized.txt` is then the transcript as it was. `--force` applies the pack anyway, for a short clip that really is from the field. In the menu, "What is this video about?" asks first: pick the pack, or "none / another area", which normalizes nothing.
+
+**Installing packs.** Packs live in their own repository, [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), one directory per pack, each with the people who maintain it (D-055). The finance pack also ships inside the tool, so it works offline.
+
+```
+transcript-normalizer pack list
+transcript-normalizer pack install financas-ptbr
+transcript-normalizer pack update
+```
+
+`pack install` puts the pack in your `packs/` after checking it against the checksum the repository publishes; from then on it is the one the tool uses, and the menu lists it. `pack update` installs newer versions, and leaves alone a pack you edited.
+
+**Your own domain.** A pack is a YAML file. Here is a first biomedicine pack with six terms, one of each kind you are likely to need:
 
 ```yaml
 # Biomedicina, pt-BR. 0.1.0: first terms, from one lecture.
@@ -199,7 +217,24 @@ transcript-normalizer aula.txt --pack packs/biomed-ptbr.yaml
   metiformina (1 occurrence) -> metformina
 ```
 
-Your answers in the review grow `packs/biomed-ptbr.learned.yaml`. When a learned entry has proven itself, move it into the pack by hand and bump the version; [CONTRIBUTING.md](../CONTRIBUTING.md) section 2 has the curation rules and how to measure a pack.
+Your answers in the review grow `packs/biomed-ptbr.learned.yaml`. When a learned entry has proven itself, move it into the pack by hand and bump the version; [CONTRIBUTING.md](../CONTRIBUTING.md) section 2 has the curation rules and how to measure a pack. To share a pack, propose it to the packs repository; its README says how.
+
+**Giving back.** What you teach the tool in a review stays in your learned layer. To offer it to everyone who uses the pack:
+
+```
+transcript-normalizer pack propose --pack financas-ptbr
+```
+
+```
+What would be contributed to financas-ptbr 0.3.4 (3), from packs/financas-ptbr.learned.yaml:
+  + variant   esse mig -> CEMIG
+  + alias     Klabinha -> Klabin
+  - rejected  saber se  (not Sabesp)
+Only these lines are sent: the term, the form and your decision, never the transcript.
+Contribute these? [y/N]
+```
+
+On a yes it writes `contributions/financas-ptbr-<date>.yaml` and opens a prefilled issue on the packs repository in your browser (or prints the link); you submit it there, and the pack's maintainers decide what goes in (D-056). The menu offers this after a review.
 
 ## 7. Another language
 
@@ -207,11 +242,11 @@ A pack declares its language (`language: pt-BR`), and a language module supplies
 
 ## 8. How good is it
 
-Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change (`uv run python scripts/measure.py`). With the pack that ships (0.3.3):
+Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change (`uv run python scripts/measure.py`). With the pack that ships (0.3.4):
 
 | video | rows to get right | right | missed | wrong changes |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 145 | 22 | 16 |
+| R2Qgz8tFWVI | 167 | 142 | 25 | 16 |
 | wxgFO_fyfXg | 222 | 211 | 11 | 10 |
 | 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
 | 4tTmY8Buask | 119 | 108 | 11 | 4 |
@@ -231,6 +266,7 @@ The limits, honestly:
 ## 9. Glossary
 
 - **pack**: the YAML list of terms the tool may touch, for one field and one language.
+- **pack fit**: whether a pack belongs to a transcript: at least three of its terms found with confidence, or nothing is applied.
 - **variant**: a form the recognizer produced instead of the term; it is corrected.
 - **alias**: another correct name of the term (ticker, brand, plural); recognized, never changed.
 - **band**: how sure a match is: high (applied), medium (applied and asked about), low (recorded only).

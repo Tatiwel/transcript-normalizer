@@ -1,6 +1,8 @@
 # Contributing
 
-Three things people outside the project add: a language, a domain pack, and a fixture that measures them. Each has a procedure below that you can follow without reading the code. `docs/DECISIONS.md` is the reason behind every rule here; decision numbers (D-0xx) point into it.
+Three things people outside the project add: a language, a domain pack, and a fixture that measures them. Each has a procedure below that you can follow without reading the code.
+
+**This repository is the engine; domain content lives in the packs repository.** Packs are proposed, reviewed and versioned in [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), one directory per pack, each with a `MAINTAINERS` file naming who reviews its changes (D-055). A change to a pack's terms goes there, not here; this repository never edits pack content. It keeps two kinds of copies: `src/transcript_normalizer/packs/financas-ptbr.yaml`, the offline default, taken from the packs repository at a released version, and the frozen `pack.yaml` of each fixture, which only a measurement changes. Section 2 below is how to build and curate a pack wherever it will live; the packs repository's README says how to propose one. A user's reviews reach the packs repository through `transcript-normalizer pack propose` (D-056). `docs/DECISIONS.md` is the reason behind every rule here; decision numbers (D-0xx) point into it.
 
 ## Contents
 
@@ -120,7 +122,7 @@ If a speaker actually said it, it is an alias. If it is the caption's mistake, i
 
 Learned entries match exactly only (D-025), so one confirmation never widens what fuzzy matching reaches. The file is personal and gitignored.
 
-**2.6 Promoting learned entries into the pack.** When a learned entry has proven itself, make it curated:
+**2.6 Promoting learned entries into the pack.** When a learned entry has proven itself, make it curated. For a pack from the packs repository, `transcript-normalizer pack propose --pack <name>` opens an issue there with your learned entries, and the pack's maintainers do the steps below. For your own pack:
 
 1. Move it from `packs/<name>.learned.yaml` into the pack: a `confirmed` variant into the term's `variants`, a learned alias into its `aliases`.
 2. Apply the curation rules in 2.4 before you move it; the learned layer does not.

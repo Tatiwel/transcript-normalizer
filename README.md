@@ -3,7 +3,7 @@
 Domain-term normalization for ASR transcripts and auto-captions.
 
 - **Just want to use it:** download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it; your files go to `Documents/transcript-normalizer/`.
-- **Use Python:** `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.0"`.
+- **Use Python:** `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"`.
 - **Want to contribute:** `git clone https://github.com/Tatiwel/transcript-normalizer`, `uv sync --extra ingest`, then [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **New here?** Read the guide: [docs/GUIDE.md](docs/GUIDE.md) (English) or [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) (português). It covers installing, a first run, reading the outputs, reviewing what the tool was unsure about and writing a pack for your own field.
@@ -27,14 +27,15 @@ The tool never asks "does this word exist?". It asks "does this stretch of text 
 
 ```
 transcript-normalizer fetch <url | file> [--caption-only | --whisper]
-transcript-normalizer <legenda.txt> [--pack <pack.yaml>] [--corrections] [--review | --confirm] [--summary]
+transcript-normalizer <legenda.txt | file.srt | file.vtt> [--pack <pack.yaml>] [--corrections] [--review | --confirm] [--summary] [--force]
 transcript-normalizer list
+transcript-normalizer pack list | install <name> | update | propose
 transcript-normalizer            # on a terminal, with no arguments: an interactive menu (D-051)
 ```
 
 `fetch` takes the platform's own caption with yt-dlp, retrying rate limits; if there is none, or it cannot be had, it transcribes the audio locally with faster-whisper (D-036). It writes `runs/<video-id>/legenda.txt` and `meta.yaml`, both recording which of the two produced the text. `--caption-only` never falls back; `--whisper` goes straight to local transcription. A local audio or video file works too: it goes straight to local transcription, into `runs/<file-stem>/` (D-038). It needs the optional extra: `uv sync --extra ingest`. No ffmpeg is needed: WebVTT is converted in Python, and faster-whisper decodes audio itself. Speech recognition is not the same as asking an AI provider to transcribe: it maps audio to text and does not fill a gap with something plausible.
 
-Normalizing reads `packs/financas-ptbr.yaml` in the current directory unless `--pack` names another; with no such file it uses the copy that ships in the package. Every output goes under `runs/<id>/` in the current directory, never beside the input:
+Normalizing reads `packs/financas-ptbr.yaml` in the current directory unless `--pack` names another; with no such file it uses the copy that ships in the package. A pack that names fewer than three of its terms with confidence does not fit the transcript, and nothing is applied unless `--force` (D-054). Packs live in [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs): `pack list` shows them, `pack install <name>` puts one in `packs/` after checking its sha256, `pack update` keeps them current (D-055), and `pack propose` offers what your reviews taught the tool back to that repository as a prefilled issue (D-056). Every output goes under `runs/<id>/` in the current directory, never beside the input:
 
 - `annotations.json` — the stand-off layer: every proposal with its band and its kind, `correction` or `alias` (D-020).
 - `normalized.txt` — the caption with the corrections substituted; aliases are left as they were said.
@@ -78,7 +79,7 @@ Measured on the fixture, with RapidFuzz plus a hand-curated variant list, a unit
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md) has the three procedures for adding a language, building a domain pack, and building a fixture that measures them.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the three procedures for adding a language, building a domain pack, and building a fixture that measures them. This repository is the engine; domain content (the packs) lives in [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), where each pack's maintainers review its changes.
 
 ## Test content
 

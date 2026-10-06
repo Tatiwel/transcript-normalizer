@@ -917,7 +917,7 @@ wheels = [
 
 [[package]]
 name = "transcript-normalizer"
-version = "0.4.1"
+version = "0.4.2"
 source = { editable = "." }
 dependencies = [
     { name = "platformdirs" },
