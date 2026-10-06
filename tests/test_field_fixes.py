@@ -29,7 +29,7 @@ def test_normalize_on_a_missing_file_says_run_fetch_first(tmp_path, monkeypatch,
     monkeypatch.chdir(tmp_path)
     assert cli.main(["normalize", "runs/nope/legenda.txt"]) == 1
     err = capsys.readouterr().err
-    assert err == "no caption at runs/nope/legenda.txt; run fetch first\n"
+    assert err == f"no caption at {Path('runs/nope/legenda.txt')}; run fetch first\n"  # backslashes on Windows
 
 
 def test_any_file_not_found_is_a_message_not_a_traceback(monkeypatch, capsys):
