@@ -1,8 +1,6 @@
-"""A fake yt-dlp and a fake transcriber, so fetch runs with no network (D-036)."""
+"""A fake yt-dlp API and a fake transcriber, so fetch runs with no network (D-036, D-057)."""
 
-import json
 import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,14 +10,20 @@ URL = f"https://www.youtube.com/watch?v={VIDEO_ID}"
 RATE_LIMITED = "ERROR: Unable to download video subtitles for 'pt': HTTP Error 429: Too Many Requests"
 
 
-class FakeYtDlp:
-    """Answers the three calls fetch makes: metadata, the caption, the audio.
+class DownloadError(Exception):
+    """What yt-dlp raises; fetch only reads its message."""
 
+
+class FakeYtDlp:
+    """The platform as yt-dlp's API sees it (D-057): metadata, captions, audio.
+
+    `open(params)` is what fetch calls in place of `yt_dlp.YoutubeDL(params)`.
     `caption` is what each caption download does, in order: "ok" writes a
     WebVTT, "429" fails rate-limited, anything else fails another way. The last
     entry repeats. `has_caption=False` offers no caption at all. `manual` and
     `automatic` are the track lists the platform reports (D-045); each caption
-    download is recorded in `downloads` as (flag, track).
+    download is recorded in `downloads` as (option, track), the option being
+    `writesubtitles` or `writeautomaticsub`. `params` keeps every option set.
     """
 
     def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",)):
@@ -30,37 +34,62 @@ class FakeYtDlp:
         self.automatic = tuple(automatic)
         self.calls: list[str] = []
         self.downloads: list[tuple[str, str]] = []
+        self.params: list[dict] = []
 
-    def __call__(self, args):
-        if "--dump-single-json" in args:
-            self.calls.append("metadata")
-            video = {
-                "id": VIDEO_ID,
-                "title": "Video sintetico de teste",
-                "uploader": "Canal de Teste",
-                "upload_date": "20260825",
-                "duration": 125,
-                "subtitles": {c: [{}] for c in self.manual} if self.has_caption else {},
-                "automatic_captions": {c: [{}] for c in self.automatic} if self.has_caption else {},
-            }
-            return subprocess.CompletedProcess(args, 0, json.dumps(video), "")
-        target = Path(args[args.index("--output") + 1]).parent
-        if "-f" in args:
-            self.calls.append("audio")
-            if not self.audio_ok:
-                return subprocess.CompletedProcess(args, 1, "", "ERROR: audio unavailable")
+    def open(self, params):
+        self.params.append(params)
+        return FakeYoutubeDL(self, params)
+
+    def info(self):
+        return {
+            "id": VIDEO_ID,
+            "title": "Video sintetico de teste",
+            "uploader": "Canal de Teste",
+            "upload_date": "20260825",
+            "duration": 125,
+            "subtitles": {c: [{}] for c in self.manual} if self.has_caption else {},
+            "automatic_captions": {c: [{}] for c in self.automatic} if self.has_caption else {},
+        }
+
+
+class FakeYoutubeDL:
+    """`yt_dlp.YoutubeDL`, as far as fetch uses it."""
+
+    def __init__(self, platform: FakeYtDlp, params: dict):
+        self.platform, self.params = platform, params
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def extract_info(self, url, download=True):
+        assert url == URL and download is False
+        self.platform.calls.append("metadata")
+        return self.platform.info()
+
+    def download(self, urls):
+        platform, params = self.platform, self.params
+        target = Path(params["outtmpl"]["default"]).parent
+        if "format" in params:
+            platform.calls.append("audio")
+            if not platform.audio_ok:
+                raise DownloadError("ERROR: audio unavailable")
             (target / "audio.m4a").write_bytes(b"\0" * 16)
-            return subprocess.CompletedProcess(args, 0, "", "")
-        self.calls.append("caption")
-        track = args[args.index("--sub-langs") + 1]
-        self.downloads.append((args[0], track))
-        outcome = self.caption.pop(0) if len(self.caption) > 1 else self.caption[0]
+            return 0
+        platform.calls.append("caption")
+        assert params["skip_download"] is True
+        option = "writesubtitles" if params["writesubtitles"] else "writeautomaticsub"
+        track = params["subtitleslangs"][0]
+        platform.downloads.append((option, track))
+        outcome = platform.caption.pop(0) if len(platform.caption) > 1 else platform.caption[0]
         if outcome == "ok":
             shutil.copy(VTT, target / f"legenda.{track}.vtt")
-            return subprocess.CompletedProcess(args, 0, "", "")
+            return 0
         if outcome == "429":
-            return subprocess.CompletedProcess(args, 1, "", RATE_LIMITED)
-        return subprocess.CompletedProcess(args, 1, "", f"ERROR: {outcome}")
+            raise DownloadError(RATE_LIMITED)
+        raise DownloadError(f"ERROR: {outcome}")
 
 
 @dataclass
@@ -94,7 +123,7 @@ def install(monkeypatch, fetch, ytdlp=None):
     """Put the fakes in place of yt-dlp, faster-whisper and the waits."""
     ytdlp = ytdlp or FakeYtDlp()
     waits: list[float] = []
-    monkeypatch.setattr(fetch, "run_ytdlp", ytdlp)
+    monkeypatch.setattr(fetch, "youtube_dl", ytdlp.open)
     monkeypatch.setattr(fetch, "missing_extra", lambda *modules: [])
     monkeypatch.setattr(fetch, "load_whisper", FakeWhisper)
     monkeypatch.setattr(fetch, "sleep", waits.append)

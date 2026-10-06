@@ -1,6 +1,5 @@
 """WebVTT is converted in Python, so the caption path needs no ffmpeg."""
 
-import subprocess
 from pathlib import Path
 
 from transcript_normalizer import parse_caption
@@ -61,20 +60,30 @@ def test_the_dispatcher_picks_the_parser_from_the_suffix():
 
 def test_the_caption_download_does_not_ask_ytdlp_to_convert(tmp_path):
     # A conversion flag would hand the job to ffmpeg; the caption path must not.
-    args = fetch.caption_args(URL, "pt", "automatica", tmp_path)
-    assert not [a for a in args if a.startswith("--convert")]
-    assert "--write-auto-subs" in args
-    assert args[args.index("--sub-langs") + 1] == "pt"
-    assert fetch.caption_args(URL, "pt", "manual", tmp_path)[0] == "--write-subs"
+    params = fetch.caption_params("pt", "automatica", tmp_path)
+    assert not [k for k in params if "convert" in k or k == "postprocessors"]
+    assert params["writeautomaticsub"] is True and params["writesubtitles"] is False
+    assert params["subtitleslangs"] == ["pt"] and params["skip_download"] is True
+    assert fetch.caption_params("pt", "manual", tmp_path)["writesubtitles"] is True
 
 
 def test_a_downloaded_vtt_is_picked_up_and_renamed(tmp_path, monkeypatch):
     """yt-dlp writes legenda.<lang>.vtt; the fixed name is what gets converted."""
-    def fake_run(args):
-        (tmp_path / "legenda.pt.vtt").write_text(VTT.read_text("utf-8"), "utf-8")
-        return subprocess.CompletedProcess(args, 0, "", "")
+    class YoutubeDL:
+        def __init__(self, params):
+            pass
 
-    monkeypatch.setattr(fetch, "run_ytdlp", fake_run)
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def download(self, urls):
+            (tmp_path / "legenda.pt.vtt").write_text(VTT.read_text("utf-8"), "utf-8")
+            return 0
+
+    monkeypatch.setattr(fetch, "youtube_dl", YoutubeDL)
     found, retries = fetch.download_caption(URL, "pt", "automatica", tmp_path)
 
     assert (found, retries) == (tmp_path / "legenda.vtt", 0)

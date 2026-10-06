@@ -123,7 +123,7 @@ def test_fetch_then_normalize_then_review_chained(tmp_path, monkeypatch, capsys)
     assert code == 0
     run = tmp_path / "runs" / VIDEO_ID
     assert (run / CAPTION_FILE).exists() and (run / NORMALIZED_FILE).exists()
-    assert fake.downloads == [("--write-auto-subs", "pt")]
+    assert fake.downloads == [("writeautomaticsub", "pt")]
     # The summary, not the full report.
     assert "corrected 1  (SEMIG → CEMIG)" in out
     assert "to confirm 1  (the tool was unsure; your answer is remembered)" in out
@@ -219,9 +219,27 @@ def test_the_lite_build_says_so_instead_of_offering_speech_recognition(tmp_path,
     monkeypatch.setenv("TRANSCRIPT_NORMALIZER_HOME", str(tmp_path / "home"))
     monkeypatch.setattr(fetch, "is_lite_build", lambda: True)
     _, out, fake = menu(tmp_path, monkeypatch, capsys, ["1", URL, "q"], FakeYtDlp(has_caption=False))
-    assert fetch.LITE_BUILD in out
+    # D-057: step 1's own reason first, then the lite notice, because step 2 was needed.
+    reason = "there is no caption in 'pt' for this video"
+    assert reason in out and fetch.LITE_BUILD in out
+    assert out.index(reason) < out.index(fetch.LITE_BUILD)
     assert "Transcribe the audio" not in out
     assert "audio" not in fake.calls
+
+
+def test_the_lite_notice_never_hides_a_step_1_error(tmp_path, monkeypatch, capsys):
+    """D-057: a failure to read the video is not a lite-build problem."""
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setenv("TRANSCRIPT_NORMALIZER_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(fetch, "is_lite_build", lambda: True)
+
+    class Unreachable(FakeYtDlp):
+        def info(self):
+            raise fetch_fakes.DownloadError("ERROR: [youtube] abcdefghijk: Video unavailable")
+
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "q"], Unreachable())
+    assert "could not read the video: reading the video failed: ERROR: [youtube] abcdefghijk: Video unavailable" in out
+    assert fetch.LITE_BUILD not in out
 
 
 def test_the_lite_build_message_on_the_command_line(tmp_path, monkeypatch, capsys):

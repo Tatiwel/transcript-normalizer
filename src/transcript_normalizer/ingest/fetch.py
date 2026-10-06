@@ -26,8 +26,6 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
-import json
-import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -146,36 +144,57 @@ def report_missing(missing: list[str]) -> int:
 
 
 # --------------------------------------------------------------------------- yt-dlp
+#
+# D-057: yt-dlp runs in this process, through its Python API, never as
+# `python -m yt_dlp`. In a PyInstaller executable `sys.executable` is the
+# executable itself, so a subprocess re-entered this CLI with `-m yt_dlp`.
 
 
-def impersonation_args() -> list[str]:
+class _Quiet:
+    """yt-dlp's logger: say nothing. Its errors come back as exceptions."""
+
+    def debug(self, message):
+        pass
+
+    info = warning = error = debug
+
+
+def impersonation_params() -> dict:
     """Browser impersonation, which is what gets past most HTTP 429s. It needs
     curl_cffi, part of the ingest extra; without it yt-dlp runs as before."""
-    return ["--impersonate", "chrome"] if importlib.util.find_spec("curl_cffi") else []
+    return {"impersonate": "chrome"} if importlib.util.find_spec("curl_cffi") else {}
 
 
-def run_ytdlp(args: list[str]) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [sys.executable, "-m", "yt_dlp", *impersonation_args(), *args],
-        capture_output=True,
-        text=True,
-    )
+def youtube_dl(params: dict):
+    """A `yt_dlp.YoutubeDL`. Replaced in tests by a fake with the same shape."""
+    from yt_dlp import YoutubeDL  # the ingest extra, imported lazily
+
+    params = dict(params)
+    if "impersonate" in params:
+        from yt_dlp.networking.impersonate import ImpersonateTarget
+
+        params["impersonate"] = ImpersonateTarget.from_str(params["impersonate"])
+    return YoutubeDL(params)
 
 
-def is_rate_limited(result: subprocess.CompletedProcess) -> bool:
-    text = f"{result.stderr}\n{result.stdout}"
-    return "HTTP Error 429" in text or "Too Many Requests" in text
+def is_rate_limited(message: str) -> bool:
+    return "HTTP Error 429" in message or "Too Many Requests" in message
 
 
-def ytdlp(args: list[str], what: str, out: Output) -> tuple[subprocess.CompletedProcess, int]:
-    """Run yt-dlp, retrying HTTP 429 with exponential backoff. Returns the result
-    and how many retries it took; raises RateLimited or FetchError otherwise."""
+def ytdlp(params: dict, call, what: str, out: Output):
+    """Run `call(ydl)` on a YoutubeDL with `params`, retrying HTTP 429 with
+    exponential backoff. Returns what `call` returned and how many retries it
+    took; raises RateLimited, or FetchError with yt-dlp's own message."""
+    params = {"quiet": True, "no_warnings": True, "noprogress": True, "logger": _Quiet(),
+              **impersonation_params(), **params}
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        result = run_ytdlp(args)
-        if result.returncode == 0:
-            return result, attempt - 1
-        if not is_rate_limited(result):
-            raise FetchError(f"{what} failed: {result.stderr.strip()[-600:]}")
+        try:
+            with youtube_dl(params) as ydl:
+                return call(ydl), attempt - 1
+        except Exception as error:  # yt-dlp's DownloadError, or anything under it
+            message = str(error).strip()
+            if not is_rate_limited(message):
+                raise FetchError(f"{what} failed: {message[-600:]}") from error
         if attempt == MAX_ATTEMPTS:
             raise RateLimited(f"{what}: HTTP 429 on all {MAX_ATTEMPTS} attempts")
         wait = BACKOFF_SECONDS * 2 ** (attempt - 1)
@@ -183,10 +202,26 @@ def ytdlp(args: list[str], what: str, out: Output) -> tuple[subprocess.Completed
     raise AssertionError("unreachable")
 
 
+def download(url: str):
+    """`ydl.download([url])`, with a non-zero result as an error."""
+
+    def call(ydl):
+        code = ydl.download([url])
+        if code:
+            raise FetchError(f"yt-dlp returned {code}")
+        return code
+
+    return call
+
+
 def read_metadata(url: str, out: Output | None = None) -> Metadata:
     """What the platform says about the video. Both steps need it."""
-    result, _ = ytdlp(["--dump-single-json", "--skip-download", url], "reading the video", out or Output())
-    data = json.loads(result.stdout)
+    data, _ = ytdlp(
+        {"skip_download": True},
+        lambda ydl: ydl.extract_info(url, download=False),
+        "reading the video",
+        out or Output(),
+    )
     return Metadata(
         id=data.get("id", ""),
         title=data.get("title", ""),
@@ -249,29 +284,29 @@ def summarise(codes: tuple[str, ...]) -> str:
     return f"{', '.join(codes[:12])} ... and {len(codes) - 12} more"
 
 
-def caption_args(url: str, code: str, source: str, target: Path) -> list[str]:
-    """The yt-dlp arguments for a subtitle download, as the platform serves it.
+def caption_params(code: str, source: str, target: Path) -> dict:
+    """The YoutubeDL options for a subtitle download, as the platform serves it:
+    what `--write-subs` or `--write-auto-subs`, `--skip-download`, `--sub-langs`
+    and `--output` were on the command line.
 
-    Deliberately no conversion flag: that hands the job to ffmpeg, and the
+    Deliberately no conversion option: that hands the job to ffmpeg, and the
     caption path should not need a system binary. WebVTT is converted in Python
     by `subtitles.vtt_to_lines`. Nothing calls ffmpeg: faster-whisper decodes audio through PyAV.
     """
-    return [
-        "--write-subs" if source == MANUAL else "--write-auto-subs",
-        "--skip-download",
-        "--sub-langs",
-        code,
-        "--output",
-        str(target / f"{SUBTITLE_STEM}.%(ext)s"),
-        url,
-    ]
+    return {
+        "writesubtitles": source == MANUAL,
+        "writeautomaticsub": source != MANUAL,
+        "skip_download": True,
+        "subtitleslangs": [code],
+        "outtmpl": {"default": str(target / f"{SUBTITLE_STEM}.%(ext)s")},
+    }
 
 
 def download_caption(
     url: str, code: str, source: str, target: Path, out: Output | None = None
 ) -> tuple[Path, int]:
     """The subtitle file, and how many 429 retries it took."""
-    _, retries = ytdlp(caption_args(url, code, source, target), "the caption download", out or Output())
+    _, retries = ytdlp(caption_params(code, source, target), download(url), "the caption download", out or Output())
     found = next(
         (
             path
@@ -297,7 +332,12 @@ def download_caption(
 def download_audio(url: str, target: Path, out: Output | None = None) -> Path:
     """Download the audio track without converting, which needs no ffmpeg."""
     ytdlp(
-        ["-f", "bestaudio[ext=m4a]/bestaudio", "--no-part", "--output", str(target / "audio.%(ext)s"), url],
+        {
+            "format": "bestaudio[ext=m4a]/bestaudio",
+            "nopart": True,
+            "outtmpl": {"default": str(target / "audio.%(ext)s")},
+        },
+        download(url),
         "the audio download",
         out or Output(),
     )
@@ -436,10 +476,10 @@ def step_speech(
     args: argparse.Namespace, meta: Metadata, target: Path, reason: str, out: Output
 ) -> Step:
     """Step 2: local speech recognition. Raises FetchError."""
+    if is_lite_build():  # D-057: only here, where step 2 is really needed
+        raise FetchError(LITE_BUILD)
     missing = missing_extra("faster_whisper")
     if missing:
-        if is_lite_build():
-            raise FetchError(LITE_BUILD)
         raise FetchError(f"local speech recognition needs {', '.join(missing)} (the ingest extra)")
     audio = download_audio(args.url, target, out)
     out.info(f"audio: {audio}")
@@ -456,8 +496,14 @@ def step_speech(
 def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "url",
+        nargs="?",
         metavar="URL_OR_FILE",
         help="a video url, or a local audio or video file (which goes straight to step 2)",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="print which fetch tools are installed (yt-dlp, curl_cffi, faster-whisper) and their versions",
     )
     parser.add_argument(
         "--out",
@@ -495,8 +541,52 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
+#: D-057: what `fetch --check` reports, and what each tool is for.
+CHECKED = (
+    ("yt_dlp", "yt-dlp", "platform captions and audio downloads"),
+    ("curl_cffi", "curl_cffi", "browser impersonation, against HTTP 429"),
+    ("faster_whisper", "faster-whisper", "local speech recognition"),
+)
+
+
+def tool_version(module: str) -> str | None:
+    """The version of an importable module, or None if it does not import.
+
+    Read from the module itself, since a frozen executable may not carry the
+    package metadata; the metadata is the fallback."""
+    try:
+        imported = importlib.import_module(module)
+    except Exception:  # not installed, or installed but broken: not usable either way
+        return None
+    version = getattr(getattr(imported, "version", None), "__version__", None) or getattr(
+        imported, "__version__", None
+    )
+    if version is None:
+        from importlib.metadata import PackageNotFoundError, version as installed
+
+        try:
+            version = installed(module.replace("_", "-"))
+        except PackageNotFoundError:
+            version = "installed"
+    return str(version)
+
+
+def run_check() -> int:
+    """`fetch --check`: one line per tool, installed or not. Always exits 0."""
+    width = max(len(name) for _, name, _ in CHECKED)
+    for module, name, purpose in CHECKED:
+        version = tool_version(module)
+        print(f"{name:{width}s}  {version or 'not installed':14s}  {purpose}")
+    return 0
+
+
 def run(args: argparse.Namespace) -> int:
     """Fetch a caption for a video: the platform's, or local speech recognition (D-036)."""
+    if args.check:
+        return run_check()
+    if not args.url:
+        print("fetch needs a video url or a file (or --check)", file=sys.stderr)
+        return 2
     out = Output()
     if args.model not in SPEECH_MODELS:
         print(

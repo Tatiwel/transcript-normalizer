@@ -465,6 +465,23 @@ Domain packs live in github.com/Tatiwel/transcript-normalizer-packs, one directo
 
 The tool sends nothing itself: the user reads the issue in the browser and submits it, under their own GitHub account. A one-click push, where the tool submits for the user, needs a server-side endpoint that holds a GitHub token, because a token in the executable is a token anyone can extract. That is deferred. The maintainers of the pack decide what enters it, by CONTRIBUTING 2.4's curation rules, which the learned layer does not apply (2.6).
 
+## D-057 yt-dlp runs in-process
+
+yt-dlp is called in-process through its Python API (yt_dlp.YoutubeDL), never as a subprocess, so the same code runs in the repository and inside a frozen executable. Error messages from step 1 are shown verbatim before any fallback message; the lite-build notice appears only when step 2 is actually needed.
+
+The bug: fetch ran `sys.executable -m yt_dlp`. In a PyInstaller build `sys.executable` is the executable itself, so the command re-entered this CLI with `-m yt_dlp`, and argparse failed with `invalid choice: 'yt_dlp'`. It was seen on a real Windows machine with 0.4.1-windows-lite, and reproduced on Linux with a lite build of 0.4.2. The chain then fell to step 2, and the menu printed the lite-build notice in place of the cause.
+
+`fetch.youtube_dl(params)` is now the one place yt-dlp is opened. The old command line maps onto YoutubeDL options:
+- `--dump-single-json` is `extract_info(url, download=False)`;
+- `--write-subs` and `--write-auto-subs` are `writesubtitles` and `writeautomaticsub`;
+- `--skip-download`, `--sub-langs` and `--output` are `skip_download`, `subtitleslangs` and `outtmpl`;
+- the audio's `-f` and `--no-part` are `format` and `nopart`;
+- `--impersonate chrome` is `impersonate`, when curl_cffi is installed.
+
+A silent logger keeps yt-dlp from printing its own copy of an error. The error comes back as an exception, whose message is shown as it is, and whose `HTTP Error 429` triggers the retries of D-036. In the lite build, step 2 raises the lite notice before anything else, and only when the chain reaches step 2. The menu no longer runs `--caption-only` there and guesses from the exit code: it runs the plain chain, so step 1's own error comes first. The test fake is shaped like the API (`open(params)` returning an object with `extract_info` and `download`), and a test fails if fetch starts a subprocess.
+
+`fetch --check` prints yt-dlp, curl_cffi and faster-whisper, each with its version or "not installed", and exits 0. The versions are read from the modules, since a frozen build may lack the package metadata. The release workflow's smoke test runs it: yt-dlp must be there in both flavors, faster-whisper only in `full`. Then it runs `fetch --list https://youtu.be/4wCtn8BWR4o`. A track list or an HTTP 429 passes, and so does YouTube's bot check: datacenter runners get it, and it still comes from yt-dlp. A traceback or an argparse error fails. Checked locally against a lite executable built from this code: `fetch --check`, `fetch --list` and a full caption download (`pt-orig`, 511 lines) all work, where the 0.4.2 build failed with `invalid choice: 'yt_dlp'`.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

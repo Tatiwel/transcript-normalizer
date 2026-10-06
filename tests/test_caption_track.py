@@ -47,7 +47,7 @@ def fetched(tmp_path, monkeypatch, ytdlp):
 def test_the_original_track_is_downloaded_and_recorded(tmp_path, monkeypatch):
     fake = FakeYtDlp(manual=("pt",), automatic=TRANSLATED)
     header, meta = fetched(tmp_path, monkeypatch, fake)
-    assert fake.downloads == [("--write-auto-subs", "pt-orig")]
+    assert fake.downloads == [("writeautomaticsub", "pt-orig")]
     assert header == "automatica original (pt-orig)"
     assert (meta["caption_track"], meta["caption_source"]) == ("pt-orig", "automatica original")
     assert (tmp_path / "runs" / VIDEO_ID / CAPTION_FILE).exists()
@@ -56,7 +56,7 @@ def test_the_original_track_is_downloaded_and_recorded(tmp_path, monkeypatch):
 def test_with_no_original_a_manual_track_wins(tmp_path, monkeypatch):
     fake = FakeYtDlp(manual=("pt",), automatic=("pt",))
     header, meta = fetched(tmp_path, monkeypatch, fake)
-    assert fake.downloads == [("--write-subs", "pt")]
+    assert fake.downloads == [("writesubtitles", "pt")]
     assert header == "manual (pt)"
     assert (meta["caption_track"], meta["caption_source"]) == ("pt", "manual")
 

@@ -17,8 +17,8 @@ from . import fetch_fakes
 class NoYtDlp:
     """A local file must never reach yt-dlp."""
 
-    def __call__(self, args):
-        raise AssertionError(f"yt-dlp was called for a local file: {args}")
+    def open(self, params):
+        raise AssertionError(f"yt-dlp was called for a local file: {params}")
 
 
 @pytest.fixture

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.3
+
+- Fix for the executables: `fetch` failed in every frozen build with "invalid choice: 'yt_dlp'", because it ran yt-dlp as a subprocess of the executable itself. yt-dlp now runs in-process through its Python API (D-057).
+- Errors from the platform caption step are shown as yt-dlp gives them, first. The lite build's "cannot transcribe audio" notice appears only when transcription is really needed.
+- `fetch --check` lists the fetch tools installed (yt-dlp, curl_cffi, faster-whisper) and their versions.
+- The release workflow tests every executable with `fetch --check` and a real `fetch --list` before publishing.
+
 ## 0.4.2
 
 - Pack fit (D-054): a pack that names fewer than three of its terms with confidence does not fit the transcript, and nothing is applied: `normalized.txt` stays as the input, with a message saying so. `--force` applies anyway. The menu asks "What is this video about?" before normalizing: your packs, or "none / another area".

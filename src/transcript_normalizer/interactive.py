@@ -121,7 +121,7 @@ def pending_count(run: Path) -> int:
 
 
 def fetch() -> None:
-    from .ingest.fetch import LITE_BUILD, is_lite_build, missing_extra
+    from .ingest.fetch import is_lite_build, missing_extra
 
     source = prompts.text(
         "Fetch: a video URL, or the path to an audio or video file",
@@ -129,14 +129,15 @@ def fetch() -> None:
     )
     if not source:
         return
-    if "://" not in source:  # a local file goes straight to step 2 (D-038)
+    if "://" not in source or is_lite_build():
+        # A local file goes straight to step 2 (D-038). In the lite build there
+        # is no step 2 to offer, so the plain chain runs: step 1's own error
+        # comes first, and the lite notice only if step 2 is reached (D-057).
         code = run_command(["fetch", source])
     else:
         code = run_command(["fetch", source, "--caption-only"])
         if code == 1:
-            if is_lite_build():
-                say(mark(LITE_BUILD, "need"))
-            elif not missing_extra("faster_whisper") and prompts.confirm(
+            if not missing_extra("faster_whisper") and prompts.confirm(
                 "No platform caption could be had. Transcribe the audio on this computer instead?",
                 default=True,
                 hint="downloads the audio and runs speech recognition; this can take minutes",

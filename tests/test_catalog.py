@@ -1,8 +1,6 @@
 """D-022: runs/<video-id>/, meta.yaml beside the caption, and `list`."""
 
-import json
 import shutil
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -33,14 +31,25 @@ URL = "https://www.youtube.com/watch?v=abcdefghijk"
 def fake_ytdlp(monkeypatch):
     """yt-dlp as far as fetch can tell: metadata, then a WebVTT on disk."""
 
-    def run(args):
-        if "--dump-single-json" in args:
-            return subprocess.CompletedProcess(args, 0, json.dumps(VIDEO), "")
-        target = Path(args[args.index("--output") + 1]).parent
-        shutil.copy(VTT, target / "legenda.pt.vtt")
-        return subprocess.CompletedProcess(args, 0, "", "")
+    class YoutubeDL:
+        def __init__(self, params):
+            self.params = params
 
-    monkeypatch.setattr(fetch, "run_ytdlp", run)
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def extract_info(self, url, download=True):
+            return VIDEO
+
+        def download(self, urls):
+            target = Path(self.params["outtmpl"]["default"]).parent
+            shutil.copy(VTT, target / "legenda.pt.vtt")
+            return 0
+
+    monkeypatch.setattr(fetch, "youtube_dl", YoutubeDL)
     monkeypatch.setattr(fetch, "missing_extra", lambda *modules: [])
 
 

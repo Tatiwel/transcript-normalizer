@@ -125,9 +125,9 @@ def test_impersonation_is_asked_for_only_when_curl_cffi_is_there(monkeypatch):
     import importlib.util
 
     monkeypatch.setattr(importlib.util, "find_spec", lambda name: None)
-    assert fetch.impersonation_args() == []
+    assert fetch.impersonation_params() == {}
     monkeypatch.setattr(importlib.util, "find_spec", lambda name: object())
-    assert fetch.impersonation_args() == ["--impersonate", "chrome"]
+    assert fetch.impersonation_params() == {"impersonate": "chrome"}
 
 
 def test_the_raw_subtitle_is_deleted_once_converted(tmp_path, monkeypatch):
@@ -139,3 +139,49 @@ def test_the_raw_subtitle_is_deleted_once_converted(tmp_path, monkeypatch):
 def test_keep_raw_keeps_the_subtitle(tmp_path, monkeypatch):
     code, run, _, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(caption=["ok"]), "--keep-raw")
     assert code == 0 and (run / "legenda.vtt").exists()
+
+
+def test_ytdlp_runs_in_process_never_as_a_subprocess(tmp_path, monkeypatch):
+    """D-057: `sys.executable -m yt_dlp` re-entered the frozen executable's CLI."""
+    import subprocess
+
+    def refuse(*args, **kwargs):
+        raise AssertionError(f"fetch started a subprocess: {args}")
+
+    monkeypatch.setattr(subprocess, "run", refuse)
+    monkeypatch.setattr(subprocess, "Popen", refuse)
+    code, run, fake, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(caption=["ok"]))
+    assert code == 0 and fake.calls == ["metadata", "caption"]
+    # The command line's options, as YoutubeDL parameters.
+    caption = fake.params[1]
+    assert caption["skip_download"] is True and caption["subtitleslangs"] == ["pt"]
+    assert caption["writeautomaticsub"] is True and caption["quiet"] is True
+
+
+def test_a_step_1_error_is_shown_verbatim(tmp_path, monkeypatch, capsys):
+    code, _, _, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(caption=["[youtube] abcdefghijk: Sign in to confirm"]), "--caption-only")
+    assert code == 1
+    assert "the caption download failed: ERROR: [youtube] abcdefghijk: Sign in to confirm" in capsys.readouterr().err
+
+
+def test_check_reports_each_tool_and_exits_0(monkeypatch, capsys):
+    versions = {"yt_dlp": "2026.08.19", "curl_cffi": None, "faster_whisper": "1.2.1"}
+    monkeypatch.setattr(fetch, "tool_version", versions.get)
+    assert main(["fetch", "--check"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].split()[:2] == ["yt-dlp", "2026.08.19"]
+    assert lines[1].split()[:3] == ["curl_cffi", "not", "installed"]
+    assert lines[2].split()[:2] == ["faster-whisper", "1.2.1"]
+
+
+def test_check_reads_real_versions(capsys):
+    """In the repository the ingest extra is installed (the dev group)."""
+    pytest.importorskip("yt_dlp")
+    assert main(["fetch", "--check"]) == 0
+    first = capsys.readouterr().out.splitlines()[0].split()
+    assert first[0] == "yt-dlp" and first[1][0].isdigit()
+
+
+def test_fetch_without_a_url_says_so(capsys):
+    assert main(["fetch"]) == 2
+    assert "fetch needs a video url or a file (or --check)" in capsys.readouterr().err

@@ -58,7 +58,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             (f"{PROG} <legenda.txt>", "same as `normalize <legenda.txt>`"),
         ]),
         ("COMMANDS", [
-            ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally"),
+            ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `fetch --check` lists the fetch tools installed"),
             ("normalize <legenda.txt>", "fix domain terms (a .srt or .vtt is converted first); --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack; --force when the pack does not seem to fit"),
             ("list", "every run under runs/, with its date and title"),
             ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),

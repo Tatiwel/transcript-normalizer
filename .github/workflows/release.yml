@@ -158,6 +158,47 @@ jobs:
           "$exe" fixtures/R2Qgz8tFWVI/legenda.txt
           test -f "$TRANSCRIPT_NORMALIZER_HOME/runs/R2Qgz8tFWVI/normalized.txt"
 
+      # D-057: the fetch tools are inside the executable and importable.
+      # yt-dlp in both flavors; faster-whisper only in `full`.
+      - name: Fetch tools present
+        run: |
+          exe="dist/$NAME"; [ "$RUNNER_OS" = Windows ] && exe="$exe.exe"
+          "$exe" fetch --check | tee check.txt
+          grep -Eq '^yt-dlp +[0-9]' check.txt
+          if [ "$FLAVOR" = full ]; then
+            grep -Eq '^faster-whisper +[0-9]' check.txt
+          else
+            grep -Eq '^faster-whisper +not installed' check.txt
+          fi
+
+      # D-057: fetch reaches yt-dlp in this process. Before 0.4.3 it ran
+      # `<exe> -m yt_dlp`, which re-entered our own CLI and failed with
+      # argparse's "invalid choice: 'yt_dlp'". This needs the network, and
+      # YouTube may refuse a datacenter runner, so the test accepts a track
+      # list, an HTTP 429, or YouTube's bot check (all three come from yt-dlp
+      # itself, which is what is being proved), and fails on a traceback or
+      # an argparse error.
+      - name: Fetch reaches YouTube
+        run: |
+          exe="dist/$NAME"; [ "$RUNNER_OS" = Windows ] && exe="$exe.exe"
+          export TRANSCRIPT_NORMALIZER_HOME="$RUNNER_TEMP/tn-home"
+          set +e
+          "$exe" fetch --list https://youtu.be/4wCtn8BWR4o > list.txt 2>&1
+          status=$?
+          set -e
+          cat list.txt
+          if grep -Eq 'Traceback|invalid choice|^usage:' list.txt; then
+            echo "::error::fetch did not reach yt-dlp"; exit 1
+          elif [ "$status" = 0 ] && grep -q '^ *original:' list.txt; then
+            echo "track list: ok"
+          elif grep -Eq 'HTTP Error 429|Too Many Requests' list.txt; then
+            echo "::warning::YouTube answered HTTP 429; yt-dlp ran, which is what this checks"
+          elif grep -q 'Sign in to confirm' list.txt; then
+            echo "::warning::YouTube asked this runner to sign in; yt-dlp ran, which is what this checks"
+          else
+            echo "::error::unexpected answer from fetch --list (exit $status)"; exit 1
+          fi
+
       # The file users download, named transcript-normalizer-<version>-<os>-<flavor>.<ext>.
       - name: Archive
         run: |
