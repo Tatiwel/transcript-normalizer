@@ -7,6 +7,7 @@ Three things people outside the project add: a language, a domain pack, and a fi
 1. [Adding a language](#1-adding-a-language)
 2. [Building a domain pack](#2-building-a-domain-pack)
 3. [Building a fixture and measuring](#3-building-a-fixture-and-measuring)
+4. [Dependencies](#4-dependencies)
 
 Set up once with `uv sync` (and `uv sync --extra ingest` if you will fetch captions). Run the tests with `uv run pytest -q`.
 
@@ -187,3 +188,11 @@ The status records who wrote the row. Scoring treats `certo` and `conferido` ali
 2. Run `uv run python scripts/measure.py`, which prints every fixture's in-scope rows, hits, misses, false positives, aliases recognized and aliases wrongly substituted, and a non-blocking run of each fixture against the current curated pack.
 3. Add the fixture to `BOUNDS` in `tests/test_regression_fixture.py` with the numbers **as measured**, not tuned: `in_scope`, `min_hits`, `max_false_positives`, and `max_manter_touched` if a `manter` row is touched. Write a comment saying what the numbers are and where they came from.
 4. Append a decision to `docs/DECISIONS.md` recording the fixture and its measured bounds. Decisions are append-only: from then on, any change that moves a bound gets a commit that updates the table, and a decision that says why.
+
+---
+
+## 4. Dependencies
+
+The core, what `pip install transcript-normalizer` brings, stays minimal: rapidfuzz, PyYAML and platformdirs. A new dependency goes into an extra, `[menu]`, `[captions]`, `[ingest]` or a new one, unless the matcher itself needs it.
+
+The reason: programs such as valuation-simulator import the core to normalize text. They must not inherit dependencies for an interface (rich, questionary) or for downloading and transcribing (yt-dlp, faster-whisper). Code that needs an extra imports it where it is used, never at the top of a core module, so the core still imports without it. See D-052 (the two artefacts and the extras) and D-053 (the `[menu]` extra and the prompts adapter).

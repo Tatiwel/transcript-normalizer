@@ -1,5 +1,6 @@
-# Continuous integration: run the test suite on every push and pull request,
-# on the three operating systems the executables are built for (D-052).
+# Continuous integration: run the test suite on every push to a branch and on
+# every pull request, on the three operating systems the executables are built
+# for (D-052). Not on tags: a tag push starts release.yml, which is enough.
 #
 # A workflow is a list of jobs; a job is a list of steps that run, in order, on
 # a fresh virtual machine ("runner") that GitHub provides and throws away after.
@@ -8,6 +9,9 @@ name: ci
 
 on:
   push:
+    # Every branch ("**" matches names with slashes too), and no tags: listing
+    # `branches` alone makes GitHub skip tag pushes for this workflow.
+    branches: ["**"]
   pull_request:
 
 jobs:
