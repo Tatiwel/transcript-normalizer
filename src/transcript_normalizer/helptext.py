@@ -61,6 +61,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally"),
             ("normalize <legenda.txt>", "fix domain terms; --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack"),
             ("list", "every run under runs/, with its date and title"),
+            ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),
             ("help", "this help; `<command> --help` lists a command's options"),
         ]),
         ("MENU", [(f"{a.key}. {a.label}", a.help, a.command) for a in ACTIONS]),

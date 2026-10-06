@@ -451,6 +451,14 @@ Measured, distinct high-band terms per caption (`scripts/measure.py runs/BIrASod
 
 The prank's one term is the `tir` recognition of D-035. The closest fixture is 4tTmY8Buask against its frozen 0.2.4 at 6; with the pack users run, the lowest is 15. Counting corrections only would also separate them (bundled: 15, 4, 26, 28 against 0), but 4wCtn8BWR4o, a video in the domain whose terms are mostly spelled right, would sit at 4, one away from the threshold. The threshold of 3 is not calibrated beyond these five captions; a short clip in the domain can fall under it, which is what `--force` is for.
 
+## D-055 Packs live in their own repository
+
+Domain packs live in github.com/Tatiwel/transcript-normalizer-packs, one directory per pack with `pack.yaml`, `README.md` and `MAINTAINERS`. The maintainers of a pack review its pull requests; the engine repository never edits pack content. An `index.json` at the root names every pack: name, version, language, description, path and the sha256 of its file. The bundled financas-ptbr stays as the offline default (D-043), a copy taken from that repository at a released version.
+
+`transcript-normalizer pack list` reads the index from https://raw.githubusercontent.com/Tatiwel/transcript-normalizer-packs/main/index.json. `pack install <name>` downloads the pack into the user's `packs/` as `<name>.yaml` and writes it only if its sha256 matches the index. `pack update` installs a newer version of each pack installed that way. urllib only, so no new dependency. `--index URL` or `TRANSCRIPT_NORMALIZER_PACKS_INDEX` points elsewhere, and a `file://` index works the same, which is what the tests use (tests/test_registry.py).
+
+`packs/installed.json` records the version and sha256 of what install wrote. A `packs/<name>.yaml` that does not match it was edited here or written by the user: `update` leaves it alone, and `install` replaces it only with `--force`. A pack name must be lowercase letters, digits and hyphens, so an index cannot make install write outside packs/. An installed pack is in `packs/`, so it wins over the bundled one of the same name (`default_pack`, D-017), it is offered by the menu's "What is this video about?" (D-054), and its learned layer is the same `packs/<name>.learned.yaml` as before.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
