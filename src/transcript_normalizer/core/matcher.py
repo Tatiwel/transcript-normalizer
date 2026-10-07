@@ -19,6 +19,7 @@ from .pack import SOURCE_LEARNED, Candidate, Pack
 from .rules import find_unit_hits
 from .standoff import (
     BAND_HIGH,
+    BAND_ASK,
     BAND_LOW,
     BAND_MEDIUM,
     KIND_ALIAS,
@@ -94,7 +95,7 @@ def band_for(rule: str, score: float, from_variant: bool = False) -> str:
     D-047: fuzzy from a curated variant needs `VARIANT_APPLY_THRESHOLD`.
     """
     if rule == term_rule("phonetic"):
-        return BAND_MEDIUM  # D-050: applied flagged, asked, never high
+        return BAND_ASK  # D-060, amending D-050: asked, never applied, never high
     if rule != term_rule("fuzzy"):
         return BAND_HIGH  # a unit rule, a listed variant or an alias
     apply_at = VARIANT_APPLY_THRESHOLD if from_variant else APPLY_THRESHOLD

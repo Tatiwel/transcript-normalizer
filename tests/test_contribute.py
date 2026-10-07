@@ -57,7 +57,7 @@ def test_propose_shows_asks_writes_and_opens_an_issue(tmp_path, monkeypatch, cap
     written = list((tmp_path / "contributions").glob("financas-ptbr-*.yaml"))
     assert len(written) == 1
     data = yaml.safe_load(written[0].read_text(encoding="utf-8"))
-    assert data["pack"] == "financas-ptbr" and data["pack_version"] == "0.3.4"
+    assert data["pack"] == "financas-ptbr" and data["pack_version"] == "0.3.5"
     assert data["entries"][0] == {"term": "CEMIG", "form": "esse mig", "decision": "variant", "decided": "2026-10-01"}
     (url,) = urls
     assert url.startswith("https://github.com/Tatiwel/transcript-normalizer-packs/issues/new?")

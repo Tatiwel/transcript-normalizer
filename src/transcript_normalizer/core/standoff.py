@@ -16,8 +16,13 @@ RULE_UNIT = "unit"
 BAND_HIGH = "high"
 BAND_MEDIUM = "medium"
 BAND_LOW = "low"
+#: D-060: a proposal that is asked about and never applied until the user
+#: confirms it (the phonetic source). Not rendered, counted as pending.
+BAND_ASK = "ask"
 
 APPLIED_BANDS = (BAND_HIGH, BAND_MEDIUM)
+#: What the confirmation loop and needs-review/pending.txt ask about.
+QUESTION_BANDS = (BAND_MEDIUM, BAND_ASK)
 
 #: D-020's two kinds. A correction replaces its span in normalized.txt; an alias
 #: names the term the speaker meant and leaves the words as they were said.
@@ -84,8 +89,9 @@ def aliases(annotations: list[Annotation]) -> list[Annotation]:
     return [a for a in annotations if a.is_alias]
 
 
-def in_band(annotations: list[Annotation], band: str) -> list[Annotation]:
-    return [a for a in annotations if a.band == band]
+def in_band(annotations: list[Annotation], band: str | tuple[str, ...]) -> list[Annotation]:
+    bands = (band,) if isinstance(band, str) else band
+    return [a for a in annotations if a.band in bands]
 
 
 def to_json(annotations: list[Annotation], indent: int = 2) -> str:

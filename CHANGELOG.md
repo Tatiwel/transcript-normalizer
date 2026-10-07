@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.6
+
+- Phonetic matches only ask (D-060). A name found by sound and not by spelling (the phonetic source of D-050) goes to "to confirm" and is never substituted until you confirm it. In a forced run on a video about prions, `proteínas` had been turned into BR Partners 40 times; now it is a question, and the text stays.
+- Pack 0.3.5: `trio` counts as the unit `tri` only in `primeiro/segundo/terceiro/quarto trio`; alone it is an ordinary word.
+- D-035 records a second out-of-domain silence run (yJxxTf0IQC8): nothing applied, with or without `--force`.
+
 ## 0.4.5
 
 - A failed attempt no longer breaks the next one (D-059). An incomplete audio file left in the run folder (the cause of "HTTP Error 416: Requested range not satisfiable" after 0.4.3's crash) is deleted before downloading, and downloads always start from zero. A 416 is retried once. When fetch fails, it removes the files it wrote in that attempt.

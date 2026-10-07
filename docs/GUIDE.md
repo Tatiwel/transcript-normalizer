@@ -200,7 +200,7 @@ terms:
 ```
 
 - `term` is how it should be written. `aliases` are other correct names (a brand, a plural, the full form of an acronym). `variants` are what the recognizer produced instead.
-- `class` must be one of eight: `companhia`, `indicador`, `conceito`, `unidade`, `pessoa`, `organizacao`, `ferramenta`, `sigla` (D-021). They were written for finance: a drug or a method is a `conceito`. Names (`companhia`, `pessoa`) also get phonetic matching, which catches garbles never seen before (D-050).
+- `class` must be one of eight: `companhia`, `indicador`, `conceito`, `unidade`, `pessoa`, `organizacao`, `ferramenta`, `sigla` (D-021). They were written for finance: a drug or a method is a `conceito`. Names (`companhia`, `pessoa`) also get phonetic matching, which finds garbles never seen before and asks you about them; it never changes the text by itself (D-050, D-060).
 - Keep out variants of one or two letters and variants that are ordinary words, even if the caption used them (D-005, D-032).
 
 Put the file in `packs/` in the directory you work in, and point at it:

@@ -53,8 +53,10 @@ BOUNDS = {
     # D-050: the phonetic source gets back 36:41 `Warn Buffet` (104 -> 105), the
     # hit D-024 lost. Its `mesmo jeito` -> CEMIG x2 went with the minimum
     # skeleton length of 5 (53 -> 55 -> 53).
+    # D-060: phonetic matches only ask, so 36:41 `Warn Buffet` is a question
+    # again with the frozen pack (105 -> 104); the bundled pack lists it.
     "wxgFO_fyfXg": Bounds(
-        in_scope=222, min_hits=105, max_false_positives=53, max_manter_touched=1
+        in_scope=222, min_hits=104, max_false_positives=53, max_manter_touched=1
     ),
     # Whisper medium, not platform captions; frozen pack 0.2.3. D-040 took out
     # the two 0:19 `Dividend` -> dividendo inside `Dividend Yield` (7 -> 5);

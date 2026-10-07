@@ -18,8 +18,10 @@
 # 0.3.3 acrescenta `Partens` e `partner` a BR Partners (4tTmY8Buask 7:48 e 11:39).
 # `A Partens` nao entra: artigo mais nome, duas palavras.
 # 0.3.4 tira `Ox` de OPEX: e o `oxe` nordestino, palavra comum (D-032, D-035).
+# 0.3.5 troca a variante `trio` de tri por `primeiro/segundo/terceiro/quarto trio`:
+# sozinha, `trio` e palavra comum (D-032; "trio de irmas" em yJxxTf0IQC8).
 language: pt-BR
-version: 0.3.4
+version: 0.3.5
 
 terms:
   - term: CEMIG
@@ -103,7 +105,8 @@ terms:
     variants: [Markovitz, Marcovit, Markovit]
   - term: tri
     class: unidade
-    variants: [trad, trio, TR]
+    # 0.3.5: `trio` only in its phrase; alone it is an ordinary word (D-032).
+    variants: [trad, primeiro trio, segundo trio, terceiro trio, quarto trio, TR]
   - term: Engie
     class: companhia
     variants: [índia, End]

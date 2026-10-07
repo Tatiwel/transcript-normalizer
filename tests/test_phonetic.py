@@ -50,8 +50,8 @@ def test_the_skeleton(text, expected):
         ("hoje a Portinas caiu", "Portinas", 90),  # not `a Portinas`, not `Portinas caiu`
     ],
 )
-def test_exp3_hits_are_medium_band_proposals(tmp_path, line, original, score):
-    assert phonetic(pack_of(tmp_path), line) == [(original, "BR Partners", score, "medium")]
+def test_exp3_hits_are_ask_band_proposals(tmp_path, line, original, score):
+    assert phonetic(pack_of(tmp_path), line) == [(original, "BR Partners", score, "ask")]
 
 
 def test_under_85_is_not_proposed(tmp_path):
@@ -59,10 +59,10 @@ def test_under_85_is_not_proposed(tmp_path):
     assert phonetic(pack_of(tmp_path), "quero aportar mais") == []
 
 
-def test_never_high_band_even_at_100(tmp_path):
+def test_only_asked_even_at_100(tmp_path):
     """wxgFO_fyfXg 36:41: `Warn Buffet` has the skeleton of `Warren Buffett`."""
     assert phonetic(pack_of(tmp_path), "do Warn Buffet. Tem") == [
-        ("Warn Buffet", "Warren Buffett", 100, "medium")
+        ("Warn Buffet", "Warren Buffett", 100, "ask")
     ]
 
 
@@ -86,3 +86,34 @@ def test_the_generic_language_has_no_phonetic_source(tmp_path):
     assert generic.skeleton is None
     pack = pack_of(tmp_path, language="zz", allow_generic=True)
     assert phonetic(pack, "a Berry Portene subiu") == []
+
+
+
+# ------------------------------------------------------------------ D-060
+
+
+def test_a_phonetic_proposal_is_asked_and_never_applied(tmp_path):
+    """D-060: proteínas -> BR Partners was applied 40 times in a forced
+    out-of-domain run (yJxxTf0IQC8). Now it is a question, and the text stays."""
+    from transcript_normalizer.cli import confirm_groups, pending_text
+    from transcript_normalizer.core.render import render_lines
+
+    transcript = parse_caption("0:01 as proteínas se dobram errado")
+    found = resolve_overlaps(find_annotations(transcript, pack_of(tmp_path)))
+    asked = [a for a in found if a.rule == "term:phonetic"]
+    assert [(a.original, a.term, a.band, a.applied) for a in asked] == [
+        ("proteínas", "BR Partners", "ask", False)
+    ]
+    assert dict(render_lines(transcript, found))["0:01"] == "as proteínas se dobram errado"
+    assert [term for term, _ in confirm_groups(found)] == ["BR Partners"]
+    text, count = pending_text(transcript, found)
+    assert count == 1 and "proteínas" in text and "[never asked]" in text
+
+
+def test_a_confirmed_phonetic_form_becomes_an_exact_variant(tmp_path):
+    transcript = parse_caption("0:01 comprei Portance ontem")
+    pack = pack_of(tmp_path, learned=Learned().confirm("BR Partners", "Portance"))
+    found = resolve_overlaps(find_annotations(transcript, pack))
+    assert [(a.original, a.rule, a.band, a.applied) for a in found if a.term == "BR Partners"] == [
+        ("Portance", "term:variant", "high", True)
+    ]

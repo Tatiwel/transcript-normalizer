@@ -200,7 +200,7 @@ terms:
 ```
 
 - `term` é como o termo deve ser escrito. `aliases` são outros nomes corretos (uma marca, um plural, a sigla por extenso). `variants` é o que o reconhecedor produziu no lugar.
-- `class` tem de ser uma de oito: `companhia`, `indicador`, `conceito`, `unidade`, `pessoa`, `organizacao`, `ferramenta`, `sigla` (D-021). Elas nasceram para finanças; fármaco e método entram como `conceito`. Nomes (`companhia`, `pessoa`) também passam pela comparação fonética, que pega erros nunca vistos antes (D-050).
+- `class` tem de ser uma de oito: `companhia`, `indicador`, `conceito`, `unidade`, `pessoa`, `organizacao`, `ferramenta`, `sigla` (D-021). Elas nasceram para finanças; fármaco e método entram como `conceito`. Nomes (`companhia`, `pessoa`) também passam pela comparação fonética, que acha erros nunca vistos antes e pergunta a você; ela nunca muda o texto sozinha (D-050, D-060).
 - Deixe de fora variantes de uma ou duas letras e variantes que são palavras comuns, mesmo que a legenda as tenha usado (D-005, D-032).
 
 Ponha o arquivo em `packs/`, no diretório em que você trabalha, e aponte para ele:

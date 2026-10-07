@@ -28,7 +28,7 @@ from .core.render import render_normalized
 from .core.standoff import (
     BAND_HIGH,
     BAND_LOW,
-    BAND_MEDIUM,
+    QUESTION_BANDS,
     RULE_UNIT,
     Annotation,
     applied,
@@ -111,7 +111,7 @@ def report(annotations: list[Annotation]) -> str:
         ("unit rules", group_by_term([a for a in fixed if a.rule == RULE_UNIT])),
         # D-020: another name of the term, as the speaker said it.
         ("recognized (not changed)", group_by_term([a for a in high if a.is_alias])),
-        ("to confirm", group_by_term(in_band(annotations, BAND_MEDIUM))),
+        ("to confirm", group_by_term(in_band(annotations, QUESTION_BANDS))),
     ]
 
     out: list[str] = []
@@ -175,9 +175,9 @@ def ask(prompt: str) -> str:
 
 
 def confirm_groups(annotations: list[Annotation]) -> list[tuple[str, list[Annotation]]]:
-    """D-011's medium band, grouped by term, busiest first."""
+    """What is asked about (D-011's medium band, D-060's ask band), grouped by term, busiest first."""
     by_term: dict[str, list[Annotation]] = defaultdict(list)
-    for a in in_band(annotations, BAND_MEDIUM):
+    for a in in_band(annotations, QUESTION_BANDS):
         by_term[a.term].append(a)
     return sorted(by_term.items(), key=lambda kv: (-len(kv[1]), kv[0]))
 
