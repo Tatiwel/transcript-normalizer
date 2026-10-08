@@ -1,0 +1,1 @@
+Portable: this program keeps everything (your runs, packs, settings and the speech model) in the data folder beside it; delete this file to use your Documents folder instead.

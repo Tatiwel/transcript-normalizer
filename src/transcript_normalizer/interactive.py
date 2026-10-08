@@ -80,6 +80,10 @@ def first_screen() -> None:
     # D-052, D-061: say where the files go, unless it is simply here.
     base = base_dir()
     detail("Working in" if base == Path.cwd() else "Your files", base, "path", indent="")
+    from .runs import portable_dir
+
+    if portable_dir() is not None and not os.environ.get(DATA_DIR_ENV):
+        say(mark(f"portable mode: everything stays in {portable_dir()}", "hint"))
     say(TYPICAL_FLOW)
     say(mark(f"Keyboard: {prompts.legend('select')}", "hint"))
     offer_merges()
@@ -912,6 +916,10 @@ def folder_source() -> str:
     """Why base_dir() is what it is, in a few words."""
     if os.environ.get(DATA_DIR_ENV):
         return f"from {DATA_DIR_ENV}, which wins over Settings"
+    from .runs import portable_dir
+
+    if portable_dir() is not None:
+        return "portable mode: the data folder beside the program"
     if configured_dir() is not None:
         return "chosen in Settings"
     return "the documents folder" if is_frozen() else "the current folder"
@@ -980,7 +988,15 @@ def save_setting(key: str, value) -> None:
 
 
 def choose_folder() -> None:
-    """Where to save your files: the dialog, or a typed path without one."""
+    """Where to save your files: the dialog, or a typed path without one.
+    A portable program keeps its files with it, so there is nothing to choose (D-070)."""
+    from .runs import portable_dir
+
+    portable = portable_dir()
+    if portable is not None and not os.environ.get(DATA_DIR_ENV):
+        say(mark(f"portable mode: everything stays in {portable}", "need"))
+        say(mark("  the files live with the program; move the whole folder to move them", "hint"))
+        return
     detail("now", base_dir(), "path")
     say(mark(f"  {folder_source()}", "hint"))
     options = [Option("Choose another folder…", "opens the folder dialog", value="pick")]

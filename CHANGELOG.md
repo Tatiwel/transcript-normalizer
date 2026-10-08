@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.3
+
+A Windows installer and a portable build (D-070). Nothing changes in how captions are normalized.
+
+- Windows full is now two downloads. `-windows-full-setup.exe`, an installer: choose where it goes, for you only (no administrator) or for all users; Start menu shortcut, optional desktop shortcut; a clean uninstall from "Add or remove programs" that keeps your files and says so. `-windows-full-portable.zip`: unzip anywhere, e.g. a USB drive, and delete the folder to remove it. The plain windows-full zip is gone; lite, macOS and Linux are unchanged.
+- Portable mode: with `portable.txt` beside the program (any build, lite too), everything stays in its `data` folder: runs, packs, settings, the speech model (`HF_HOME`), yt-dlp's cache and whatever its JavaScript runtime writes. Settings says "portable mode: everything stays in <folder>" and has no folder dialog. `TRANSCRIPT_NORMALIZER_HOME` still wins.
+- The release runner installs, runs and uninstalls the installer silently, and checks that the portable build writes only inside its folder.
+
 ## 0.6.2
 
 Three-way pack merge (D-069).

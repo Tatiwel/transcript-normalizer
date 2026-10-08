@@ -4,8 +4,9 @@
 #   - the Python package (wheel and sdist), for `pip install`;
 #   - a standalone executable per system, in two builds:
 #       lite: fetch with platform captions only, small; one file;
-#       full: local speech recognition included, large; on Windows and
-#             macOS a folder in a zip (D-063), on Linux one file;
+#       full: local speech recognition included, large; on macOS a folder
+#             in a zip (D-063), on Linux one file, on Windows an installer
+#             and a portable zip (D-070);
 #   - a sha256 checksum of every file, and the CHANGELOG section as the text.
 #
 # Jobs run in parallel unless one `needs` another. The order here is:
@@ -307,15 +308,88 @@ jobs:
 
       # The file users download, named transcript-normalizer-<version>-<os>-<flavor>.<ext>.
       # A onedir build is zipped as its folder, so unzipping gives $NAME/.
+      # Windows full is not zipped here: it is the installer and the portable
+      # zip below (D-070).
       - name: Archive
         run: |
           mkdir -p out
           case "$RUNNER_OS-$MODE" in
             Windows-onefile) cp "$EXE" "out/$ASSET" ;;
-            Windows-onedir)  pwsh -NoProfile -Command "Compress-Archive -Path 'dist/$NAME' -DestinationPath 'out/$ASSET'" ;;
+            Windows-onedir)  ;;
             Linux-*)         tar -czf "out/$ASSET" -C dist "$NAME" ;;
             macOS-*)         (cd dist && zip -qry "../out/$ASSET" "$NAME") ;;
           esac
+
+      # D-070: Windows full, two files. The installer, from
+      # packaging/windows-installer.iss with Inno Setup 6: per user by default
+      # (no administrator), the install location chosen on its own page, a
+      # Start menu shortcut, and an uninstaller that removes the program folder
+      # and nothing of the user's.
+      - name: Installer (Windows full)
+        if: runner.os == 'Windows' && matrix.flavor == 'full'
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress | Out-Null
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          & $iscc "/DAppVersion=$env:VERSION" "/DSourceDir=$((Resolve-Path "dist/$env:NAME").Path)" `
+            "/DOutputDir=$((Resolve-Path out).Path)" "/DOutputBase=$env:NAME-setup" packaging\windows-installer.iss
+          if ($LASTEXITCODE) { throw "ISCC failed ($LASTEXITCODE)" }
+
+      # The installer, silently, for this user, into a folder of our choosing
+      # (with a space in it); the program runs from there; the uninstaller
+      # removes it, and its shortcut, completely.
+      - name: Installer installs and uninstalls (Windows full)
+        if: runner.os == 'Windows' && matrix.flavor == 'full'
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "tn install"
+          $setup = (Resolve-Path "out/$env:NAME-setup.exe").Path
+          Start-Process -FilePath $setup -Wait -ArgumentList `
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=`"$dir`""
+          $exe = Join-Path $dir "transcript-normalizer.exe"
+          if (-not (Test-Path $exe)) { throw "nothing installed in $dir" }
+          $shortcut = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\transcript-normalizer.lnk"
+          if (-not (Test-Path $shortcut)) { throw "no Start menu shortcut at $shortcut" }
+          $help = & $exe help | Out-String
+          if ($LASTEXITCODE) { throw "help failed ($LASTEXITCODE)" }
+          Write-Output ($help -split "`n" | Select-Object -First 3)
+          $check = & $exe fetch --check | Out-String
+          Write-Output $check
+          if ($check -notmatch "faster-whisper +[0-9]") { throw "fetch --check: no faster-whisper" }
+          Start-Process -FilePath (Join-Path $dir "unins000.exe") -Wait -ArgumentList `
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"
+          # The uninstaller hands over to a copy of itself and returns at once.
+          for ($i = 0; $i -lt 90 -and (Test-Path $dir); $i++) { Start-Sleep -Seconds 1 }
+          if (Test-Path $dir) { Get-ChildItem -Recurse $dir; throw "the program folder is still there" }
+          if (Test-Path $shortcut) { throw "the Start menu shortcut is still there" }
+          Write-Output "installed in $dir, ran, uninstalled: the folder is gone"
+
+      # The portable zip: the program folder, portable.txt and an empty data/.
+      - name: Portable zip (Windows full)
+        if: runner.os == 'Windows' && matrix.flavor == 'full'
+        run: uv run --no-sync python packaging/portable_zip.py "dist/$NAME" "out/$NAME-portable.zip"
+
+      # Unzipped elsewhere, with no TRANSCRIPT_NORMALIZER_HOME: a normalize
+      # writes into its data/ folder, and nothing into Documents, the user's
+      # settings folder or the working directory.
+      - name: Portable keeps everything in its folder (Windows full)
+        if: runner.os == 'Windows' && matrix.flavor == 'full'
+        run: |
+          dest="$RUNNER_TEMP/portable"
+          mkdir -p "$dest"
+          uv run --no-sync python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' \
+            "out/$NAME-portable.zip" "$dest"
+          root="$dest/$NAME"
+          test -f "$root/portable.txt" && test -d "$root/data"
+          docs="$(cygpath -u "$USERPROFILE")/Documents/transcript-normalizer"
+          settings="$(cygpath -u "$APPDATA")/transcript-normalizer"
+          rm -rf "$docs" "$settings"
+          unset TRANSCRIPT_NORMALIZER_HOME
+          "$root/transcript-normalizer.exe" help | head -3
+          "$root/transcript-normalizer.exe" fixtures/R2Qgz8tFWVI/legenda.txt | tail -1
+          test -f "$root/data/runs/R2Qgz8tFWVI/normalized.txt"
+          test ! -e "$docs" && test ! -e "$settings" && test ! -e runs
+          find "$root/data" -type f | head -20
 
       - uses: actions/upload-artifact@v4
         with:

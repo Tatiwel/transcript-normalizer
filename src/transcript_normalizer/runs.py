@@ -60,11 +60,54 @@ def is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
+#: D-070: this file beside the program makes it portable.
+PORTABLE_FILE = "portable.txt"
+#: Inside the program's folder, where a portable program keeps everything.
+PORTABLE_DATA = "data"
+
+
+def program_dir() -> Path:
+    """The folder of the executable (frozen), or of the script that was run."""
+    if is_frozen():
+        return Path(sys.executable).resolve().parent
+    return Path(sys.argv[0] or ".").resolve().parent
+
+
+def portable_dir() -> Path | None:
+    """D-070: `<program folder>/data` when `portable.txt` is beside the program."""
+    folder = program_dir()
+    return folder / PORTABLE_DATA if (folder / PORTABLE_FILE).is_file() else None
+
+
+def portable_models() -> Path | None:
+    """D-070: where a portable program keeps the speech model (HF_HOME)."""
+    base = portable_dir()
+    return base / "models" if base else None
+
+
+def portable_cache() -> Path | None:
+    """D-070: yt-dlp's cache, and the working directory it runs in."""
+    base = portable_dir()
+    return base / "cache" if base else None
+
+
+def apply_portable_environment() -> None:
+    """D-070: the speech model goes inside the portable folder. Called once,
+    before anything imports huggingface_hub."""
+    models = portable_models()
+    if models is not None:
+        os.environ["HF_HOME"] = str(models)
+
+
 def data_dir() -> Path:
-    """D-052: `~/Documents/transcript-normalizer/`, or the platform's equivalent."""
+    """D-052: `~/Documents/transcript-normalizer/`, or the platform's equivalent;
+    `<program folder>/data` for a portable program (D-070)."""
     override = os.environ.get(DATA_DIR_ENV)
     if override:
         return Path(override).expanduser()
+    portable = portable_dir()
+    if portable is not None:
+        return portable
     import platformdirs
 
     return Path(platformdirs.user_documents_dir()) / APP_NAME
@@ -75,7 +118,11 @@ CONFIG_FILE = "config.toml"
 
 
 def config_file() -> Path:
-    """`config.toml` in the platform's user configuration directory."""
+    """`config.toml` in the platform's user configuration directory, or in the
+    portable folder (D-070)."""
+    portable = portable_dir()
+    if portable is not None:
+        return portable / CONFIG_FILE
     import platformdirs
 
     return Path(platformdirs.user_config_dir(APP_NAME, appauthor=False)) / CONFIG_FILE
@@ -113,14 +160,17 @@ def configured_dir() -> Path | None:
 def base_dir() -> Path:
     """Where runs/ and packs/ live.
 
-    In order (D-061): TRANSCRIPT_NORMALIZER_HOME, for scripts; the folder chosen
-    in Settings; then the current directory, as always (D-015, D-017), except in
+    In order (D-061): TRANSCRIPT_NORMALIZER_HOME, for scripts; the portable
+    folder (D-070); the folder chosen in Settings; then the current directory,
+    as always (D-015, D-017), except in
     the executable: double-clicked, its current directory is wherever the system
     chose, so it uses the documents directory instead (D-052). A folder other
     than the current directory is created with both folders on first use.
     """
     if os.environ.get(DATA_DIR_ENV):
         base = data_dir()
+    elif (portable := portable_dir()) is not None:
+        base = portable
     elif (chosen := configured_dir()) is not None:
         base = chosen
     elif not is_frozen():

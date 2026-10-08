@@ -694,6 +694,32 @@ The answers have fixed keys in plain text: `m` keep mine, `t` take theirs, `k` k
 
 Tested with a synthetic base, upstream and mine that has one term per row of both tables, in both directions (`--yes-theirs`, `--yes-mine`, every conflict decided later), two-way mode, a backup, a dry run, detection in the menu, the table and `pack update`, and the diff-only contribution.
 
+## D-070 A Windows installer with a folder choice, and a portable build
+
+No change under core/; packaging and the product layer only.
+
+**The installer.** The Windows full build ships as `transcript-normalizer-<version>-windows-full-setup.exe`, made by Inno Setup 6 from `packaging/windows-installer.iss`. It installs per user by default (`PrivilegesRequired=lowest`, into `%LOCALAPPDATA%\Programs\transcript-normalizer`), so no administrator is needed, and its first page offers "install for all users" instead. The "choose install location" page is shown (`DisableDirPage=no`). It adds a Start menu shortcut, and a desktop shortcut when that box is ticked. Its uninstaller is in "Add or remove programs". A fixed AppId lets a new version install over an old one, and `[InstallDelete]` empties the old `_internal` first, so the program folder is replaced rather than mixed.
+
+The uninstaller never deletes user data. It removes what the installer put in the program folder, and the folder once it is empty; the user's files are not there (runs/ and packs/ are in Documents or the Settings folder, D-052, D-061, and config.toml is in the user settings folder). Its last page says so: "Your files were kept: runs/ and packs/ … and the Settings folder."
+
+The release runner installs it silently into a folder with a space in its name (`/VERYSILENT /CURRENTUSER /DIR=…`), checks the Start menu shortcut, runs `help` and `fetch --check` from there (faster-whisper must be listed), uninstalls silently, and waits up to 90 seconds for the folder and the shortcut to be gone.
+
+**The portable build.** `transcript-normalizer-<version>-windows-full-portable.zip` holds the onedir folder, `portable.txt` (one line saying what it does) and an empty `data/` folder. The zip is written with Python's zipfile (`packaging/portable_zip.py`), because PowerShell's Compress-Archive drops empty folders. The plain windows-full zip of D-063 is no longer published; lite stays a single .exe, and macOS and Linux are unchanged.
+
+**Portable mode** keeps every byte inside its folder. It is on when `portable.txt` is beside the executable (`sys.executable` when frozen, `sys.argv[0]` otherwise), so any build becomes portable by adding the file, lite included. Then, under `<program folder>/data`:
+
+| what | normally | portable |
+|---|---|---|
+| runs/ and packs/ (`base_dir`) | Documents, or the Settings folder | `data/` |
+| config.toml | the user settings folder | `data/config.toml` |
+| the speech model (`HF_HOME`) | `~/.cache/huggingface` | `data/models` |
+| yt-dlp's cache (`cachedir`) | `~/.cache/yt-dlp` | `data/cache` |
+| what yt-dlp's JavaScript runtime writes (a `deno.lock`) | the working directory | `data/cache`, yt-dlp's working directory while it runs |
+
+`HF_HOME` is set at the start of `cli.main`, before anything imports huggingface_hub. Portable wins over a folder chosen in Settings, since the data lives with the program, and Settings says "portable mode: everything stays in <folder>" with no folder dialog; the first screen says it too. `TRANSCRIPT_NORMALIZER_HOME` still wins over both, for scripts. yt-dlp runs in-process (D-057), so its working directory is changed for the call and restored after, and only in portable mode, where a relative path typed by the user is not involved (fetch's paths are absolute by then).
+
+A test makes a program folder with `portable.txt`, a temporary home (HOME, USERPROFILE, APPDATA, LOCALAPPDATA and the XDG folders) and a current directory of its own, runs a fake fetch and a normalize, writes the settings, and finds every file under the program folder and none in the home (settings, documents, ~/.cache) or the current directory. Another proves yt-dlp ran inside data/cache and the working directory came back. On the runner, the unzipped portable build normalizes a fixture with no TRANSCRIPT_NORMALIZER_HOME, and the run is in its data/ and nothing is in Documents, the settings folder or the working directory.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

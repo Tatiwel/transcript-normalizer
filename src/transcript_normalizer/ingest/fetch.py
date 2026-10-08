@@ -25,7 +25,9 @@ engine stays installable without them.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib.util
+import os
 import sys
 import time
 from dataclasses import dataclass
@@ -165,6 +167,34 @@ def impersonation_params() -> dict:
     return {"impersonate": "chrome"} if importlib.util.find_spec("curl_cffi") else {}
 
 
+def portable_params() -> dict:
+    """D-070: a portable program keeps yt-dlp's cache in its own folder."""
+    from ..runs import portable_cache
+
+    cache = portable_cache()
+    return {"cachedir": str(cache)} if cache else {}
+
+
+@contextlib.contextmanager
+def in_portable_cache():
+    """D-070: in a portable program, yt-dlp runs with its cache folder as the
+    working directory, so whatever its JavaScript runtime writes (a deno.lock)
+    stays inside the portable folder. Elsewhere, nothing changes."""
+    from ..runs import portable_cache
+
+    cache = portable_cache()
+    if cache is None:
+        yield
+        return
+    cache.mkdir(parents=True, exist_ok=True)
+    before = os.getcwd()
+    os.chdir(cache)
+    try:
+        yield
+    finally:
+        os.chdir(before)
+
+
 def youtube_dl(params: dict):
     """A `yt_dlp.YoutubeDL`. Replaced in tests by a fake with the same shape."""
     from yt_dlp import YoutubeDL  # the ingest extra, imported lazily
@@ -186,10 +216,10 @@ def ytdlp(params: dict, call, what: str, out: Output):
     exponential backoff. Returns what `call` returned and how many retries it
     took; raises RateLimited, or FetchError with yt-dlp's own message."""
     params = {"quiet": True, "no_warnings": True, "noprogress": True, "logger": _Quiet(),
-              **impersonation_params(), **params}
+              **impersonation_params(), **portable_params(), **params}
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            with youtube_dl(params) as ydl:
+            with in_portable_cache(), youtube_dl(params) as ydl:
                 return call(ydl), attempt - 1
         except Exception as error:  # yt-dlp's DownloadError, or anything under it
             message = str(error).strip()

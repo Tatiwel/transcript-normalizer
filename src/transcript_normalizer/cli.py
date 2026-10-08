@@ -802,6 +802,9 @@ def is_interactive() -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    from .runs import apply_portable_environment
+
+    apply_portable_environment()  # D-070: before anything loads huggingface_hub
     # D-051: no arguments on a terminal opens the menu; anywhere else argparse
     # prints the usage and exits 2, as it always has.
     if not argv and is_interactive():
