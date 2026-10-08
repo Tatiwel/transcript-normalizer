@@ -55,7 +55,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Review pending          answer what the tool was unsure about
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
-   Packs                   installed, get, create, import, remove
+   Packs                   installed, get, create, edit, share
    Settings                where to save your files
    Help                    what each action does and its command
    Quit
@@ -171,8 +171,11 @@ O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote
 | Installed packs | `pack list --installed` | uma tabela: nome, versão, idioma, termos, tamanho (KB), origem (`bundled`, `repository` ou `mine`); quando o repositório de pacotes responde em até 3 segundos, uma marca `↑ update` onde ele tem versão mais nova |
 | Get a pack | `pack install <nome>` | lista o repositório de pacotes (nome, versão, descrição) e instala no seu `packs/` o que você escolher |
 | Create a pack | `pack create --template <área> --name <n> --lang <l>` | um pacote novo a partir de um modelo de área, com as classes da área e nenhum termo; depois o menu oferece pô-lo em primeiro |
+| Edit a pack | `pack add-term`, `edit-term`, `remove-term`, `show` | acrescenta, edita, remove e mostra termos; um pacote que vem com o programa ou do repositório é só leitura, e o menu oferece antes uma cópia sua (`pack copy`) |
 | Import a pack file | `pack import <arquivo>` | uma janela de arquivos com filtro `.yaml` (ou um caminho digitado); o arquivo é conferido como o `normalize` o leria, e copiado para `packs/` |
+| Export a pack file | `pack export <nome> [--to <caminho>]` | grava `<nome>-<versão>.yaml` na pasta que você escolher |
 | Remove a pack | `pack remove <nome>` | pergunta duas vezes e mostra o arquivo; um pacote que vem com o programa não pode ser removido |
+| Contribute a pack | `pack propose --whole <nome>` | propõe o pacote inteiro ao repositório de pacotes (abaixo) |
 | The pack offered first | (configuração do próprio menu) | o pacote no topo de "What is this video about?" |
 
 ```
@@ -221,7 +224,7 @@ terms:
 ```
 
 - `term` é como o termo deve ser escrito. `aliases` são outros nomes corretos (uma marca, um plural, a sigla por extenso). `variants` é o que o reconhecedor produziu no lugar.
-- `class` tem de ser uma das `classes:` do pacote, ou uma das quatro que todo pacote tem: `pessoa`, `organizacao`, `sigla`, `unidade` (D-064). A classe é um rótulo para quem lê o resultado; não muda o que é encontrado, exceto que uma `unidade` nunca é encontrada por semelhança (D-028). Um pacote sem a linha `classes:`, escrito antes da 0.6.0, fica com as oito classes de finanças de D-021. Nomes (`companhia`, `pessoa`) também passam pela comparação fonética, que acha erros nunca vistos antes e pergunta a você; ela nunca muda o texto sozinha (D-050, D-060).
+- `class` tem de ser uma das `classes:` do pacote, ou uma das quatro que todo pacote tem: `pessoa`, `organizacao`, `sigla`, `unidade` (D-064). A classe é um rótulo para quem lê o resultado; não muda o que é encontrado, exceto que uma `unidade` nunca é encontrada por semelhança (D-028). Um pacote sem a linha `classes:`, escrito antes da 0.6.0, fica com as oito classes de finanças de D-021. Nomes também passam pela comparação fonética, que acha erros nunca vistos antes e pergunta a você; ela nunca muda o texto sozinha (D-050, D-060). Quais classes são nomes é o `phonetic_classes:` do pacote (por padrão `pessoa` e `organizacao`, e `companhia` onde o pacote a tem; o modelo medicina acrescenta `farmaco` e `doenca`, D-068). Precisa de um idioma com esqueleto fonético: pt-BR tem, inglês ainda não.
 - Deixe de fora variantes de uma ou duas letras e variantes que são palavras comuns, mesmo que a legenda as tenha usado (D-005, D-032).
 
 O `pack create` põe o arquivo no seu `packs/`; um pacote que você escreveu em outro lugar vai para lá com `pack import <arquivo>`. Aponte para ele:
@@ -240,6 +243,30 @@ transcript-normalizer aula.txt --pack packs/biomed-ptbr.yaml
 
 As suas respostas na revisão vão crescendo `packs/biomed-ptbr.learned.yaml`. Quando uma entrada aprendida se provar, passe-a à mão para o pacote e suba a versão; a seção 2 de [CONTRIBUTING.md](../CONTRIBUTING.md) tem as regras de curadoria e mostra como medir um pacote. Para compartilhar um pacote, proponha-o ao repositório de pacotes; o README dele diz como.
 
+**Editando um pacote.** Packs → Edit a pack escolhe um pacote e oferece: Add a term (o termo, a classe entre as do pacote, depois outros nomes corretos e as versões do reconhecedor, um por linha, linha vazia para terminar), Edit a term (digite parte dele, escolha, e acrescente ou remova formas, mude a classe ou o nome), Remove a term (pergunta uma vez) e Show terms (página por página, ou busca). Um pacote que vem com o programa ou do repositório é só leitura: o menu oferece antes fazer uma cópia sua, com o mesmo nome, que passa a ser usada. Cada mudança é conferida como o normalize leria o pacote e salva na hora, com a próxima versão de correção (0.1.0 → 0.1.1). Uma variante com menos de 3 letras é recusada (acharia palavras demais, D-005), e uma variante feita de palavras comuns é salva com um aviso (D-032). Pela linha de comando:
+
+```
+transcript-normalizer pack copy financas-ptbr
+transcript-normalizer pack add-term biomed-ptbr metformina --class farmaco --alias Glifage --variant metiformina
+transcript-normalizer pack edit-term biomed-ptbr metformina --add-variant "met forming"
+transcript-normalizer pack show biomed-ptbr --search metf
+```
+
+**Um termo que você notou.** Depois de normalizar, e em "Show a run's outputs", o menu pergunta "Add a term you noticed?". Pede a forma errada que você viu, mostra até cinco linhas da run com ela, para você conferir que é essa, e depois o que ela deveria ser. Se esse termo está no pacote, pergunta se o reconhecedor ouviu errado (uma variante, corrigida dali em diante) ou se a pessoa falou assim mesmo (um alias, mantido como foi dito); se não está, pede uma classe e acrescenta o termo com a forma como variante. Depois oferece normalizar a run de novo com ele (D-066):
+
+```
+The wrong form you saw
+> mississões
+  in 1 line(s) of R2Qgz8tFWVI:
+    3:22 gestão, tanto as mississões e tal. Então
+Is 'mississões' the form you saw? [Y/n]
+What it should be
+> emissão
++ term     emissão (conceito)
+  + variant  mississões -> emissão
+Normalize R2Qgz8tFWVI again with it? [Y/n]
+```
+
 **Devolvendo.** O que você ensina à ferramenta numa revisão fica na sua camada aprendida. Para oferecê-lo a todo mundo que usa o pacote:
 
 ```
@@ -257,9 +284,11 @@ Contribute these? [y/N]
 
 Com um sim, grava `contributions/financas-ptbr-<data>.yaml` e abre no navegador uma issue já preenchida no repositório de pacotes (ou imprime o link); você a envia por lá, e quem mantém o pacote decide o que entra (D-056). O menu oferece isso depois de uma revisão.
 
+Um pacote inteiro, seu para uma área nova ou um que veio com o programa e você melhorou, é proposto com `pack propose --whole <nome>` (menu: Packs → Contribute a pack). Ele mostra a área do pacote, as classes, o número de termos e cinco deles, e pergunta; com um sim, grava `contributions/<nome>-<versão>.yaml` e abre uma issue com o título "New pack: <nome>", ou "Update: <nome>" quando o repositório já tem esse pacote, com o arquivo no corpo, recolhido (ou, para um pacote longo, um aviso para anexar o arquivo). Nada sai do seu computador até você mesmo enviar a issue (D-067). O `pack export <nome>` grava o mesmo arquivo em qualquer lugar, para compartilhar de outro jeito.
+
 ## 7. Outro idioma
 
-O pacote declara o idioma (`language: pt-BR`), e um módulo de idioma fornece o que o núcleo não deve adivinhar: como dobrar o texto (caixa, acentos), como é um plural, os padrões de unidade, onde termina uma frase e o esqueleto fonético. Por enquanto só existe português do Brasil. Acrescentar um idioma é um arquivo Python; a seção 1 de [CONTRIBUTING.md](../CONTRIBUTING.md) mostra o caminho.
+O pacote declara o idioma (`language: pt-BR`), e um módulo de idioma fornece o que o núcleo não deve adivinhar: como dobrar o texto (caixa, acentos), como é um plural, os padrões de unidade, onde termina uma frase e o esqueleto fonético. Há dois: português do Brasil e inglês (plurais em -s, -es e -ies, `bn`/`B` e `mn`/`M` depois de um número como billion e million, ainda sem esqueleto fonético; D-068). Um pacote em outro idioma é comparado com um módulo genérico, sem inflexões e sem regras de unidade; o menu faz isso sozinho e avisa, e um comando precisa de `--allow-generic`. Acrescentar um idioma é um arquivo Python; a seção 1 de [CONTRIBUTING.md](../CONTRIBUTING.md) mostra o caminho.
 
 ## 8. Quão bom é
 

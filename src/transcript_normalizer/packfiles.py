@@ -48,6 +48,7 @@ class Template:
     classes: tuple[str, ...]
     description: dict[str, str]  # en and pt-BR, one line each
     path: Path
+    phonetic_classes: tuple[str, ...] = ()  # D-068; empty: the default
 
 
 #: The order the menu lists them in; a template not named here comes after,
@@ -65,7 +66,10 @@ def templates() -> dict[str, Template]:
     key = lambda p: (p.stem == "geral", rank.get(p.stem, len(ORDER)), p.stem)  # noqa: E731
     for path in sorted(TEMPLATES.glob("*.yaml"), key=key):
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        found[path.stem] = Template(path.stem, tuple(data["classes"]), dict(data["description"]), path)
+        found[path.stem] = Template(
+            path.stem, tuple(data["classes"]), dict(data["description"]), path,
+            tuple(data.get("phonetic_classes") or ()),
+        )
     return found
 
 
@@ -238,11 +242,13 @@ def created_text(template: Template, name: str, lang: str) -> str:
         "# Add terms under `terms:`; CONTRIBUTING.md, section 2, says how.\n",
         "# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).\n",
         f"name: {name}\n",
+        f"field: {template.field}\n",
         "description:\n",
         *(f"  {code}: {quoted(line, ensure_ascii=False)}\n" for code, line in template.description.items()),
         f"language: {lang}\n",
         "version: 0.1.0\n",
         f"classes: [{', '.join(template.classes)}]\n",
+        *([f"phonetic_classes: [{', '.join(template.phonetic_classes)}]\n"] if template.phonetic_classes else []),
         "terms: []\n",
     ])
 
@@ -252,8 +258,8 @@ def note_language(code: str) -> None:
         languages.for_code(code)
     except languages.LanguageNotFound:
         print(
-            f"  no language module for {code}: normalize matches it with the generic one "
-            "and needs --allow-generic (D-033)"
+            f"  no language module for {code}: it is matched with the generic one, no "
+            "inflections and no unit rules (the menu does this; a command needs --allow-generic, D-033)"
         )
 
 

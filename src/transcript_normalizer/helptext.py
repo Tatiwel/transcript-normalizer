@@ -44,10 +44,11 @@ ACTIONS = (
     Action("5", "List runs", "everything under runs/",
            "id, publication date and title of every run",
            f"{PROG} list"),
-    Action("6", "Packs", "installed, get, create, import, remove",
+    Action("6", "Packs", "installed, get, create, edit, share",
            "the packs on this machine (with an update mark when the repository has a newer one); "
-           "get one from the packs repository; create one from a field template; import a pack "
-           "file; remove one; and the pack the menu offers first",
+           "get one from the packs repository; create one from a field template; edit one (add, "
+           "edit, remove and show terms); import, export or remove a pack file; contribute a "
+           "whole pack; and the pack the menu offers first",
            f"{PROG} pack list --installed"),
     Action("7", "Settings", "where to save your files",
            "a folder dialog for where runs/ and packs/ go, kept in config.toml in your user "
@@ -75,6 +76,12 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("pack list --installed", "the packs on this machine: version, language, terms, size, source, and ↑ where the repository has a newer one"),
             ("pack create --template <field> --name <n> --lang <l>", "a new pack in packs/, with the field's classes and no terms (D-065)"),
             ("pack import <file> | remove <name>", "check a pack file and copy it into packs/; delete one from packs/ (never a bundled one)"),
+            ("pack copy <name>", "make a bundled or repository pack your own, to edit (D-066)"),
+            ("pack add-term <pack> <term>", "add a term (--class, --alias, --variant), or forms to an existing one; checked, saved with the next patch version"),
+            ("pack edit-term | remove-term", "change a term of a pack (--rename, --class, --add-variant, --remove-alias, …); remove one"),
+            ("pack show <pack>", "a pack's terms with their forms; --search <text>, --page <n>"),
+            ("pack export <name> [--to <path>]", "write <name>-<version>.yaml"),
+            ("pack propose --whole <name>", "propose a whole pack to the packs repository: shows it, asks, then opens a prefilled issue (D-067)"),
             ("pack propose [--pack <name>]", "contribute what your reviews taught the tool: shows it, asks, then opens a prefilled issue"),
             ("help", "this help; `<command> --help` lists a command's options"),
         ]),

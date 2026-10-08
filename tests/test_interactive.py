@@ -225,8 +225,8 @@ def test_a_bad_url_is_an_error_in_the_menu(tmp_path, monkeypatch, capsys):
 
 def test_show_wraps_long_lines_with_a_margin(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("COLUMNS", "30")
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "n", "", "4", "1", "q"])
-    shown = out.split("normalized.txt, first")[1].split("-" * 30)[0]
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "n", "", "", "4", "1", "n", "q"])
+    shown = out.split("normalized.txt, first")[1].split("Add a term you noticed?")[0]
     body = [line for line in shown.splitlines()[1:] if line.strip()]
     assert body and all(line.startswith("  ") and len(line) <= 30 for line in body)
 
@@ -459,7 +459,7 @@ def test_review_with_nothing_pending_says_so_and_does_not_offer_the_folder(tmp_p
 
 
 def test_review_on_a_run_whose_pack_did_not_fit_says_nothing_to_review(tmp_path, monkeypatch, capsys):
-    lines = [*LINK, "", "1", "3", "1", "q"]  # fetch, normalize (unfit), review
+    lines = [*LINK, "", "1", "n", "3", "1", "q"]  # fetch, normalize (unfit), no term, review
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="rolling.vtt")
     after = out.split("Review which run?")[1]
     assert interactive.NOTHING_TO_REVIEW in after and "Open the folder?" not in after
@@ -501,7 +501,7 @@ def test_settings_can_go_back_to_the_default(tmp_path, monkeypatch, capsys):
 
 
 def test_the_pack_offered_first_is_saved(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "6", "1", "b", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "9", "1", "b", "q"])
     assert "Saved. Offered first: financas-ptbr" in out
     assert runs.read_config() == {"pack": "financas-ptbr"}
 

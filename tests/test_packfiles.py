@@ -136,8 +136,8 @@ def test_create_refuses_what_it_should(home, capsys):
 
 
 def test_create_in_a_language_with_no_module_says_so(home, capsys):
-    assert main(["pack", "create", "--template", "tecnologia", "--name", "tech-en", "--lang", "en"]) == 0
-    assert "no language module for en" in capsys.readouterr().out
+    assert main(["pack", "create", "--template", "tecnologia", "--name", "tech-de", "--lang", "de"]) == 0
+    assert "no language module for de" in capsys.readouterr().out
 
 
 # ------------------------------------------------------------------ import
@@ -219,7 +219,7 @@ def test_installed_table_offline(home, capsys):
     out = capsys.readouterr().out
     lines = out.splitlines()
     assert lines[0].split() == ["name", "version", "language", "terms", "size", "(KB)", "source"]
-    assert lines[1].split()[:4] == ["financas-ptbr", "0.3.6", "pt-BR", str(len(load_pack(BUNDLED).terms))]
+    assert lines[1].split()[:4] == ["financas-ptbr", load_pack(BUNDLED).version, "pt-BR", str(len(load_pack(BUNDLED).terms))]
     assert lines[1].split()[-1] == "bundled"
     assert lines[2].split()[:4] == ["med", "0.1.0", "pt-BR", "0"] and lines[2].split()[-1] == "mine"
     assert "update" not in lines[0] and "↑" not in out
@@ -285,9 +285,10 @@ def test_installed_table_with_an_index_marks_newer_versions(home, monkeypatch, c
 
 def test_the_menu_has_packs_and_settings_no_longer_has_the_pack(home, monkeypatch, capsys):
     _, out, _ = menu(home, monkeypatch, capsys, ["6", "b", "q"])
-    assert "   6. Packs                   installed, get, create, import, remove" in out
-    for item in ("Installed packs", "Get a pack", "Create a pack", "Import a pack file",
-                 "Remove a pack", "The pack offered first", "b. <- Back"):
+    assert "   6. Packs                   installed, get, create, edit, share" in out
+    for item in ("Installed packs", "Get a pack", "Create a pack", "Edit a pack", "Import a pack file",
+                 "Export a pack file", "Remove a pack", "Contribute a pack", "The pack offered first",
+                 "b. <- Back"):
         assert item in out.split("* Packs")[1]
 
 
@@ -313,7 +314,7 @@ def test_menu_create_with_a_bad_name_writes_nothing(home, monkeypatch, capsys):
 
 def test_menu_import_with_a_typed_path(home, monkeypatch, capsys):
     source = write(home / "agro-ptbr.yaml", pack_text("classes: [praga]\n", "praga"))
-    _, out, _ = menu(home, monkeypatch, capsys, ["6", "4", str(source), "b", "q"])
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "5", str(source), "b", "q"])
     assert "no file dialog here; type the path instead" in out
     assert (home / "packs" / "agro-ptbr.yaml").exists()
 
@@ -323,7 +324,7 @@ def test_menu_import_uses_the_file_dialog_on_yaml(home, monkeypatch, capsys):
 
     source = write(home / "agro-ptbr.yaml", pack_text("classes: [praga]\n", "praga"))
     tk = fake_tkinter(monkeypatch, str(source))
-    menu(home, monkeypatch, capsys, ["6", "4", "b", "q"])
+    menu(home, monkeypatch, capsys, ["6", "5", "b", "q"])
     (_, asked), = [c for c in tk.calls if isinstance(c, tuple)]
     assert asked["filetypes"][0] == ("Pack files", "*.yaml")
     assert (home / "packs" / "agro-ptbr.yaml").exists()
@@ -332,15 +333,15 @@ def test_menu_import_uses_the_file_dialog_on_yaml(home, monkeypatch, capsys):
 def test_menu_remove_asks_twice_and_shows_the_path(home, monkeypatch, capsys):
     main(["pack", "create", "--template", "agro", "--name", "agro-ptbr", "--lang", "pt-BR"])
     target = home / "packs" / "agro-ptbr.yaml"
-    _, out, _ = menu(home, monkeypatch, capsys, ["6", "5", "2", "y", "n", "b", "q"])
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "7", "2", "y", "n", "b", "q"])
     assert f"file: {target}" in out and "Remove agro-ptbr?" in out and "Really remove it?" in out
     assert target.exists()  # the second answer was no
-    menu(home, monkeypatch, capsys, ["6", "5", "2", "y", "y", "b", "q"])
+    menu(home, monkeypatch, capsys, ["6", "7", "2", "y", "y", "b", "q"])
     assert not target.exists()
 
 
 def test_menu_remove_refuses_the_bundled_pack_without_asking(home, monkeypatch, capsys):
-    _, out, _ = menu(home, monkeypatch, capsys, ["6", "5", "1", "b", "q"])
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "7", "1", "b", "q"])
     assert "bundled with the program and cannot be removed" in out
     assert "Remove financas-ptbr?" not in out
 

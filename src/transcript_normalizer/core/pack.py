@@ -41,6 +41,13 @@ CLASSES = (
 #: D-064: the classes every pack may use, whatever it declares.
 COMMON_CLASSES = ("pessoa", "organizacao", "sigla", "unidade")
 
+#: D-050: the classes the phonetic source reads, for a pack with no
+#: `classes:` line (D-064's legacy packs, measured with these two).
+LEGACY_PHONETIC_CLASSES = ("companhia", "pessoa")
+#: D-068: the default for a pack that declares its classes and not its
+#: `phonetic_classes:`; `companhia` is added when the pack declares it.
+DEFAULT_PHONETIC_CLASSES = ("pessoa", "organizacao")
+
 
 def nfc(s: str) -> str:
     """Display form: NFC, nothing else. The original is never lost."""
@@ -252,6 +259,7 @@ class Pack:
     language: ModuleType = field(default=None)  # D-033: the pack's language module
     language_code: str = ""
     classes: tuple[str, ...] = ()  # D-064: what its terms may be labelled
+    phonetic_classes: tuple[str, ...] = ()  # D-068: names the phonetic source reads
 
     def normalize(self, text: str) -> str:
         """Text as this pack's language compares it (D-033)."""
@@ -299,6 +307,28 @@ def pack_classes(data: dict, path: Path) -> tuple[str, ...]:
     return tuple(dict.fromkeys(COMMON_CLASSES + own))
 
 
+def pack_phonetic_classes(data: dict, path: Path, classes: tuple[str, ...]) -> tuple[str, ...]:
+    """D-068: the pack's `phonetic_classes:`, each one of its classes; without
+    the line, D-050's two for a legacy pack, else pessoa and organizacao, and
+    companhia when the pack declares it."""
+    declared = data.get("phonetic_classes")
+    if declared is None:
+        if data.get("classes") is None:
+            return LEGACY_PHONETIC_CLASSES
+        own = data.get("classes") or ()
+        return DEFAULT_PHONETIC_CLASSES + (("companhia",) if "companhia" in own else ())
+    if not (isinstance(declared, list) and all(isinstance(c, str) and c.strip() for c in declared)):
+        raise ValueError(f"{path}: `phonetic_classes:` must be a list of class names")
+    found = tuple(nfc(c.strip()) for c in declared)
+    unknown = [c for c in found if c not in classes]
+    if unknown:
+        raise ValueError(
+            f"{path}: `phonetic_classes:` names {', '.join(unknown)}, not among this pack's classes "
+            f"({', '.join(classes)}) (D-068)"
+        )
+    return found
+
+
 def load_pack(
     path: str | Path,
     learned: Learned | None = None,
@@ -321,6 +351,7 @@ def load_pack(
         raise languages.LanguageNotFound(f"{path}: {error}") from None
     norm = language.normalize
     classes = pack_classes(data, path)
+    phonetic_classes = pack_phonetic_classes(data, path, classes)
     if learned is None:
         learned = load_learned(learned_file(path, learned_from))
 
@@ -387,4 +418,5 @@ def load_pack(
         language=language,
         language_code=code or language.CODE,
         classes=classes,
+        phonetic_classes=phonetic_classes,
     )

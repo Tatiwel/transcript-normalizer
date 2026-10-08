@@ -82,3 +82,17 @@ def skeleton(text: str) -> str:
     s = re.sub(r"[gj]", "j", s)
     s = re.sub(r"[aeiouy]", "", s)
     return re.sub(r"(.)\1+", r"\1", s)
+
+
+# ------------------------------------------------------------------ common words
+
+#: D-032, D-066: ordinary words, normalized; the pack editor warns when a
+#: variant is made of these only (`esse amigo`, `me caiu`).
+common_words: frozenset[str] = frozenset("""
+a ao aos aquela aquele aquilo as ate bem cada como com da das de dela dele depois
+do dos e ela ele eles em entao entre era essa esse esta estava este eu foi for ha
+isso isto ja la lhe mais mas me mesmo meu minha muito na nao nas nem no nos nossa
+nosso num numa o os ou para pela pelo pode por porque pra quando que quem se sem
+ser seu sua so sobre tambem tem ter tipo tudo um uma umas uns vai voce
+amigo caiu cair coisa dia diz faz fazer gente hoje tira rapido divide trio oxe
+""".split())

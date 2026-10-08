@@ -1,4 +1,5 @@
-"""`transcript-normalizer pack propose` (D-056): give back what the review taught.
+"""`transcript-normalizer pack propose` (D-056): give back what the review taught;
+`pack propose --whole <name>` (D-067): propose a whole pack.
 
 The learned layer (D-013) is personal and never merged into a pack by the tool.
 This reads it, keeps what the pack does not already have, shows it (term, form
@@ -103,9 +104,103 @@ def resolve(name: str | None) -> Path | None:
     return installed_packs().get(Path(name).stem)
 
 
+def open_issue(url: str) -> None:
+    opened = False
+    try:
+        opened = webbrowser.open(url)
+    except Exception:  # no browser here is a fallback, not a failure
+        opened = False
+    if opened:
+        print("a prefilled issue is open in your browser; check it and submit it there.")
+    else:
+        print(f"open this link to submit it as an issue:\n{url}")
+
+
+# ------------------------------------------------------------------ a whole pack (D-067)
+
+#: How many terms the summary shows.
+EXAMPLES = 5
+
+
+def pack_summary(name: str, data: dict) -> list[str]:
+    """What the user sees before a whole pack is proposed: field, classes,
+    number of terms and five examples."""
+    from .packedit import term_line
+
+    terms = data.get("terms") or []
+    description = data.get("description")
+    if isinstance(description, dict):
+        description = description.get("en") or next(iter(description.values()), "")
+    lines = [
+        f"  pack      {name} {data.get('version') or '?'} ({data.get('language') or '?'})",
+        f"  field     {data.get('field') or '(not recorded)'}" + (f": {description}" if description else ""),
+        f"  classes   {', '.join(data.get('classes') or ['(the eight of D-021)'])}",
+        f"  terms     {len(terms)}",
+    ]
+    lines += [f"    {term_line(t)}" for t in terms[:EXAMPLES]]
+    if len(terms) > EXAMPLES:
+        lines.append(f"    … and {len(terms) - EXAMPLES} more")
+    return lines
+
+
+def whole_issue_url(title: str, path: Path, text: str, summary: list[str]) -> str:
+    intro = (
+        f"Proposed with `transcript-normalizer pack propose --whole`: the whole pack, as one "
+        "user has it. The pack file only; no transcript.\n\n```\n" + "\n".join(summary) + "\n```\n\n"
+    )
+    for body in (
+        f"{intro}<details><summary>{path.name}</summary>\n\n```yaml\n{text}```\n\n</details>\n",
+        f"{intro}The pack is too long for a link: attach `{path.name}` (written to {path}).\n",
+    ):
+        url = f"{ISSUE_URL}?{urllib.parse.urlencode({'title': title, 'body': body})}"
+        if len(url) <= MAX_URL:
+            return url
+    return url
+
+
+def known_to_repository(name: str, path: Path) -> bool:
+    """Whether the packs repository has a pack of this name: from its index
+    when it answers within a few seconds, else from where the pack came from."""
+    from .packfiles import INDEX_WAIT_SECONDS, MINE, index_within, source_of
+
+    index = index_within(INDEX_WAIT_SECONDS)
+    if index is not None:
+        return name in index
+    return source_of(name, path) != MINE
+
+
+def run_propose_whole(name: str) -> int:
+    from . import prompts
+
+    path = installed_packs().get(name)
+    if path is None:
+        print(f"no pack called {name}; installed: {', '.join(installed_packs())}", file=sys.stderr)
+        return 1
+    text = path.read_text(encoding="utf-8")
+    data = yaml.safe_load(text) or {}
+    version = str(data.get("version") or "0.0.0")
+    summary = pack_summary(name, data)
+    title = f"{'Update' if known_to_repository(name, path) else 'New pack'}: {name}"
+    print(f"What would be proposed to the packs repository, as \"{title}\":")
+    for line in summary:
+        print(line)
+    print(f"The whole file is sent, as it is in {path}; never a transcript.")
+    if not prompts.confirm("Propose this pack?", default=False):
+        print("nothing written.")
+        return 0
+    target = base_dir() / CONTRIBUTIONS_DIR / f"{name}-{version}.yaml"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    print(f"written to {target}")
+    open_issue(whole_issue_url(title, target, text, summary))
+    return 0
+
+
 def run_propose(args) -> int:
     from . import prompts
 
+    if args.whole:
+        return run_propose_whole(args.whole)
     pack_path = resolve(args.pack)
     if pack_path is None:
         print(
@@ -136,16 +231,7 @@ def run_propose(args) -> int:
     path.write_text(text, encoding="utf-8")
     print(f"written to {path}")
 
-    url = issue_url(name, path, text, len(found))
-    opened = False
-    try:
-        opened = webbrowser.open(url)
-    except Exception:  # no browser here is a fallback, not a failure
-        opened = False
-    if opened:
-        print("a prefilled issue is open in your browser; check it and submit it there.")
-    else:
-        print(f"open this link to submit it as an issue:\n{url}")
+    open_issue(issue_url(name, path, text, len(found)))
     return 0
 
 
@@ -156,4 +242,8 @@ def add_arguments(commands) -> None:
         description=__doc__.split("\n\n")[1],
     )
     proposing.add_argument("--pack", metavar="NAME", help="the pack. default: the default pack")
+    proposing.add_argument(
+        "--whole", metavar="NAME",
+        help="propose the whole pack instead, as a new pack or an update (D-067)",
+    )
     proposing.set_defaults(run=run_propose)

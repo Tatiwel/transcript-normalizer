@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.1
+
+Editing packs (D-066), contributing a whole pack (D-067), English and phonetic classes (D-068).
+
+- Packs → Edit a pack: add a term (class from the pack's classes, aliases, variants one per line), edit a term, remove a term, show terms (paged, searchable). A bundled or repository pack is read-only; the menu offers your own copy first. Every change is checked and saved with the next patch version. A variant under 3 letters is refused (D-005); a variant made of ordinary words is saved with a warning (D-032). Commands: `pack copy`, `pack add-term`, `pack edit-term`, `pack remove-term`, `pack show`.
+- "Add a term you noticed", offered after Normalize and in Show a run's outputs: the wrong form (with up to five of the run's lines containing it), what it should be, then a variant or alias of an existing term, or a new term; then an offer to normalize the run again.
+- Packs → Export a pack file and `pack export <name> [--to <path>]`: `<name>-<version>.yaml`.
+- Packs → Contribute a pack and `pack propose --whole <name>`: the pack's summary, a question, `contributions/<name>-<version>.yaml`, and a prefilled issue "New pack: <name>" or "Update: <name>" with the file in the body, collapsed.
+- An English language module: folding, plurals (-s, -es, -ies), `bn`/`B` and `mn`/`M` after a number as billion and million, sentence punctuation. The menu passes `--allow-generic`, with a notice, only for a language that still has no module.
+- `phonetic_classes:` per pack: which classes the phonetic source compares (default `pessoa`, `organizacao`, and `companhia` where declared). The medicina, tecnologia and esportes templates set their own. Pack 0.3.7: financas-ptbr declares D-050's `companhia` and `pessoa`; nothing it matches changes. Created packs record their `field:`.
+- The Packs menu is now: Installed, Get, Create, Edit, Import, Export, Remove, Contribute, The pack offered first.
+
 ## 0.6.0
 
 Packs for other fields: classes per pack (D-064), field templates and a Packs menu (D-065).

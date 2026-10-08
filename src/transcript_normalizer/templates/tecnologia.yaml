@@ -10,4 +10,5 @@ description:
 language: LANG
 version: 0.1.0
 classes: [linguagem, biblioteca, protocolo, produto, conceito]
+phonetic_classes: [produto, biblioteca, linguagem, pessoa, organizacao]  # D-068: the names a recognizer garbles
 terms: []

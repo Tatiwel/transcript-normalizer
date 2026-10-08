@@ -424,11 +424,14 @@ def normalize() -> None:
             return
 
 
-def normalize_run(run: Path, caption: Path | None = None, chained: bool = False) -> str | None:
-    """Normalize, offer the review, then offer the folder.
+def normalize_run(
+    run: Path, caption: Path | None = None, chained: bool = False, pack: Path | None = None
+) -> str | None:
+    """Normalize, offer the review, then a term you noticed (D-066), then the folder.
 
     `chained` when another step led here, which then labels this one. BACK
     when the pack question was answered with Back, before anything was written.
+    `pack` skips the pack question: the run is normalized again with it.
     """
     from .cli import is_subtitle, is_unfit
 
@@ -437,7 +440,7 @@ def normalize_run(run: Path, caption: Path | None = None, chained: bool = False)
     caption = caption or caption_of(run)
     if not caption:
         return None
-    pack = choose_pack("What is this video about?", allow_none=True)
+    pack = pack or choose_pack("What is this video about?", allow_none=True)
     if pack is None:
         return BACK
     if pack == NO_PACK:
@@ -445,11 +448,12 @@ def normalize_run(run: Path, caption: Path | None = None, chained: bool = False)
         say(mark("  Packs (6) gets a pack from the repository, or creates one for your field.", "hint"))
         return None
     say(mark(f"Normalizing {run.name}", "title"))
-    code = run_command(["normalize", str(caption), "--summary", "--menu", "--pack", str(pack)])
+    code = run_command(["normalize", str(caption), "--summary", "--menu", "--pack", str(pack), *generic(pack)])
     if code != 0:
         error("normalize did not finish")
         return None
     if is_unfit(run):  # D-054: normalize said so, and applied nothing
+        offer_noticed(run, pack)  # a missing term may be why
         return None
     if is_subtitle(caption):  # converted into the run's legenda.txt
         caption = run / CAPTION_FILE
@@ -461,6 +465,8 @@ def normalize_run(run: Path, caption: Path | None = None, chained: bool = False)
         if prompts.confirm(f"Next: review the {count} uncertain one(s) now?", default=True):
             review_run(run, caption, pack, chained=True)
             return None
+    if offer_noticed(run, pack):
+        return None  # normalized again, which offered the folder
     offer_folder(run)
     return None
 
@@ -500,11 +506,13 @@ def review_run(
         stage("Review", run.name)
     say(mark(f"Reviewing {run.name}", "title"))
     argv = ["normalize", str(caption), "--review", "--menu", "--quiet" if chained else "--summary"]
-    code = run_command(argv + (["--pack", str(pack)] if pack else []))
+    code = run_command(argv + (["--pack", str(pack), *generic(pack)] if pack else []))
     if code not in (0, 130):  # 130: interrupted, the answers so far are kept (D-037)
         error("review did not finish")
         return
     offer_contribution(pack)
+    if offer_noticed(run, pack or default_pack()):
+        return
     offer_folder(run)
 
 
@@ -558,6 +566,7 @@ def show() -> None:
     lines = normalized.read_text(encoding="utf-8").splitlines()
     say(f"\n{NORMALIZED_FILE}, first {min(PREVIEW_LINES, len(lines))} of {len(lines)} lines:")
     print(helptext.wrap_block("\n".join(lines[:PREVIEW_LINES])))
+    offer_noticed(run, None)
 
 
 def listing() -> None:
@@ -566,6 +575,313 @@ def listing() -> None:
 
 def help_text() -> None:
     run_command(["help"])
+
+
+# ------------------------------------------------------------------ a term you noticed (D-066)
+
+#: How many of the run's lines are shown for the form typed.
+NOTICED_LINES = 5
+
+
+def generic(pack: Path) -> list[str]:
+    """D-068: `--allow-generic` for a pack whose language has no module, said once."""
+    import yaml
+
+    from . import languages
+
+    try:
+        code = str((yaml.safe_load(Path(pack).read_text(encoding="utf-8")) or {}).get("language") or "")
+        languages.for_code(code)
+    except languages.LanguageNotFound:
+        say(mark(f"  no language module for {code or '?'}: matching with the generic one "
+                 "(no inflections, no unit rules)", "hint"))
+        return ["--allow-generic"]
+    except (OSError, yaml.YAMLError):
+        pass
+    return []
+
+
+def lines_with(caption: Path, form: str) -> list[str]:
+    """The caption's `m:ss text` lines where `form` occurs as whole words."""
+    from .languages import generic as plain
+
+    target = f" {plain.normalize(form)} "
+    found = []
+    for line in caption.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#") or not line.strip():
+            continue
+        if target.strip() and target in f" {plain.normalize(line.split(' ', 1)[-1])} ":
+            found.append(line.strip())
+    return found
+
+
+def own_copy(name: str, path: Path, doing: str) -> bool:
+    """D-066: a bundled or repository pack is read-only; offer the user's own copy."""
+    from .packfiles import MINE, source_of
+
+    source = source_of(name, path)
+    if source == MINE:
+        return True
+    say(mark(f"  {name} is a {source} pack, read-only.", "need"))
+    if not prompts.confirm(f"Make your own copy of {name} to {doing}?", default=True):
+        return False
+    return run_command(["pack", "copy", name]) == 0
+
+
+def allowed_classes(path: Path) -> list[str]:
+    import yaml
+
+    from .core.pack import pack_classes
+
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return list(pack_classes(data, path))
+
+
+def choose_class(path: Path) -> str | None:
+    return prompts.select("Which class?", [
+        Option(c, value=c) for c in allowed_classes(path)
+    ], hint="a label for whoever reads the output; `unidade` is never matched by similarity")
+
+
+def offer_noticed(run: Path, pack: Path | None) -> bool:
+    """After normalizing, or showing a run: offer to add a term. True when the
+    run was normalized again."""
+    if not prompts.confirm("Add a term you noticed?", default=False):
+        return False
+    return add_noticed(run, pack)
+
+
+def add_noticed(run: Path, pack: Path | None) -> bool:
+    """The wrong form, shown in the run's lines; what it should be; then the
+    pack gets a variant (or alias) of an existing term, or a new term."""
+    from .core.pack import Learned, load_pack
+
+    stage("Add a term", run.name)
+    caption = caption_of(run)
+    if caption is None:
+        return False
+    if pack is None:
+        pack = choose_pack("Add it to which pack?", allow_none=False)
+        if pack is None:
+            return False
+    pack = Path(pack)
+    name = pack.stem
+    if not own_copy(name, pack, "add to it"):
+        return False
+    pack = installed_packs()[name]
+    while True:
+        form = prompts.text("The wrong form you saw", hint="as the caption has it, e.g. SEMIG", kind="type")
+        if not form:
+            return False
+        found = lines_with(caption, form)
+        if not found:
+            error(f"{form!r} is not in {run.name}'s caption; type it as the caption has it")
+            continue
+        say(mark(f"  in {len(found)} line(s) of {run.name}" + (f", the first {NOTICED_LINES}:" if len(found) > NOTICED_LINES else ":"), "hint"))
+        for line in found[:NOTICED_LINES]:
+            say("    ", line)
+        if prompts.confirm(f"Is {form!r} the form you saw?", default=True):
+            break
+    canonical = prompts.text("What it should be", hint="the term, as it should be written", kind="type")
+    if not canonical:
+        return False
+    loaded = load_pack(pack, learned=Learned(), allow_generic=True)
+    existing = loaded.term_named(canonical)
+    if existing is not None:
+        kind = prompts.select(f"{existing.term} is in the pack. How did the speaker say it?", [
+            Option("A mishearing", f"a variant: {form} is corrected to {existing.term} from now on", value="variant"),
+            Option("The term, said that way", f"an alias: {form} is recognized and kept as said", value="alias"),
+        ])
+        if kind is None:
+            return False
+        argv = ["pack", "add-term", name, existing.term, f"--{kind}", form]
+    else:
+        klass = choose_class(pack)
+        if klass is None:
+            return False
+        argv = ["pack", "add-term", name, canonical, "--class", klass]
+        if loaded.normalize(form) != loaded.normalize(canonical):
+            argv += ["--variant", form]
+    if run_command(argv) != 0:
+        return False
+    if prompts.confirm(f"Normalize {run.name} again with it?", default=True):
+        normalize_run(run, pack=installed_packs()[name], chained=True)
+        return True
+    return False
+
+
+# ------------------------------------------------------------------ editing a pack (D-066)
+
+
+def choose_own_pack(question: str, doing: str) -> str | None:
+    """A pack from the installed ones; a read-only one is copied first."""
+    from .packfiles import source_of
+
+    packs_ = installed_packs()
+    picked = prompts.select(question, [
+        Option(name, f"{source_of(name, path)} · {pack_line(path)}", value=name) for name, path in packs_.items()
+    ])
+    if picked is None or not own_copy(picked, packs_[picked], doing):
+        return None
+    return picked
+
+
+def term_names(name: str) -> list[str]:
+    import yaml
+
+    data = yaml.safe_load(installed_packs()[name].read_text(encoding="utf-8")) or {}
+    return [str(t["term"]) for t in data.get("terms") or []]
+
+
+def choose_term(name: str, question: str) -> str | None:
+    """Type part of a term (or of one of its forms); pick it from the matches."""
+    from .packedit import forms_of, language_of, read
+
+    _, data = read(installed_packs()[name])
+    language = language_of(data)
+    while True:
+        typed = prompts.text("Which term? Type part of it", hint="a term, an alias or a variant", kind="type")
+        if not typed:
+            return None
+        needle = language.normalize(typed)
+        matches = [t for t in data.get("terms") or []
+                   if any(needle in language.normalize(str(f)) for f in forms_of(t))]
+        if not matches:
+            error(f"no term of {name} has {typed!r} in it")
+            continue
+        picked = prompts.select(question, [Option(str(t["term"]), str(t.get("class") or ""), value=str(t["term"]))
+                                          for t in matches[:TERM_CHOICES]],
+                                hint=f"{len(matches)} match(es)" + (f"; the first {TERM_CHOICES}" if len(matches) > TERM_CHOICES else ""))
+        if picked is not None:
+            return picked
+
+
+#: How many matches choose_term lists.
+TERM_CHOICES = 20
+
+
+def lines_typed(title: str, hint: str) -> list[str]:
+    """One per line; an empty line ends."""
+    out = []
+    while True:
+        line = prompts.text(title if not out else f"{title} (another, or empty to finish)", hint=hint, kind="type")
+        if not line:
+            return out
+        out.append(line)
+
+
+def add_term(name: str) -> None:
+    term = prompts.text("The term, as it should be written", hint="its canonical form, e.g. metformina", kind="type")
+    if not term:
+        return
+    klass = choose_class(installed_packs()[name])
+    if klass is None:
+        return
+    aliases = lines_typed("Other correct names", "one per line: a brand, a plural, the full form; empty line ends")
+    variants = lines_typed("What the recognizer wrote instead", "one per line, as the caption has it; empty line ends")
+    run_command(["pack", "add-term", name, term, "--class", klass,
+                 *[a for alias in aliases for a in ("--alias", alias)],
+                 *[a for variant in variants for a in ("--variant", variant)]])
+
+
+def edit_term(name: str) -> None:
+    term = choose_term(name, "Edit which term?")
+    if term is None:
+        return
+    run_command(["pack", "show", name, "--search", term])
+    change = prompts.select(f"What would you like to change in {term}?", [
+        Option("Add aliases", value="add-alias"), Option("Add variants", value="add-variant"),
+        Option("Remove an alias", value="remove-alias"), Option("Remove a variant", value="remove-variant"),
+        Option("Change its class", value="class"), Option("Rename it", value="rename"),
+    ])
+    if change is None:
+        return
+    if change == "class":
+        klass = choose_class(installed_packs()[name])
+        values = [("--class", klass)] if klass else []
+    elif change == "rename":
+        new = prompts.text("Its new name", hint="the canonical form", kind="type")
+        values = [("--rename", new)] if new else []
+    elif change.startswith("add"):
+        forms = lines_typed("The form" if change == "add-alias" else "The mishearing", "one per line; empty line ends")
+        values = [(f"--{change}", f) for f in forms]
+    else:
+        form = prompts.text("Which one, exactly as listed?", kind="type")
+        values = [(f"--{change}", form)] if form else []
+    if values:
+        run_command(["pack", "edit-term", name, term, *[a for pair in values for a in pair]])
+
+
+def remove_term(name: str) -> None:
+    term = choose_term(name, "Remove which term?")
+    if term and prompts.confirm(f"Remove {term} from {name}?", default=False):
+        run_command(["pack", "remove-term", name, term])
+
+
+def show_terms(name: str) -> None:
+    """Paged; Search… types part of a form."""
+    from .packedit import PAGE_SIZE
+
+    page, pages = 1, max(1, -(-len(term_names(name)) // PAGE_SIZE))
+    while True:
+        run_command(["pack", "show", name, "--page", str(page)])
+        options = []
+        if page < pages:
+            options.append(Option("Next page", f"{page + 1} of {pages}", value="next"))
+        if page > 1:
+            options.append(Option("Previous page", value="previous"))
+        options.append(Option("Search…", "type part of a term, an alias or a variant", value="search"))
+        choice = prompts.select("Terms", options)
+        if choice is None:
+            return
+        if choice == "search":
+            typed = prompts.text("Search for", kind="type")
+            if typed:
+                run_command(["pack", "show", name, "--search", typed])
+            continue
+        page += 1 if choice == "next" else -1
+
+
+EDIT_ACTIONS = {"add": add_term, "edit": edit_term, "remove": remove_term, "show": show_terms}
+
+
+def edit_pack() -> None:
+    name = choose_own_pack("Edit which pack?", "edit it")
+    if name is None:
+        return
+    while True:
+        choice = prompts.select(f"Edit {name}", [
+            Option("Add a term", "its class, aliases and variants", value="add"),
+            Option("Edit a term", "add or remove forms, change its class, rename", value="edit"),
+            Option("Remove a term", "asks once", value="remove"),
+            Option("Show terms", "page by page, or search", value="show"),
+        ], hint="every change is checked and saved at once, with the next patch version")
+        if choice is None:
+            return
+        EDIT_ACTIONS[choice](name)
+
+
+def export_pack() -> None:
+    picked = prompts.select("Export which pack?", [
+        Option(name, pack_line(path), value=name) for name, path in installed_packs().items()
+    ], hint="written as <name>-<version>.yaml in the folder you choose")
+    if picked is None:
+        return
+    folder = pick_folder(base_dir())
+    if folder is NO_PICKER:
+        say(mark("  no folder dialog here; type the path instead", "hint"))
+        answer = prompts.text("The folder to export to", kind="path")
+        folder = Path(answer.strip().strip("'\"")).expanduser() if answer else None
+    if folder is not None:
+        run_command(["pack", "export", picked, "--to", str(folder)])
+
+
+def contribute_pack() -> None:
+    picked = prompts.select("Contribute which pack?", [
+        Option(name, pack_line(path), value=name) for name, path in installed_packs().items()
+    ], hint="shows what would be sent, and asks, before anything is written")
+    if picked is not None:
+        run_command(["pack", "propose", "--whole", picked])
 
 
 # ------------------------------------------------------------------ settings (D-061)
@@ -801,8 +1117,9 @@ def remove_pack() -> None:
 GET_WAIT_SECONDS = 10
 
 PACK_ACTIONS = {
-    "installed": installed_table, "get": get_pack, "create": create_pack,
-    "import": import_pack, "remove": remove_pack, "first": choose_first_pack,
+    "installed": installed_table, "get": get_pack, "create": create_pack, "edit": edit_pack,
+    "import": import_pack, "export": export_pack, "remove": remove_pack,
+    "contribute": contribute_pack, "first": choose_first_pack,
 }
 
 
@@ -814,8 +1131,11 @@ def packs() -> None:
             Option("Installed packs", "name, version, language, terms, size, source", value="installed"),
             Option("Get a pack", "from the packs repository", value="get"),
             Option("Create a pack", "from a field template, with no terms", value="create"),
+            Option("Edit a pack", "add, edit, remove and show terms", value="edit"),
             Option("Import a pack file", "a .yaml pack, checked, copied into packs/", value="import"),
+            Option("Export a pack file", "as <name>-<version>.yaml, into a folder", value="export"),
             Option("Remove a pack", "from packs/; never a bundled one", value="remove"),
+            Option("Contribute a pack", "propose it to the packs repository", value="contribute"),
             Option("The pack offered first", first, value="first"),
         ])
         if choice is None:

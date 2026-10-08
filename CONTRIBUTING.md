@@ -19,7 +19,7 @@ Set up once with `uv sync`. Its `dev` dependency group includes `transcript-norm
 
 The core knows no language (D-033). Everything language-specific lives in one module that implements four things. A pack says which language it is in, and the loader picks the module.
 
-**1.1 Create the module.** For the language code `xx-YY`, create `src/transcript_normalizer/languages/xx_yy.py` (lowercase, `-` becomes `_`). Start from `tests/lang_xx.py`, which is a complete working module for an invented language.
+**1.1 Create the module.** For the language code `xx-YY`, create `src/transcript_normalizer/languages/xx_yy.py` (lowercase, `-` becomes `_`). Start from `tests/lang_xx.py`, which is a complete working module for an invented language, or from `languages/en.py`, the smallest real one (D-068).
 
 **1.2 Implement the protocol.** The module provides these four names:
 
@@ -50,6 +50,8 @@ The core knows no language (D-033). Everything language-specific lives in one mo
   sentence_boundaries = frozenset(".?!;")
   # "Warn Buffet. Tem" is never matched as one span
   ```
+
+Two more names: `skeleton`, a function for the phonetic source or `None` to leave it off (D-050; `en` has none yet), and, optionally, `common_words`, a frozenset of ordinary words in normalized form. The pack editor warns when a new variant is made of these only (D-032, D-066); without it, it never warns.
 
 **1.3 Register it.** Usually there is nothing to do: a module at `languages/<code>.py` is found by its name when a pack declares that `language:`. A module kept anywhere else (a plugin, a test) is made known with `transcript_normalizer.languages.register("xx-YY", module)`, which also checks that it keeps the protocol.
 
@@ -91,6 +93,7 @@ name: financas-ptbr      # optional; the file name is what names the pack
 language: pt-BR          # required; selects the language module (D-033)
 version: 0.2.3           # see 2.7
 classes: [companhia, indicador, conceito, ferramenta]   # this pack's classes, 2.2
+phonetic_classes: [companhia, pessoa]   # optional: the names compared by sound, 2.2
 terms:
   - term: CPFL           # the canonical name, as it should be written
     class: companhia     # one of the pack's classes, or a common one, 2.2
@@ -102,6 +105,8 @@ terms:
 `term` and `class` are required; the rest are optional lists. A `unit_rules:` block at the end of a pack is descriptive only: the rules that run are the language module's (1.2).
 
 **2.2 Classes (D-064, amending D-021).** A pack declares its classes in `classes:`. Four are allowed in every pack whatever it declares: `pessoa`, `organizacao`, `sigla` and `unidade`. A term whose class is neither declared nor common is an error when the pack is loaded, naming the file and the term. A pack with no `classes:` line (every pack written before 0.6.0) keeps D-021's eight, below. Class is a label for consumers and for the editor; matching reads only `unidade`, never matched by similarity (D-028), and `companhia` and `pessoa`, which also get phonetic proposals (D-050). A class name is lowercase, without accents (`doenca`, not `doença`), like the eight.
+
+**Phonetic classes (D-068).** `phonetic_classes:` names the classes whose terms are names a recognizer garbles by sound; their canonical names and aliases go to the phonetic source, which only ever asks (D-050, D-060). Each must be one of the pack's classes. Without the line, a pack that declares `classes:` gets `pessoa` and `organizacao`, plus `companhia` when it declares it; a pack with no `classes:` line keeps D-050's `companhia` and `pessoa`. The medicina, tecnologia and esportes templates set their own lists (`farmaco`, `doenca`, `pessoa`, `organizacao`; `produto`, `biblioteca`, `linguagem`, `pessoa`, `organizacao`; `time`, `pessoa`, `competicao`). financas-ptbr declares the two D-050 measured.
 
 The eight of `financas-ptbr`, which declares them all:
 
@@ -132,6 +137,7 @@ If a speaker actually said it, it is an alias. If it is the caption's mistake, i
 - **Short strings match exactly, and one- and two-letter strings stay out** (D-005). Fuzzy matching needs at least 6 characters on both sides and lengths within 2, so anything shorter matches only if it is identical. Single letters and two-letter strings (`R`, `TI`, `EB`) match too much ordinary text even exactly, so new ones do not enter the pack. Two from the first version predate the rule: `TR` (a variant of the unit tri) and `Lu` (of Leo). Check each against a silence run (below) before the next pack release, and remove it if it fires. `Ox` was the third: it was removed in 0.3.4 after the silence run of D-035 found it was the Northeastern interjection `oxe`.
 - **Silence run** (D-035). Normalize a video from a different field with the pack, and count what it applies. Any applied correction there is a false positive by definition. Run it before a pack release.
 - **Ordinary words stay out** (D-032). A variant that is an ordinary word of the language (`tira`, `rápido`, `divide`) does not enter the pack, even if the caption used it for the term: exact matching on ordinary words is wrong more often than right. Such cases wait for the collocation layer. Also check that a new variant does not fuzzily reach an ordinary word: `presteto` reaches `preste` (0:24 on wxgFO_fyfXg).
+- **The editor checks the forms it adds** (D-066). `pack add-term` and `pack edit-term` (and the menu's Edit a pack and "Add a term you noticed") refuse a variant under 3 letters, and warn about one made of the language module's ordinary words; it is still saved, since only you know the caption. The checks apply to what is being added, not to what the pack already holds (`TR` and `Lu` above stay until a release removes them).
 - **Units are class `unidade`** (D-028). A unit term never enters fuzzy matching (`milhão` and `bilhão` are one letter apart). Its rules live in the language module (1.2), and the pack names the term the rules resolve to: `bilhão` with alias `bi`.
 
 **2.5 The learned layer.** `transcript-normalizer <legenda.txt> --confirm` asks about each medium-band proposal, one variant at a time (D-019). Your answers go to `packs/<pack-name>.learned.yaml`, never into the pack itself (D-013, D-017):
@@ -152,7 +158,9 @@ Learned entries match exactly only (D-025), so one confirmation never widens wha
 
 A rejection stays in the learned layer: the pack has no place for "never this".
 
-**2.7 Versioning.** Bump the **patch** number (`0.2.2` → `0.2.3`) for data: adding, removing or moving a term, alias or variant. Bump the **minor** number (`0.2.x` → `0.3.0`) for a change someone reading the file would notice in its shape: a new key, a changed meaning of a key, a class change. Say in the comment at the top of the pack what each version added. Every annotation records the pack version that produced it (D-004).
+**2.7 Versioning.** The editor bumps the patch number on every change it saves (D-066). By hand: bump the **patch** number (`0.2.2` → `0.2.3`) for data: adding, removing or moving a term, alias or variant. Bump the **minor** number (`0.2.x` → `0.3.0`) for a change someone reading the file would notice in its shape: a new key, a changed meaning of a key, a class change. Say in the comment at the top of the pack what each version added. Every annotation records the pack version that produced it (D-004).
+
+**2.8 Editing and sharing with the tool (D-066, D-067).** A bundled pack or one from the repository is read-only; `pack copy <name>` makes it yours under the same name (a bundled one is copied into `packs/`, D-017; a repository one stops being replaced by `pack update`). Then `pack add-term`, `edit-term`, `remove-term` and `show`, or the menu's Packs → Edit a pack. Each change is loaded as normalize loads it before the file is replaced; the comment block at the top of the file is kept, comments further down are not. In the menu, after normalizing and in "Show a run's outputs", "Add a term you noticed" takes the wrong form, shows the run's lines with it, and adds it as a variant (or an alias) of an existing term or as a new term. `pack export <name> [--to <path>]` writes `<name>-<version>.yaml`. `pack propose --whole <name>` shows the pack's field, classes, number of terms and five of them, asks, writes `contributions/<name>-<version>.yaml` and opens a prefilled issue titled "New pack: <name>" or "Update: <name>", with the file in the body, collapsed, or to attach when it is too long for a link.
 
 ---
 

@@ -21,9 +21,11 @@
 # 0.3.5 troca a variante `trio` de tri por `primeiro/segundo/terceiro/quarto trio`:
 # sozinha, `trio` e palavra comum (D-032; "trio de irmas" em yJxxTf0IQC8).
 # 0.3.6 declara as classes do pacote (D-064): as oito de D-021. Nenhum termo muda.
+# 0.3.7 declara as classes foneticas (D-068): as duas de D-050, como foram medidas.
 language: pt-BR
-version: 0.3.6
+version: 0.3.7
 classes: [companhia, indicador, conceito, unidade, pessoa, organizacao, ferramenta, sigla]
+phonetic_classes: [companhia, pessoa]
 
 terms:
   - term: CEMIG

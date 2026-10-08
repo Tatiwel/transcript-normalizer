@@ -39,7 +39,7 @@ def applied(pack, line):
 
 
 def test_versions(v2):
-    assert v2.version == "0.3.6"
+    assert v2.version == "0.3.7"
     assert {p.parent.name for p in FROZEN} == set(FROZEN_VERSIONS)
     for path in FROZEN:
         assert load_pack(path, learned=Learned()).version == FROZEN_VERSIONS[path.parent.name], path

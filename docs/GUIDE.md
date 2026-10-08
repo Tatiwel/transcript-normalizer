@@ -55,7 +55,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Review pending          answer what the tool was unsure about
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
-   Packs                   installed, get, create, import, remove
+   Packs                   installed, get, create, edit, share
    Settings                where to save your files
    Help                    what each action does and its command
    Quit
@@ -171,8 +171,11 @@ pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing
 | Installed packs | `pack list --installed` | a table: name, version, language, terms, size (KB), source (`bundled`, `repository` or `mine`); when the packs repository answers within 3 seconds, an `↑ update` mark where it has a newer version |
 | Get a pack | `pack install <name>` | lists the packs repository (name, version, description) and installs the one you pick into your `packs/` |
 | Create a pack | `pack create --template <field> --name <n> --lang <l>` | a new pack from a field template, with the field's classes and no terms; the menu then offers to put it first |
+| Edit a pack | `pack add-term`, `edit-term`, `remove-term`, `show` | add, edit, remove and show terms; a bundled or repository pack is read-only, and the menu offers your own copy first (`pack copy`) |
 | Import a pack file | `pack import <file>` | a file dialog on `.yaml` files (or a typed path); the file is checked as `normalize` would load it, then copied into `packs/` |
+| Export a pack file | `pack export <name> [--to <path>]` | writes `<name>-<version>.yaml` into the folder you choose |
 | Remove a pack | `pack remove <name>` | asks twice and shows the file; a bundled pack cannot be removed |
+| Contribute a pack | `pack propose --whole <name>` | proposes the whole pack to the packs repository (below) |
 | The pack offered first | (the menu's own setting) | the pack at the top of "What is this video about?" |
 
 ```
@@ -221,7 +224,7 @@ terms:
 ```
 
 - `term` is how it should be written. `aliases` are other correct names (a brand, a plural, the full form of an acronym). `variants` are what the recognizer produced instead.
-- `class` must be one of the pack's `classes:`, or one of the four every pack has: `pessoa`, `organizacao`, `sigla`, `unidade` (D-064). A class is a label for whoever reads the output; it does not change what is matched, except that a `unidade` is never matched by similarity (D-028). A pack with no `classes:` line, written before 0.6.0, keeps the eight finance classes of D-021. Names (`companhia`, `pessoa`) also get phonetic matching, which finds garbles never seen before and asks you about them; it never changes the text by itself (D-050, D-060).
+- `class` must be one of the pack's `classes:`, or one of the four every pack has: `pessoa`, `organizacao`, `sigla`, `unidade` (D-064). A class is a label for whoever reads the output; it does not change what is matched, except that a `unidade` is never matched by similarity (D-028). A pack with no `classes:` line, written before 0.6.0, keeps the eight finance classes of D-021. Names also get phonetic matching, which finds garbles never seen before and asks you about them; it never changes the text by itself (D-050, D-060). Which classes are names is the pack's `phonetic_classes:` (by default `pessoa` and `organizacao`, and `companhia` where the pack has it; the medicina template adds `farmaco` and `doenca`, D-068). It needs a language with a phonetic skeleton: pt-BR has one, English not yet.
 - Keep out variants of one or two letters and variants that are ordinary words, even if the caption used them (D-005, D-032).
 
 `pack create` puts the file in your `packs/`; a pack you wrote elsewhere goes there with `pack import <file>`. Point at it:
@@ -240,6 +243,30 @@ transcript-normalizer aula.txt --pack packs/biomed-ptbr.yaml
 
 Your answers in the review grow `packs/biomed-ptbr.learned.yaml`. When a learned entry has proven itself, move it into the pack by hand and bump the version; [CONTRIBUTING.md](../CONTRIBUTING.md) section 2 has the curation rules and how to measure a pack. To share a pack, propose it to the packs repository; its README says how.
 
+**Editing a pack.** Packs → Edit a pack picks a pack and offers: Add a term (the term, its class from the pack's classes, then other correct names and the recognizer's versions, one per line, an empty line to finish), Edit a term (type part of it, pick it, then add or remove forms, change its class or rename it), Remove a term (asks once) and Show terms (page by page, or search). A bundled pack or one from the repository is read-only: the menu offers to make your own copy first, with the same name, which is then used instead. Every change is checked as normalize would load the pack and saved at once with the next patch version (0.1.0 → 0.1.1). A variant under 3 letters is refused (it would match too many words, D-005), and a variant made of ordinary words is saved with a warning (D-032). On the command line:
+
+```
+transcript-normalizer pack copy financas-ptbr
+transcript-normalizer pack add-term biomed-ptbr metformina --class farmaco --alias Glifage --variant metiformina
+transcript-normalizer pack edit-term biomed-ptbr metformina --add-variant "met forming"
+transcript-normalizer pack show biomed-ptbr --search metf
+```
+
+**A term you noticed.** After normalizing, and in "Show a run's outputs", the menu asks "Add a term you noticed?". It asks for the wrong form you saw, shows up to five of the run's lines with it so you can check it is the one, then what it should be. If that term is in the pack, it asks whether the recognizer misheard it (a variant, corrected from now on) or the speaker said it that way (an alias, kept as said); if not, it asks for a class and adds the term with the form as a variant. Then it offers to normalize the run again with it (D-066):
+
+```
+The wrong form you saw
+> mississões
+  in 1 line(s) of R2Qgz8tFWVI:
+    3:22 gestão, tanto as mississões e tal. Então
+Is 'mississões' the form you saw? [Y/n]
+What it should be
+> emissão
++ term     emissão (conceito)
+  + variant  mississões -> emissão
+Normalize R2Qgz8tFWVI again with it? [Y/n]
+```
+
 **Giving back.** What you teach the tool in a review stays in your learned layer. To offer it to everyone who uses the pack:
 
 ```
@@ -257,9 +284,11 @@ Contribute these? [y/N]
 
 On a yes it writes `contributions/financas-ptbr-<date>.yaml` and opens a prefilled issue on the packs repository in your browser (or prints the link); you submit it there, and the pack's maintainers decide what goes in (D-056). The menu offers this after a review.
 
+A whole pack, yours for a new field or a bundled one you have improved, is proposed with `pack propose --whole <name>` (menu: Packs → Contribute a pack). It shows the pack's field, classes, number of terms and five of them, and asks; on a yes it writes `contributions/<name>-<version>.yaml` and opens an issue titled "New pack: <name>", or "Update: <name>" when the repository has that pack, with the file in its body, collapsed (or, for a long pack, a note to attach the file). Nothing leaves your computer until you submit the issue yourself (D-067). `pack export <name>` writes the same file anywhere, to share it another way.
+
 ## 7. Another language
 
-A pack declares its language (`language: pt-BR`), and a language module supplies what the core must not guess: how text is folded, what a plural looks like, the unit patterns, where a sentence ends, and the phonetic skeleton. Brazilian Portuguese is the only one so far. Adding one is a single Python file; [CONTRIBUTING.md](../CONTRIBUTING.md) section 1 walks through it.
+A pack declares its language (`language: pt-BR`), and a language module supplies what the core must not guess: how text is folded, what a plural looks like, the unit patterns, where a sentence ends, and the phonetic skeleton. There are two: Brazilian Portuguese, and English (plurals in -s, -es and -ies, `bn`/`B` and `mn`/`M` after a number as billion and million, no phonetic skeleton yet; D-068). A pack in another language is matched with a generic module, with no inflections and no unit rules; the menu does that by itself and says so, and a command needs `--allow-generic`. Adding one is a single Python file; [CONTRIBUTING.md](../CONTRIBUTING.md) section 1 walks through it.
 
 ## 8. How good is it
 

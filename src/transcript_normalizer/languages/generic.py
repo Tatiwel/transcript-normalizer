@@ -33,3 +33,7 @@ def inflections(word: str) -> set[str]:
 
 def unit_rules() -> list[UnitRule]:
     return []
+
+
+#: D-066: no ordinary-word list without a language that has one.
+common_words: frozenset[str] = frozenset()

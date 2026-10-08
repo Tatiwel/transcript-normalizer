@@ -90,7 +90,7 @@ def test_normalize_then_review_prints_the_counters_once(tmp_path, monkeypatch, c
 
 def test_open_the_folder_falls_back_to_printing_the_path(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(interactive, "open_folder", lambda path: False)
-    lines = [*LINK, "", "1", "n", "y", "q"]
+    lines = [*LINK, "", "1", "n", "n", "y", "q"]  # no review, no term, open
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert "Open the folder? [y/N]" in out
     assert f"the folder: {tmp_path / 'runs' / fetch_fakes.VIDEO_ID}" in out
@@ -99,5 +99,5 @@ def test_open_the_folder_falls_back_to_printing_the_path(tmp_path, monkeypatch, 
 def test_open_the_folder_opens_it(tmp_path, monkeypatch, capsys):
     opened = []
     monkeypatch.setattr(interactive, "open_folder", lambda path: opened.append(path) or True)
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "n", "y", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "n", "n", "y", "q"])
     assert opened == [tmp_path / "runs" / fetch_fakes.VIDEO_ID]

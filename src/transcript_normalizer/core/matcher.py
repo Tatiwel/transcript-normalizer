@@ -106,8 +106,8 @@ def band_for(rule: str, score: float, from_variant: bool = False) -> str:
 UNIT_CLASS = "unidade"
 
 #: D-050: the phonetic source. Names only, never high band, never over a span
-#: the exact and fuzzy sources already resolved.
-PHONETIC_CLASSES = frozenset({"companhia", "pessoa"})
+#: the exact and fuzzy sources already resolved. Which classes are names is
+#: the pack's `phonetic_classes` (D-068).
 PHONETIC_THRESHOLD = 85
 PHONETIC_NGRAM_SIZES = (1, 2)
 #: A skeleton shorter than this matches too many words: at 4, `Cemig GT`
@@ -395,7 +395,7 @@ def phonetic_proposals(
     """D-050: the fourth source, a consonant-skeleton similarity for names.
 
     Runs only when the pack's language defines a skeleton, only against the
-    canonical names and aliases of companhia and pessoa terms, and only on
+    canonical names and aliases of the pack's phonetic classes (D-068), and only on
     1-2 word windows that no applied annotation of the other sources covers.
     """
     skeleton = getattr(pack.language, "skeleton", None)
@@ -405,7 +405,7 @@ def phonetic_proposals(
     names = [
         (c.term, skeleton(c.folded))
         for c in pack.candidates
-        if c.origin in ("term", "alias") and klass.get(c.term) in PHONETIC_CLASSES
+        if c.origin in ("term", "alias") and klass.get(c.term) in pack.phonetic_classes
     ]
     names = [(term, code) for term, code in names if len(code) >= MIN_SKELETON_LEN]
     if not names:
