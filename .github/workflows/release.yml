@@ -11,12 +11,19 @@
 #
 # Jobs run in parallel unless one `needs` another. The order here is:
 #   check -> (package, executable x 6) -> release
+#
+# A test build: Actions -> release -> "Run workflow" on any branch builds and
+# tests the same files from that commit, without a tag. The tag check is
+# skipped, files are named after the commit (transcript-normalizer-<sha>-...),
+# each executable is a workflow artifact named <sha>-<os>-<flavor>, and no
+# Release is created.
 
 name: release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 # The release job creates a Release and uploads files to it, which needs write
 # access to the repository's contents. Nothing else is granted.
@@ -34,14 +41,27 @@ jobs:
   check:
     # Stop early if the tag and the code disagree: tag v0.4.0 must be version
     # 0.4.0 in pyproject.toml, and CHANGELOG.md must have a `## 0.4.0` section.
+    # Two outputs: `version`, what the program calls itself (the installer's
+    # version), and `label`, what goes in file names. For a tag both are
+    # 0.4.0. For a test build (Run workflow) there is no tag to check: label is
+    # the commit's short sha, and version is pyproject's plus it, 0.4.0+<sha>.
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      label: ${{ steps.version.outputs.label }}
     steps:
       - uses: actions/checkout@v4
       - id: version
         name: Tag, pyproject and CHANGELOG agree
         run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            sha="${GITHUB_SHA::7}"
+            declared=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+            echo "test build of $GITHUB_REF_NAME at $sha (pyproject $declared): no tag check, no Release"
+            echo "version=$declared+$sha" >> "$GITHUB_OUTPUT"
+            echo "label=$sha" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           tag="${GITHUB_REF_NAME#v}"  # v0.4.0 -> 0.4.0
           declared=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
           if [ "$tag" != "$declared" ]; then
@@ -53,6 +73,7 @@ jobs:
             exit 1
           fi
           echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "label=$tag" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------- 1. package
   package:
@@ -89,6 +110,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{ needs.check.outputs.version }}
+      LABEL: ${{ needs.check.outputs.label }}
       FLAVOR: ${{ matrix.flavor }}
     steps:
       - uses: actions/checkout@v4
@@ -100,7 +122,9 @@ jobs:
           python-version: "3.12"
 
       # Names used below: the system as users know it, the file extension,
-      # the PyInstaller mode, and EXE, the executable the tests start.
+      # the PyInstaller mode, EXE, the executable the tests start, and
+      # ARTIFACT, the workflow artifact's name: $NAME for a release (the
+      # release job merges them all), <sha>-<os>-<flavor> for a test build.
       # Linux and macOS executables are archived so the "can run" permission
       # survives the download; a Windows onefile needs no archive.
       #
@@ -117,14 +141,20 @@ jobs:
             Linux)   os=linux;   ext=tar.gz; suffix= ;;
             macOS)   os=macos;   ext=zip; suffix= ;;
           esac
-          name="transcript-normalizer-$VERSION-$os-$FLAVOR"
+          name="transcript-normalizer-$LABEL-$os-$FLAVOR"
           if [ "$FLAVOR" = full ] && [ "$RUNNER_OS" != Linux ]; then
             mode=onedir; ext=zip; exe="dist/$name/transcript-normalizer$suffix"
           else
             mode=onefile; exe="dist/$name$suffix"
           fi
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            artifact="$LABEL-$os-$FLAVOR"
+          else
+            artifact="$name"
+          fi
           {
             echo "NAME=$name"
+            echo "ARTIFACT=$artifact"
             echo "ASSET=$name.$ext"
             echo "MODE=$mode"
             echo "EXE=$exe"
@@ -306,7 +336,8 @@ jobs:
             Add-Content $env:GITHUB_STEP_SUMMARY $line
           }
 
-      # The file users download, named transcript-normalizer-<version>-<os>-<flavor>.<ext>.
+      # The file users download, named transcript-normalizer-<version>-<os>-<flavor>.<ext>
+      # (<sha> in place of <version> for a test build).
       # A onedir build is zipped as its folder, so unzipping gives $NAME/.
       # Windows full is not zipped here: it is the installer and the portable
       # zip below (D-070).
@@ -393,12 +424,14 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.NAME }}
+          name: ${{ env.ARTIFACT }}
           path: out/*
 
   # ---------------------------------------------------------------- 4. release
   release:
     # Waits for everything above; if any build failed, there is no release.
+    # Only for a tag: a test build (Run workflow) stops at the artifacts.
+    if: github.event_name == 'push'
     needs: [check, package, executable]
     runs-on: ubuntu-latest
     env:

@@ -10,6 +10,7 @@ Three things people outside the project add: a language, a domain pack, and a fi
 2. [Building a domain pack](#2-building-a-domain-pack)
 3. [Building a fixture and measuring](#3-building-a-fixture-and-measuring)
 4. [Dependencies](#4-dependencies)
+5. [Releasing](#5-releasing)
 
 Set up once with `uv sync`. Its `dev` dependency group includes `transcript-normalizer[ingest]` (which carries `[captions]` and `[menu]`) and pytest, so every extra is installed, and a later plain `uv sync` keeps them instead of removing them. Run the tests with `uv run pytest -q`.
 
@@ -228,3 +229,13 @@ The status records who wrote the row. Scoring treats `certo` and `conferido` ali
 The core, what `pip install transcript-normalizer` brings, stays minimal: rapidfuzz, PyYAML and platformdirs. A new dependency goes into an extra, `[menu]`, `[captions]`, `[ingest]` or a new one, unless the matcher itself needs it.
 
 The reason: programs such as valuation-simulator import the core to normalize text. They must not inherit dependencies for an interface (rich, questionary) or for downloading and transcribing (yt-dlp, faster-whisper). Code that needs an extra imports it where it is used, never at the top of a core module, so the core still imports without it. See D-052 (the two artefacts and the extras) and D-053 (the `[menu]` extra and the prompts adapter).
+
+---
+
+## 5. Releasing
+
+Work lands on `main` without a version bump or a tag. Every commit that changes behaviour adds a line under `## Unreleased` at the top of `CHANGELOG.md`.
+
+To try the executables before a release, open Actions → release → **Run workflow** and pick the branch. It builds and tests everything a release does, from that commit, and keeps each executable as a workflow artifact named `<sha>-<os>-<flavor>`, downloadable from the run's page. It does not check a tag and creates no Release.
+
+A tag is cut when the Unreleased section is worth shipping, or when a published release is broken and needs a fix. The tag commit bumps `version` in `pyproject.toml` and renames `## Unreleased` to `## <version>` (adding a one-line summary under it), leaving a fresh, empty `## Unreleased` above. Pushing the tag `v<version>` runs the same workflow, which checks that the tag, `pyproject.toml` and the CHANGELOG heading agree, and publishes the Release with that section as its text.

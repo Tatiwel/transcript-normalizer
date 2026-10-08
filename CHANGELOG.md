@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Test builds: the release workflow can be started by hand (Actions → release → Run workflow) on any commit. It builds and tests the same executables, named after the commit, and keeps them as workflow artifacts `<sha>-<os>-<flavor>`; no tag check, no Release. Tag pushes release as before.
+
 ## 0.6.3
 
 A Windows installer and a portable build (D-070). Nothing changes in how captions are normalized.
