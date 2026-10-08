@@ -46,6 +46,10 @@ ACTIONS = (
     Action("6", "Help", "what each action does and its command",
            "this help; `?` on any question explains its options",
            f"{PROG} help"),
+    Action("7", "Settings", "where to save your files, the pack offered first",
+           "a folder dialog for where runs/ and packs/ go, and the pack the menu offers first; "
+           "kept in config.toml in your user settings. In a script, the variable wins",
+           f"TRANSCRIPT_NORMALIZER_HOME=<folder> {PROG}"),
 )
 QUIT = Action("q", "Quit", "", "", "")
 
@@ -104,6 +108,27 @@ def version() -> str:
         return installed("transcript-normalizer")
     except PackageNotFoundError:
         return "(version unknown)"
+
+
+def whisper_available() -> bool:
+    """Whether faster-whisper can be imported, without importing it."""
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec("faster_whisper") is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def build_line() -> str:
+    """D-061: what this installation can do, under the version on the first screen."""
+    from .runs import is_frozen
+
+    whisper = whisper_available()
+    if is_frozen():
+        return ("full build: captions and local transcription" if whisper
+                else "lite build: platform captions only (no local transcription)")
+    return "captions + local transcription" if whisper else "captions only"
 
 
 def width() -> int:

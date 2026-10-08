@@ -5,6 +5,10 @@ Every action runs a subcommand through `cli.main`, the same entry point a script
 uses, so nothing here is reachable only through the menu, and the menu never
 does a subcommand's work in its own way. The questions go through `prompts`:
 arrow keys with questionary, numbered text without it.
+
+The one exception is Settings (D-061), which writes the user's config.toml:
+where runs/ and packs/ go, and the pack offered first. A script reaches the
+same with TRANSCRIPT_NORMALIZER_HOME and --pack.
 """
 
 from __future__ import annotations
@@ -18,17 +22,22 @@ from pathlib import Path
 from . import helptext, prompts
 from .catalog import list_runs
 from .helptext import ACTIONS as ITEMS, QUIT
-from .prompts import Option, mark, say
+from .prompts import Option, detail, mark, say, stage
 from .runs import (
     CAPTION_FILE,
+    DATA_DIR_ENV,
     NORMALIZED_FILE,
     PENDING_FILE,
     base_dir,
+    configured_dir,
+    data_dir,
     default_pack,
     installed_packs,
     is_frozen,
     needs_review_dir,
+    read_config,
     runs_root,
+    write_config,
 )
 
 #: How much of normalized.txt "Show a run's outputs" prints.
@@ -54,7 +63,7 @@ def error(text: str) -> None:
 def separator() -> None:
     """A blank line and a dim rule, so one action's output ends visibly."""
     print()
-    say(mark("─" * min(helptext.width(), 60), "hint"))
+    prompts.rule()
 
 
 def menu_options() -> list[Option]:
@@ -66,8 +75,10 @@ def menu_options() -> list[Option]:
 
 def first_screen() -> None:
     say(mark(f"transcript-normalizer {helptext.version()}", "title"))
-    # D-052: the executable keeps your files in the documents directory; say where.
-    say("Your files: " if is_frozen() else "Working in: ", mark(base_dir(), "path"))
+    say(mark(helptext.build_line(), "hint"))
+    # D-052, D-061: say where the files go, unless it is simply here.
+    base = base_dir()
+    detail("Working in" if base == Path.cwd() else "Your files", base, "path", indent="")
     say(TYPICAL_FLOW)
     say(mark(f"Keyboard: {prompts.legend('select')}", "hint"))
 
@@ -124,9 +135,10 @@ def pending_count(run: Path) -> int:
 def fetch() -> None:
     from .ingest.fetch import is_lite_build, missing_extra
 
+    stage("Fetch")
     source = prompts.text(
-        "Fetch: a video URL, or the path to an audio or video file",
-        hint="a link (YouTube and others) or a file on this computer; empty goes back",
+        "A video URL, or the path to an audio or video file",
+        hint="a link (YouTube and others) or a file on this computer",
     )
     if not source:
         return
@@ -146,11 +158,11 @@ def fetch() -> None:
                 # The title, channel and duration were shown by the first call.
                 code = run_command(["fetch", source, "--whisper", "--no-video-info"])
     if code != 0:
-        error(f"fetch did not finish (exit {code})")
+        error("fetch did not finish")
         return
     run = newest_run()
     if run and prompts.confirm("Next: normalize this run now?", default=True):
-        normalize_run(run)
+        normalize_run(run, chained=True)
 
 
 #: The answer to "What is this video about?" that no installed pack covers.
@@ -170,12 +182,25 @@ def pack_line(path: Path) -> str:
     return " · ".join(parts)
 
 
+#: D-061: config.toml's key for the pack offered first.
+FIRST_PACK = "pack"
+
+
+def packs_in_order() -> dict[str, Path]:
+    """Every installed pack, the one chosen in Settings first."""
+    packs = installed_packs()
+    first = read_config().get(FIRST_PACK)
+    if first in packs:
+        packs = {first: packs[first], **{n: p for n, p in packs.items() if n != first}}
+    return packs
+
+
 def choose_pack(question: str, allow_none: bool) -> Path | str | None:
     """D-054: the pack for this video, NO_PACK for another area, None for back.
 
     With `allow_none` false and one pack installed, that pack, without asking.
     """
-    packs = installed_packs()
+    packs = packs_in_order()
     if not allow_none and len(packs) == 1:
         return next(iter(packs.values()))
     options = [Option(name, pack_line(path), value=path) for name, path in packs.items()]
@@ -198,7 +223,8 @@ def typed_caption() -> Path | None:
     """A caption file the user types the path of, or None."""
     answer = prompts.text(
         "Path to a caption file",
-        hint="a legenda.txt (m:ss text lines), or a .srt or .vtt subtitle; empty goes back",
+        hint="a legenda.txt (m:ss text lines), or a .srt or .vtt subtitle",
+        kind="path",
     )
     if not answer:
         return None
@@ -212,55 +238,71 @@ def typed_caption() -> Path | None:
     return path
 
 
+#: What normalize_run returns when Back was chosen at its first question.
+BACK = "back"
+
+
 def normalize() -> None:
-    """A run from the list, or a file typed by its path."""
+    """A run from the list, or a file typed by its path; Back from the pack
+    question comes back to this list (D-061)."""
     from .cli import caption_run
 
-    runs = list_runs()
+    stage("Normalize")
     file_option = Option("A file…", "type the path to a .txt, .srt or .vtt", value=A_FILE, key="f")
-    if runs:
-        width = max(len(r.id) for r in runs)
-        picked = prompts.select(
-            "Normalize which run?",
-            [Option(r.id.ljust(width), f"{r.date or '-':10s}  {r.title}", value=r.id) for r in runs]
-            + [file_option],
-            hint="the video's id, its publication date and its title; f for a file",
-        )
-    else:
-        picked = A_FILE
-    if picked is None:
-        return
-    if picked != A_FILE:
-        normalize_run(runs_root() / picked)
-        return
-    caption = typed_caption()
-    if caption:
-        normalize_run(caption_run(caption), caption)
+    while True:
+        runs = list_runs()
+        if runs:
+            width = max(len(r.id) for r in runs)
+            picked = prompts.select(
+                "Normalize which run?",
+                [Option(r.id.ljust(width), f"{r.date or '-':10s}  {r.title}", value=r.id) for r in runs]
+                + [file_option],
+                hint="the video's id, its publication date and its title; f for a file",
+            )
+        else:
+            picked = A_FILE
+        if picked is None:
+            return
+        if picked != A_FILE:
+            run, caption = runs_root() / picked, None
+        else:
+            caption = typed_caption()
+            if not caption:
+                if runs:
+                    continue
+                return
+            run = caption_run(caption)
+        if normalize_run(run, caption) != BACK:
+            return
 
 
-def normalize_run(run: Path, caption: Path | None = None) -> None:
-    """Normalize, offer the review, then offer the folder."""
-    from .cli import is_subtitle
+def normalize_run(run: Path, caption: Path | None = None, chained: bool = False) -> str | None:
+    """Normalize, offer the review, then offer the folder.
 
-    from .cli import is_unfit
+    `chained` when another step led here, which then labels this one. BACK
+    when the pack question was answered with Back, before anything was written.
+    """
+    from .cli import is_subtitle, is_unfit
 
+    if chained:
+        stage("Normalize", run.name)
     caption = caption or caption_of(run)
     if not caption:
-        return
+        return None
     pack = choose_pack("What is this video about?", allow_none=True)
     if pack is None:
-        return
+        return BACK
     if pack == NO_PACK:
         say(mark("No pack for this area, so nothing was normalized.", "need"))
         say(mark("  `transcript-normalizer pack list` shows the packs you can install.", "hint"))
-        return
+        return None
     say(mark(f"Normalizing {run.name}", "title"))
-    code = run_command(["normalize", str(caption), "--summary", "--pack", str(pack)])
+    code = run_command(["normalize", str(caption), "--summary", "--menu", "--pack", str(pack)])
     if code != 0:
-        error(f"normalize did not finish (exit {code})")
-        return
+        error("normalize did not finish")
+        return None
     if is_unfit(run):  # D-054: normalize said so, and applied nothing
-        return
+        return None
     if is_subtitle(caption):  # converted into the run's legenda.txt
         caption = run / CAPTION_FILE
     count = pending_count(run)
@@ -270,17 +312,33 @@ def normalize_run(run: Path, caption: Path | None = None) -> None:
         say(mark("The result is usable as it is; reviewing only makes the next run better.", "hint"))
         if prompts.confirm(f"Next: review the {count} uncertain one(s) now?", default=True):
             review_run(run, caption, pack, chained=True)
-            return
+            return None
     offer_folder(run)
+    return None
+
+
+#: D-061: what "Review pending" says on a run with nothing to ask.
+NOTHING_TO_REVIEW = "nothing to review for this run"
 
 
 def review() -> None:
-    run = choose_run("Review which run?")
-    if not run:
-        return
-    pack = choose_pack("Review against which pack?", allow_none=False)
-    if pack:
-        review_run(run, pack=pack)
+    """A run, then a pack; Back from the pack question comes back to the runs."""
+    from .cli import is_unfit
+
+    stage("Review")
+    while True:
+        run = choose_run("Review which run?")
+        if not run:
+            return
+        # A refused pack (D-054) leaves nothing pending either; there is no
+        # folder to offer, since nothing was done.
+        if is_unfit(run) or not pending_count(run):
+            say(mark(NOTHING_TO_REVIEW, "need"))
+            return
+        pack = choose_pack("Review against which pack?", allow_none=False)
+        if pack:
+            review_run(run, pack=pack)
+            return
 
 
 def review_run(
@@ -290,11 +348,13 @@ def review_run(
     caption = caption or caption_of(run)
     if not caption:
         return
+    if chained:
+        stage("Review", run.name)
     say(mark(f"Reviewing {run.name}", "title"))
-    argv = ["normalize", str(caption), "--review", "--quiet" if chained else "--summary"]
+    argv = ["normalize", str(caption), "--review", "--menu", "--quiet" if chained else "--summary"]
     code = run_command(argv + (["--pack", str(pack)] if pack else []))
     if code not in (0, 130):  # 130: interrupted, the answers so far are kept (D-037)
-        error(f"review did not finish (exit {code})")
+        error("review did not finish")
         return
     offer_contribution(pack)
     offer_folder(run)
@@ -345,7 +405,7 @@ def show() -> None:
         say("  ", mark(path, "path"))
     normalized = run / NORMALIZED_FILE
     if not normalized.exists():
-        say(mark("not normalized yet (2).", "need"))
+        say(mark("not normalized yet.", "need"))
         return
     lines = normalized.read_text(encoding="utf-8").splitlines()
     say(f"\n{NORMALIZED_FILE}, first {min(PREVIEW_LINES, len(lines))} of {len(lines)} lines:")
@@ -360,7 +420,132 @@ def help_text() -> None:
     run_command(["help"])
 
 
-ACTIONS = {"1": fetch, "2": normalize, "3": review, "4": show, "5": listing, "6": help_text}
+# ------------------------------------------------------------------ settings (D-061)
+
+#: config.toml's key for the folder runs/ and packs/ go in.
+DATA_DIR = "data_dir"
+#: What pick_folder returns where there is no dialog to show.
+NO_PICKER = object()
+
+
+def default_folder() -> Path:
+    """Where the files go when Settings has not chosen a folder."""
+    return data_dir() if is_frozen() else Path.cwd()
+
+
+def folder_source() -> str:
+    """Why base_dir() is what it is, in a few words."""
+    if os.environ.get(DATA_DIR_ENV):
+        return f"from {DATA_DIR_ENV}, which wins over Settings"
+    if configured_dir() is not None:
+        return "chosen in Settings"
+    return "the documents folder" if is_frozen() else "the current folder"
+
+
+def pick_folder(initial: Path):
+    """The system's folder dialog: a Path, None when cancelled, or NO_PICKER
+    when there is no dialog here (no tkinter, or no display)."""
+    try:
+        import tkinter
+        from tkinter import filedialog
+    except ImportError:
+        return NO_PICKER
+    try:
+        root = tkinter.Tk()
+    except tkinter.TclError:  # no display
+        return NO_PICKER
+    try:
+        root.withdraw()
+        root.attributes("-topmost", True)  # above the terminal, not behind it
+        chosen = filedialog.askdirectory(
+            parent=root, initialdir=str(initial), mustexist=False, title="Where to save your files"
+        )
+    finally:
+        root.destroy()
+    return Path(chosen) if chosen else None
+
+
+def picker_check() -> str:
+    """The folder dialog's parts load (the release smoke test, D-061): no window."""
+    import tkinter
+    from tkinter import filedialog
+
+    return f"tkinter {tkinter.Tcl().eval('info patchlevel')}, filedialog {filedialog.__name__}"
+
+
+def typed_folder() -> Path | None:
+    answer = prompts.text("The folder to save your files in", hint="it is created if it does not exist", kind="path")
+    return Path(answer.strip().strip("'\"")).expanduser() if answer else None
+
+
+def save_setting(key: str, value) -> None:
+    settings = read_config()
+    settings[key] = value
+    write_config(settings)
+
+
+def choose_folder() -> None:
+    """Where to save your files: the dialog, or a typed path without one."""
+    detail("now", base_dir(), "path")
+    say(mark(f"  {folder_source()}", "hint"))
+    options = [Option("Choose another folder…", "opens the folder dialog", value="pick")]
+    if configured_dir() is not None:
+        options.append(Option("Use the default again", str(default_folder()), value="default"))
+    choice = prompts.select("Where to save your files", options)
+    if choice is None:
+        return
+    if choice == "default":
+        save_setting(DATA_DIR, None)
+    else:
+        folder = pick_folder(base_dir())
+        if folder is NO_PICKER:
+            say(mark("  no folder dialog here; type the path instead", "hint"))
+            folder = typed_folder()
+        if folder is None:
+            return
+        folder = folder.absolute()
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+        except OSError as failure:
+            error(f"cannot use {folder}: {failure.strerror or failure}")
+            return
+        save_setting(DATA_DIR, str(folder))
+    say(mark("Saved. ", "ok"), "Your files go in ", mark(base_dir(), "path"))
+    say(mark("  files saved before stay where they were", "hint"))
+    if os.environ.get(DATA_DIR_ENV):
+        say(mark(f"  {DATA_DIR_ENV} is set, and wins over this until it is unset", "need"))
+
+
+def choose_first_pack() -> None:
+    """The pack the menu offers first, when it asks what a video is about."""
+    packs = installed_packs()
+    picked = prompts.select(
+        "Which pack should be offered first?",
+        [Option(name, pack_line(path), value=name) for name, path in packs.items()],
+        hint="`transcript-normalizer pack install <name>` adds more",
+    )
+    if picked is None:
+        return
+    save_setting(FIRST_PACK, picked)
+    say(mark("Saved. ", "ok"), "Offered first: ", mark(picked, "path"))
+
+
+def settings() -> None:
+    stage("Settings")
+    while True:
+        first = next(iter(packs_in_order()), "")
+        choice = prompts.select("What would you like to change?", [
+            Option("Where to save your files", str(base_dir()), value="folder"),
+            Option("The pack offered first", first, value="pack"),
+        ], hint="saved in your user settings, for every run of the menu")
+        if choice is None:
+            return
+        (choose_folder if choice == "folder" else choose_first_pack)()
+
+
+ACTIONS = {
+    "1": fetch, "2": normalize, "3": review, "4": show, "5": listing, "6": help_text, "7": settings,
+}
 
 
 def run() -> int:
@@ -376,6 +561,7 @@ def run() -> int:
                 "What would you like to do?",
                 menu_options(),
                 hint="pick an action; empty input or Esc here quits",
+                back=False,
             )
             if choice is None or choice == QUIT.key:
                 return 0

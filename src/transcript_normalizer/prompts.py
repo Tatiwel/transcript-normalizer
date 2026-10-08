@@ -7,8 +7,15 @@ terminal; plain numbered or lettered text everywhere else, which is also what
 the tests drive. The core never imports this module.
 
 Every question shows a hint (what it expects) and a key legend. Empty input or
-Esc means "go back": the function returns None. `?` prints one line per option
-and asks again.
+Esc means "go back": the function returns None, and so does the "← Back" option
+that ends every select list (D-061). `?` prints one line per option and asks
+again.
+
+The structure is drawn the same way in both (D-061): a dim rule and a stage
+label before each block (`stage`), a line above every text field (`field`),
+label/value pairs for details (`detail`). With questionary the marks are
+Unicode (─ ◆ ● ○ »); in plain text they are ASCII (- * * >), so a pipe or a
+Windows console with a narrow code page reads the same structure.
 
 Colour, via rich, one colour per meaning (`mark` and `say`): yellow for what
 needs the user, green for success, red for refusals and errors, blue for paths
@@ -32,6 +39,9 @@ STYLES = {
     "path": "blue",
     "hint": "dim",
     "title": "bold",
+    "label": "dim",
+    "value": "white",
+    "number": "bold",
 }
 
 
@@ -116,6 +126,46 @@ def use_questionary() -> bool:
     return interactive_terminal() and importlib.util.find_spec("questionary") is not None
 
 
+# ------------------------------------------------------------------ structure
+
+#: The marks, Unicode with questionary and ASCII in plain text (D-061).
+UNICODE = {"rule": "─", "stage": "◆", "on": "●", "off": "○", "pointer": "»", "back": "←", "qmark": "◇"}
+ASCII = {"rule": "-", "stage": "*", "on": "*", "off": " ", "pointer": ">", "back": "<-"}
+
+
+def glyph(name: str) -> str:
+    return (UNICODE if use_questionary() else ASCII)[name]
+
+
+def rule() -> None:
+    """A dim rule, as wide as the terminal up to 60 columns."""
+    from .helptext import width
+
+    say(mark(glyph("rule") * min(width(), 60), "hint"))
+
+
+def stage(label: str, detail: str = "") -> None:
+    """`◆ Fetch`: a one-word stage label under a rule, before each block."""
+    print()
+    rule()
+    say(mark(f"{glyph('stage')} {label}", "title"), mark(f"  {detail}", "hint") if detail else "")
+
+
+#: What `field` says above a text input.
+FIELDS = {"paste": "paste below", "path": "type a path"}
+
+
+def field(kind: str = "paste") -> None:
+    """`── paste below ──`: where the input goes."""
+    line = glyph("rule") * 2
+    say(mark(f"{line} {FIELDS[kind]} {line}", "hint"))
+
+
+def detail(label: str, value, kind: str = "value", indent: str = "  ") -> None:
+    """`label: value`, the label dim and the value white, blue (path) or bold (number)."""
+    say(indent, mark(f"{label}: ", "label"), mark(value, kind))
+
+
 def legend(kind: str = "select") -> str:
     """The key legend under a question."""
     if use_questionary():
@@ -123,16 +173,20 @@ def legend(kind: str = "select") -> str:
             "select": "↑↓ move · enter confirm · esc back · ? explain",
             "multi": "↑↓ move · space select · enter confirm · esc back · ? explain",
             "confirm": "y / n · enter takes the default · esc back",
-            "text": "type, then enter · empty or esc goes back · ? alone explains",
+            "text": "type, then enter · ? alone explains",
         }
     else:
         keys = {
             "select": "a number or letter shown, then enter · empty goes back · ? explains",
             "multi": "letters (e.g. a c), - for none, then enter · empty goes back · ? explains",
             "confirm": "y or n, then enter · enter alone takes the default",
-            "text": "type, then enter · empty goes back · ? alone explains",
+            "text": "type, then enter · ? alone explains",
         }
     return keys[kind]
+
+
+#: What a text field adds to its hint (D-061).
+BACK_HINT = "(empty or Esc: back)"
 
 
 def _header(title: str, hint: str, kind: str) -> None:
@@ -145,9 +199,22 @@ def _header(title: str, hint: str, kind: str) -> None:
 # ------------------------------------------------------------------ the four questions
 
 
-def select(title: str, options: list[Option], hint: str = ""):
-    """One option's `result`, or None for back."""
-    return (_Questionary if use_questionary() else _Plain).select(title, list(options), hint)
+_GO_BACK = object()
+
+
+def back_option() -> Option:
+    """The last option of every select list (D-061): the previous screen."""
+    return Option(f"{glyph('back')} Back", value=_GO_BACK, key="b", help="return to the previous screen")
+
+
+def select(title: str, options: list[Option], hint: str = "", back: bool = True):
+    """One option's `result`, or None for back (the Back option, Esc or empty).
+
+    `back` adds the Back option; the menu itself has Quit instead.
+    """
+    options = list(options) + ([back_option()] if back else [])
+    answer = (_Questionary if use_questionary() else _Plain).select(title, options, hint)
+    return None if answer is _GO_BACK else answer
 
 
 def multi_select(title: str, options: list[Option], preselected=(), hint: str = ""):
@@ -162,9 +229,10 @@ def confirm(title: str, default: bool = True, hint: str = ""):
     return (_Questionary if use_questionary() else _Plain).confirm(title, default, hint)
 
 
-def text(title: str, hint: str = ""):
-    """A stripped line, or None for back."""
-    return (_Questionary if use_questionary() else _Plain).text(title, hint)
+def text(title: str, hint: str = "", kind: str = "paste"):
+    """A stripped line, or None for back. `kind` is the line above the field."""
+    hint = f"{hint} {BACK_HINT}" if hint else BACK_HINT
+    return (_Questionary if use_questionary() else _Plain).text(title, hint, kind)
 
 
 # ------------------------------------------------------------------ plain text
@@ -209,7 +277,7 @@ class _Plain:
         keys = _letters(len(options))
         width = max(len(o.label) for o in options)
         for key, o in zip(keys, options):
-            box = "[x]" if o.result in preselected else "[ ]"
+            box = f"[{glyph('on')}]" if o.result in preselected else "[ ]"
             label = o.label.ljust(width) if o.description else o.label
             say(f"  {key}. {box} ", mark(label, "need"), f"   {o.description}" if o.description else "")
         while True:
@@ -248,13 +316,16 @@ class _Plain:
             say(mark("  y or n", "bad"))
 
     @staticmethod
-    def text(title, hint):
+    def text(title, hint, kind):
         _header(title, hint, "text")
+        field(kind)
         while True:
             answer = _read()
             if answer == "?":
                 say(mark(f"  {hint}", "hint"))
                 continue
+            if answer == "\x1b":  # Esc, then enter
+                return None
             return answer or None
 
 
@@ -286,6 +357,23 @@ def _bind(question, explainable: bool = True):
     return question
 
 
+def _style() -> dict:
+    """questionary's marks and colours (D-061); nothing if it has no Style."""
+    import questionary
+
+    if not hasattr(questionary, "Style"):
+        return {}
+    return {"qmark": UNICODE["qmark"], "style": questionary.Style([
+        ("qmark", "fg:ansicyan bold"),
+        ("question", "bold"),
+        ("pointer", "fg:ansicyan bold"),
+        ("highlighted", "fg:ansicyan bold"),
+        ("selected", "fg:ansigreen"),
+        ("instruction", "fg:ansibrightblack"),
+        ("answer", "fg:ansicyan"),
+    ])}
+
+
 class _Questionary:
     @staticmethod
     def _choices(options, preselected=()):
@@ -309,7 +397,8 @@ class _Questionary:
             if hint:
                 say(mark(f"  {hint}", "hint"))
             answer = _bind(questionary.select(
-                title, choices=_Questionary._choices(options), instruction=legend("select")
+                title, choices=_Questionary._choices(options), instruction=legend("select"),
+                pointer=UNICODE["pointer"], **_style(),
             )).unsafe_ask()
             if answer is _EXPLAIN:
                 explain(options)
@@ -324,7 +413,8 @@ class _Questionary:
             if hint:
                 say(mark(f"  {hint}", "hint"))
             answer = _bind(questionary.checkbox(
-                title, choices=_Questionary._choices(options, preselected), instruction=legend("multi")
+                title, choices=_Questionary._choices(options, preselected), instruction=legend("multi"),
+                pointer=UNICODE["pointer"], **_style(),
             )).unsafe_ask()
             if answer is _EXPLAIN:
                 explain(options)
@@ -339,16 +429,20 @@ class _Questionary:
 
         if hint:
             say(mark(f"  {hint}", "hint"))
-        answer = _bind(questionary.confirm(title, default=default), explainable=False).unsafe_ask()
+        answer = _bind(questionary.confirm(title, default=default, **_style()), explainable=False).unsafe_ask()
         return None if answer is _BACK else answer
 
     @staticmethod
-    def text(title, hint):
+    def text(title, hint, kind):
         import questionary
 
         while True:
+            say(mark(f"  {hint}", "hint"))
+            field(kind)
             # `?` is not bound here: it belongs in URLs. `?` alone explains.
-            answer = _bind(questionary.text(title, instruction=legend("text")), explainable=False).unsafe_ask()
+            answer = _bind(
+                questionary.text(title, instruction=legend("text"), **_style()), explainable=False
+            ).unsafe_ask()
             if answer is _BACK or answer is None:
                 return None
             if answer.strip() == "?":

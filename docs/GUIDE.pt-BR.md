@@ -15,7 +15,7 @@ Ela nunca muda o que o falante disse; corrige o que o reconhecedor ouviu. Daí a
 
 ## 2. Instalação
 
-**Só quero usar.** Baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). O `lite` (uns 40 MB) pega a legenda da plataforma; o `full` (algumas centenas de MB) também transcreve áudio no seu computador; na primeira vez, baixa um modelo de fala de 1,5 GB. A página da Release tem uma tabela dizendo qual arquivo é qual. Windows: dois cliques no `.exe`; o arquivo não é assinado, então, se o Windows disser que protegeu o computador, escolha *Mais informações* e depois *Executar assim mesmo*. macOS (Apple Silicon): descompacte e, na primeira vez, clique com o botão direito e escolha *Abrir*. Linux: extraia e rode pelo terminal. O programa abre o menu (seção 3). Seus arquivos vão para `Documentos/transcript-normalizer/` (`runs/` e `packs/`), e a primeira linha do menu diz onde (D-052).
+**Só quero usar.** Baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). O `lite` (uns 40 MB) pega a legenda da plataforma; o `full` (algumas centenas de MB) também transcreve áudio no seu computador; na primeira vez, baixa um modelo de fala de 1,5 GB. A página da Release tem uma tabela dizendo qual arquivo é qual. Windows: dois cliques no `.exe`; o arquivo não é assinado, então, se o Windows disser que protegeu o computador, escolha *Mais informações* e depois *Executar assim mesmo*. macOS (Apple Silicon): descompacte e, na primeira vez, clique com o botão direito e escolha *Abrir*. Linux: extraia e rode pelo terminal. O programa abre o menu (seção 3). Seus arquivos vão para `Documentos/transcript-normalizer/` (`runs/` e `packs/`), e a primeira tela do menu diz onde (D-052). Para guardá-los em outro lugar, escolha Settings no menu e depois "Where to save your files": abre uma janela para escolher a pasta (ou, onde não há janela, você digita o caminho), e a escolha fica em `config.toml`, na pasta de configurações do usuário (D-061).
 
 **Uso Python.**
 
@@ -23,7 +23,7 @@ Ela nunca muda o que o falante disse; corrige o que o reconhecedor ouviu. Daí a
 pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"
 ```
 
-Sem extra, vem só o normalizador (poucos MB): para chamar do seu próprio programa, ou normalizar legendas que você já tem. `[captions]` acrescenta o `fetch` com legendas das plataformas (yt-dlp); `[ingest]` acrescenta também o reconhecimento de fala local (faster-whisper). Os arquivos ficam no diretório atual. O pacote ainda não está no PyPI; o wheel também vai anexado a cada Release.
+Sem extra, vem só o normalizador (poucos MB): para chamar do seu próprio programa, ou normalizar legendas que você já tem. `[captions]` acrescenta o `fetch` com legendas das plataformas (yt-dlp); `[ingest]` acrescenta também o reconhecimento de fala local (faster-whisper). Os arquivos ficam no diretório atual, a não ser que o Settings do menu tenha escolhido uma pasta. O pacote ainda não está no PyPI; o wheel também vai anexado a cada Release.
 
 **Quero contribuir.**
 
@@ -43,21 +43,24 @@ Em qualquer caso: não é preciso ffmpeg (o faster-whisper decodifica o áudio s
 **O menu.** Dê dois cliques no programa, ou digite `transcript-normalizer`, sem mais nada, num terminal. Com o extra `[menu]` (todo executável tem) você navega pelas setas. O menu está em inglês:
 
 ```
-transcript-normalizer 0.4.2
+transcript-normalizer 0.5.0
+full build: captions and local transcription
 Your files: /home/ana/Documentos/transcript-normalizer
 Typical flow: 1 fetch → 2 normalize → 3 review
 Keyboard: ↑↓ move · enter confirm · esc back · ? explain
-? What would you like to do?
+  pick an action; empty input or Esc here quits
+◇ What would you like to do? ↑↓ move · enter confirm · esc back · ? explain
  » Fetch a video or file   download a caption, or transcribe audio locally
    Normalize a run         fix domain terms in a fetched caption
    Review pending          answer what the tool was unsure about
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
    Help                    what each action does and its command
+   Settings                where to save your files, the pack offered first
    Quit
 ```
 
-Cada passo oferece o seguinte: depois de baixar, "Next: normalize this run now?"; em seguida "What is this video about?" (sobre o que é o vídeo), com a lista dos seus pacotes e "none / another area" (seção 6); depois de normalizar, três contadores e "Next: review the 6 uncertain one(s) now?". O resultado já serve sem a revisão; revisar melhora o próximo vídeo. Depois de uma revisão, o menu oferece contribuir com o que você ensinou à ferramenta (seção 6), e no fim "Open the folder?" abre a pasta da run no gerenciador de arquivos. "Normalize a run" também aceita um arquivo que você já tem: escolha "A file…" e digite o caminho, um `legenda.txt` ou uma legenda `.srt` ou `.vtt`. Esc ou entrada vazia em qualquer pergunta volta, e `?` explica as opções. Sem o extra, ou fora de um terminal, as mesmas perguntas aparecem como linhas numeradas. Cada item do menu executa um dos comandos abaixo; o que você faz no menu vale num script (D-051, D-053). O que a normalização mostra no menu, para o vídeo abaixo:
+Cada passo oferece o seguinte: depois de baixar, "Next: normalize this run now?"; em seguida "What is this video about?" (sobre o que é o vídeo), com a lista dos seus pacotes e "none / another area" (seção 6); depois de normalizar, três contadores e "Next: review the 6 uncertain one(s) now?". O resultado já serve sem a revisão; revisar melhora o próximo vídeo. Depois de uma revisão, o menu oferece contribuir com o que você ensinou à ferramenta (seção 6), e no fim "Open the folder?" abre a pasta da run no gerenciador de arquivos. "Normalize a run" também aceita um arquivo que você já tem: escolha "A file…" e digite o caminho, um `legenda.txt` ou uma legenda `.srt` ou `.vtt`. Toda lista termina com "← Back", que volta à tela anterior (Esc faz o mesmo, e entrada vazia num campo de texto também), e `?` explica as opções. Abaixo da versão, a primeira tela diz o que esta instalação faz: "full build: captions and local transcription" ou "lite build: platform captions only (no local transcription)" no programa, "captions + local transcription" ou "captions only" numa instalação por pip. Cada bloco começa com uma linha e o nome da etapa (◆ Fetch, ◆ Normalize, ◆ Review, ◆ Settings), e uma linha como "── paste below ──" marca onde digitar. Sem o extra, ou fora de um terminal, as mesmas perguntas aparecem como linhas numeradas, com marcas em ASCII (`* Fetch`, `b. <- Back`). Cada item do menu executa um dos comandos abaixo; o que você faz no menu vale num script (D-051, D-053). O que a normalização mostra no menu, para o vídeo abaixo:
 
 ```
 corrected 24  (semiga → CEMIG, Semig → CEMIG)
@@ -158,7 +161,7 @@ O `--confirm` pergunta a mesma coisa uma forma por vez, com `y` (é o termo), `n
 pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing applied. Use --force to apply anyway.
 ```
 
-O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote mesmo assim, para um trecho curto que é mesmo da área. No menu, "What is this video about?" pergunta antes: escolha o pacote, ou "none / another area", que não normaliza nada.
+O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote mesmo assim, para um trecho curto que é mesmo da área. No menu, "What is this video about?" pergunta antes: escolha o pacote, ou "none / another area", que não normaliza nada. Quando o pacote não serve, o menu termina a frase com "Pick another pack in Settings, or install one with pack install." em vez do conselho do `--force`: Settings → "The pack offered first" põe um pacote no topo dessa pergunta.
 
 **Instalando pacotes.** Os pacotes ficam num repositório próprio, [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), um diretório por pacote, cada um com as pessoas que o mantêm (D-055). O pacote de finanças também vem dentro da ferramenta, para funcionar sem internet.
 

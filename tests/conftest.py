@@ -1,14 +1,26 @@
+import sys
 from pathlib import Path
 
 import pytest
 
-from transcript_normalizer import find_annotations, load_pack, read_caption
-from transcript_normalizer.runs import run_dir
+from transcript_normalizer import find_annotations, load_pack, read_caption, runs
+from transcript_normalizer.runs import DATA_DIR_ENV, run_dir
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "R2Qgz8tFWVI"
 CAPTION = FIXTURE / "legenda.txt"
 PACK = FIXTURE / "pack.yaml"
 GOLD = FIXTURE / "gold.csv"
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings(tmp_path_factory, monkeypatch):
+    """D-061: no test reads the developer's config.toml or TRANSCRIPT_NORMALIZER_HOME,
+    and no test opens a real folder dialog (tkinter reads as not installed)."""
+    config = tmp_path_factory.mktemp("config") / runs.CONFIG_FILE
+    monkeypatch.setattr(runs, "config_file", lambda: config)
+    monkeypatch.delenv(DATA_DIR_ENV, raising=False)
+    monkeypatch.setitem(sys.modules, "tkinter", None)
+    return config
 
 
 @pytest.fixture(scope="session")

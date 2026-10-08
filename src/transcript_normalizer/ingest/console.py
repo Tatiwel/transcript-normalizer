@@ -45,6 +45,20 @@ class Output:
         else:
             print(f"   {message}", file=self.stream)
 
+    #: D-061: a detail's value, by kind: white text, a blue path, a bold number.
+    DETAIL_STYLES = {"value": "white", "path": "blue", "number": "bold"}
+
+    def detail(self, label: str, value, kind: str = "value", note: str = "") -> None:
+        """`label: value`, the label dim; in plain text the same as `info`."""
+        if not self._console:
+            print(f"   {label}: {value}{f' {note}' if note else ''}", file=self.stream)
+            return
+        from rich.markup import escape
+
+        style = self.DETAIL_STYLES[kind]
+        tail = f" [dim]{escape(note)}[/]" if note else ""
+        self._console.print(f"  [dim]{escape(label)}:[/] [{style}]{escape(str(value))}[/]{tail}")
+
     def warn(self, message: str) -> None:
         if self._console:
             self._console.print(f"  [yellow]{message}[/]")

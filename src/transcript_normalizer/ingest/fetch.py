@@ -513,8 +513,8 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     meta = Metadata(id=media.stem, title=media.stem)
     target = fetch_dir(media.stem, args.out)  # D-018 rule 3: the file's stem
     target.mkdir(parents=True, exist_ok=True)
-    out.info(f"file: {media}")
-    out.info(f"directory: {target}")
+    out.detail("file", media, "path")
+    out.detail("directory", target, "path")
     out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
     step = Step(STEP_SPEECH, reason="arquivo local")
     try:
@@ -529,8 +529,8 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
         + "\n",
         encoding="utf-8",
     )
-    out.info(f"meta:  {save_meta(target, meta, None, step, path=media)}")
-    out.info(f"text:  {caption} (step {step.number}, {step.name})")
+    out.detail("meta", save_meta(target, meta, None, step, path=media), "path")
+    out.detail("text", caption, "path", note=f"(step {step.number}, {step.name})")
     return 0
 
 
@@ -555,7 +555,7 @@ def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Ou
     # legenda.txt holds everything the subtitle had that the tool reads; the
     # raw file stays only when asked for.
     if getattr(args, "keep_raw", False):
-        out.info(f"subtitle: {subtitle}")
+        out.detail("subtitle", subtitle, "path")
     else:
         subtitle.unlink()
     return step
@@ -571,7 +571,7 @@ def step_speech(
     if missing:
         raise FetchError(f"local speech recognition needs {', '.join(missing)} (the ingest extra)")
     audio = download_audio(args.url, target, out)
-    out.info(f"audio: {audio}")
+    out.detail("audio", audio, "path")
     body = transcribe(audio, args.lang, args.model, out)
     step = Step(STEP_SPEECH, reason=reason)
     (target / CAPTION_FILE).write_text(
@@ -730,10 +730,10 @@ def run(args: argparse.Namespace) -> int:
         print(f"could not read the video: {error}", file=sys.stderr)
         return 1
     if not args.no_video_info:  # the menu's second call has shown it already
-        out.info(f"title: {meta.title}")
-        out.info(f"channel: {meta.channel}")
-        out.info(f"published: {meta.published}")
-        out.info(f"duration: {meta.duration // 60}min{meta.duration % 60:02d}s")
+        out.detail("title", meta.title)
+        out.detail("channel", meta.channel)
+        out.detail("published", meta.published)
+        out.detail("duration", f"{meta.duration // 60}min{meta.duration % 60:02d}s", "number")
 
     if args.list:
         # D-045: the source track first and in full; the translations may be summarised.
@@ -750,7 +750,7 @@ def run(args: argparse.Namespace) -> int:
     existed = target.exists()
     before = {p for p in target.rglob("*")} if existed else set()
     target.mkdir(parents=True, exist_ok=True)
-    out.info(f"directory: {target}")
+    out.detail("directory", target, "path")
 
     def give_back() -> None:
         removed = undo_attempt(target, before, existed)
@@ -797,7 +797,7 @@ def run(args: argparse.Namespace) -> int:
             return 1
 
     caption = target / CAPTION_FILE
-    out.info(f"meta:  {save_meta(target, meta, args.url, step)}")
-    out.info(f"text:  {caption} (step {step.number}, {step.name})")
-    out.info(f"lines: {len(caption.read_text(encoding='utf-8').splitlines())}")
+    out.detail("meta", save_meta(target, meta, args.url, step), "path")
+    out.detail("text", caption, "path", note=f"(step {step.number}, {step.name})")
+    out.detail("lines", len(caption.read_text(encoding="utf-8").splitlines()), "number")
     return 0

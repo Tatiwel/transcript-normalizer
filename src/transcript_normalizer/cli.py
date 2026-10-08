@@ -504,11 +504,16 @@ NOT_FIT = (
     "pack {name} does not seem to fit this transcript ({found} terms found); "
     "nothing applied. Use --force to apply anyway."
 )
+#: D-061: the same, in the menu, which has no --force to offer.
+NOT_FIT_MENU = (
+    "pack {name} does not seem to fit this transcript ({found} terms found); "
+    "nothing applied. Pick another pack in Settings, or install one with pack install."
+)
 
 
 def refuse_unfit(args: argparse.Namespace, transcript: Transcript, out_dir: Path, found: int) -> int:
     """D-054: normalized.txt identical to the input, no annotations, no questions."""
-    message = NOT_FIT.format(name=args.pack.stem, found=found)
+    message = (NOT_FIT_MENU if args.menu else NOT_FIT).format(name=args.pack.stem, found=found)
     write_json([], out_dir / ANNOTATIONS_FILE)
     (out_dir / NORMALIZED_FILE).write_text(render_normalized(transcript, []), encoding="utf-8")
     keep_original(args.caption, out_dir)
@@ -639,6 +644,15 @@ def run_help(args: argparse.Namespace | None = None) -> int:
     """D-051: sectioned help, the same for `help`, `--help` and the menu."""
     from .helptext import render
 
+    if getattr(args, "check_picker", False):
+        from .interactive import picker_check
+
+        try:
+            print(picker_check())
+        except Exception as failure:  # the message, for the release log
+            print(f"no folder dialog: {type(failure).__name__}: {failure}", file=sys.stderr)
+            return 1
+        return 0
     print(render(), end="")
     return 0
 
@@ -713,6 +727,8 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         help="print neither the report nor the counters (the menu, when it has just shown them); "
         "report.txt is unchanged",
     )
+    # D-061: the menu runs normalize; its messages name the menu's ways, not flags.
+    parser.add_argument("--menu", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--allow-generic",
         action="store_true",
@@ -764,6 +780,8 @@ def build_parser() -> argparse.ArgumentParser:
     contribute.add_arguments(registry.add_arguments(packs))
 
     helping = commands.add_parser("help", help="how to use the tool, by section")
+    # D-061: the release smoke test proves the folder dialog's parts are inside.
+    helping.add_argument("--check-picker", action="store_true", help=argparse.SUPPRESS)
     helping.set_defaults(run=run_help)
 
     return parser

@@ -15,7 +15,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 
 ## 2. Install
 
-**I just want to use it.** Download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). `lite` (about 40 MB) gets the platform's captions; `full` (several hundred MB) can also transcribe audio on your computer; the first time it does, it downloads a 1.5 GB speech model. The Release page has a table of which file is which. Windows: double-click the `.exe`; the file is not signed, so if Windows says it protected your PC, choose *More info*, then *Run anyway*. macOS (Apple silicon): unzip, then right-click and *Open* the first time. Linux: extract it and run it from a terminal. It opens the menu (section 3). Your files go to `Documents/transcript-normalizer/` (`runs/` and `packs/`), and the menu's first line says where (D-052).
+**I just want to use it.** Download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). `lite` (about 40 MB) gets the platform's captions; `full` (several hundred MB) can also transcribe audio on your computer; the first time it does, it downloads a 1.5 GB speech model. The Release page has a table of which file is which. Windows: double-click the `.exe`; the file is not signed, so if Windows says it protected your PC, choose *More info*, then *Run anyway*. macOS (Apple silicon): unzip, then right-click and *Open* the first time. Linux: extract it and run it from a terminal. It opens the menu (section 3). Your files go to `Documents/transcript-normalizer/` (`runs/` and `packs/`), and the menu's first screen says where (D-052). To keep them somewhere else, choose Settings in the menu, then "Where to save your files": a folder dialog opens (or, where there is none, you type the path), and the choice is kept in `config.toml` in your user settings folder (D-061).
 
 **I use Python.**
 
@@ -23,7 +23,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"
 ```
 
-Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory. The package is not on PyPI yet; the wheel is also attached to each Release.
+Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory, unless the menu's Settings chose a folder. The package is not on PyPI yet; the wheel is also attached to each Release.
 
 **I want to contribute.**
 
@@ -43,21 +43,24 @@ Whichever way: no ffmpeg is needed (faster-whisper decodes audio itself). To rea
 **The menu.** Double-click the program, or type `transcript-normalizer` with nothing after it in a terminal. With the `[menu]` extra (every executable has it) you move with the arrow keys:
 
 ```
-transcript-normalizer 0.4.2
+transcript-normalizer 0.5.0
+full build: captions and local transcription
 Your files: /home/ana/Documents/transcript-normalizer
 Typical flow: 1 fetch → 2 normalize → 3 review
 Keyboard: ↑↓ move · enter confirm · esc back · ? explain
-? What would you like to do?
+  pick an action; empty input or Esc here quits
+◇ What would you like to do? ↑↓ move · enter confirm · esc back · ? explain
  » Fetch a video or file   download a caption, or transcribe audio locally
    Normalize a run         fix domain terms in a fetched caption
    Review pending          answer what the tool was unsure about
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
    Help                    what each action does and its command
+   Settings                where to save your files, the pack offered first
    Quit
 ```
 
-Each step offers the next one: after a fetch, "Next: normalize this run now?"; then "What is this video about?", a list of your packs and "none / another area" (section 6); after normalizing, three counters and "Next: review the 6 uncertain one(s) now?". The result is usable without the review; reviewing makes the next video better. After a review the menu offers to contribute what you taught the tool (section 6), and at the end "Open the folder?" opens the run's folder in your file manager. "Normalize a run" also takes a file you already have: choose "A file…" and type its path, a `legenda.txt` or a `.srt` or `.vtt` subtitle. Esc or empty input on any question goes back, and `?` explains its options. Without the extra, or without a terminal, the same questions come as numbered lines. Every menu item runs one of the commands below, so anything you do in the menu works in a script (D-051, D-053). What normalizing shows in the menu, for the video below:
+Each step offers the next one: after a fetch, "Next: normalize this run now?"; then "What is this video about?", a list of your packs and "none / another area" (section 6); after normalizing, three counters and "Next: review the 6 uncertain one(s) now?". The result is usable without the review; reviewing makes the next video better. After a review the menu offers to contribute what you taught the tool (section 6), and at the end "Open the folder?" opens the run's folder in your file manager. "Normalize a run" also takes a file you already have: choose "A file…" and type its path, a `legenda.txt` or a `.srt` or `.vtt` subtitle. Every list ends with "← Back", which returns to the previous screen (Esc does the same, and so does empty input in a text field), and `?` explains its options. Under the version, the first screen says what this installation can do: "full build: captions and local transcription" or "lite build: platform captions only (no local transcription)" for the program, "captions + local transcription" or "captions only" for a pip install. Each block starts with a rule and its stage (◆ Fetch, ◆ Normalize, ◆ Review, ◆ Settings), and a line such as "── paste below ──" marks where you type. Without the extra, or without a terminal, the same questions come as numbered lines, with ASCII marks (`* Fetch`, `b. <- Back`). Every menu item runs one of the commands below, so anything you do in the menu works in a script (D-051, D-053). What normalizing shows in the menu, for the video below:
 
 ```
 corrected 24  (semiga → CEMIG, Semig → CEMIG)
@@ -158,7 +161,7 @@ If you selected any, a second screen asks which of those the speaker really said
 pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing applied. Use --force to apply anyway.
 ```
 
-`normalized.txt` is then the transcript as it was. `--force` applies the pack anyway, for a short clip that really is from the field. In the menu, "What is this video about?" asks first: pick the pack, or "none / another area", which normalizes nothing.
+`normalized.txt` is then the transcript as it was. `--force` applies the pack anyway, for a short clip that really is from the field. In the menu, "What is this video about?" asks first: pick the pack, or "none / another area", which normalizes nothing. When the pack does not fit, the menu ends the sentence with "Pick another pack in Settings, or install one with pack install." instead of the `--force` advice: Settings → "The pack offered first" puts a pack at the top of that question.
 
 **Installing packs.** Packs live in their own repository, [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), one directory per pack, each with the people who maintain it (D-055). The finance pack also ships inside the tool, so it works offline.
 

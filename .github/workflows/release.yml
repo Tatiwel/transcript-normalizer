@@ -131,6 +131,10 @@ jobs:
       #                          yt-dlp loads its site extractors by name
       #   --copy-metadata transcript-normalizer
       #                          the version the menu's first screen shows
+      #   --collect-submodules tkinter, --hidden-import tkinter.filedialog
+      #                          Settings' folder dialog (D-061); imported only
+      #                          inside a function, and with it the Tcl/Tk
+      #                          libraries PyInstaller's tkinter hook adds
       #   --collect-all ...      (full) the speech stack: compiled libraries
       #                          and data files PyInstaller would miss. No
       #                          ffmpeg program: faster-whisper decodes audio
@@ -149,6 +153,8 @@ jobs:
             --collect-data transcript_normalizer \
             --collect-submodules yt_dlp \
             --copy-metadata transcript-normalizer \
+            --collect-submodules tkinter \
+            --hidden-import tkinter.filedialog \
             $full_args \
             packaging/entry.py
 
@@ -161,6 +167,15 @@ jobs:
           export TRANSCRIPT_NORMALIZER_HOME="$RUNNER_TEMP/tn-home"
           "$exe" fixtures/R2Qgz8tFWVI/legenda.txt
           test -f "$TRANSCRIPT_NORMALIZER_HOME/runs/R2Qgz8tFWVI/normalized.txt"
+
+      # D-061: the folder dialog's parts are inside: tkinter.filedialog imports
+      # and a Tcl interpreter starts (its library files were bundled). No
+      # window, so no display is needed.
+      - name: Folder dialog imports
+        run: |
+          exe="dist/$NAME"; [ "$RUNNER_OS" = Windows ] && exe="$exe.exe"
+          "$exe" help --check-picker | tee picker.txt
+          grep -Eq '^tkinter [0-9]+\.[0-9]+.*, filedialog tkinter\.filedialog' picker.txt
 
       # D-058: the audio stack decodes inside the full executable, with no
       # model and no network: two seconds of a 440 Hz tone, 32000 samples.

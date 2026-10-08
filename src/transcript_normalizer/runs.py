@@ -70,16 +70,63 @@ def data_dir() -> Path:
     return Path(platformdirs.user_documents_dir()) / APP_NAME
 
 
+#: D-061: the user's settings, written by the menu's Settings screen.
+CONFIG_FILE = "config.toml"
+
+
+def config_file() -> Path:
+    """`config.toml` in the platform's user configuration directory."""
+    import platformdirs
+
+    return Path(platformdirs.user_config_dir(APP_NAME, appauthor=False)) / CONFIG_FILE
+
+
+def read_config() -> dict:
+    """The settings, or {} when there is no file or it cannot be read."""
+    import tomllib
+
+    try:
+        return tomllib.loads(config_file().read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return {}
+
+
+def write_config(settings: dict) -> Path:
+    """Write `settings` (string values only); a None value removes its key."""
+    import json
+
+    path = config_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # A JSON string is a valid TOML basic string: the same escapes.
+    lines = [f"{key} = {json.dumps(str(value), ensure_ascii=False)}"
+             for key, value in settings.items() if value is not None]
+    path.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
+    return path
+
+
+def configured_dir() -> Path | None:
+    """D-061: the folder chosen in Settings (`data_dir` in config.toml), if any."""
+    chosen = read_config().get("data_dir")
+    return Path(chosen).expanduser() if isinstance(chosen, str) and chosen.strip() else None
+
+
 def base_dir() -> Path:
     """Where runs/ and packs/ live.
 
-    The current directory, as always (D-015, D-017), except in the executable:
-    double-clicked, its current directory is wherever the system chose, so it
-    uses the data directory instead, created with both folders on first use.
+    In order (D-061): TRANSCRIPT_NORMALIZER_HOME, for scripts; the folder chosen
+    in Settings; then the current directory, as always (D-015, D-017), except in
+    the executable: double-clicked, its current directory is wherever the system
+    chose, so it uses the documents directory instead (D-052). A folder other
+    than the current directory is created with both folders on first use.
     """
-    if not is_frozen():
+    if os.environ.get(DATA_DIR_ENV):
+        base = data_dir()
+    elif (chosen := configured_dir()) is not None:
+        base = chosen
+    elif not is_frozen():
         return Path.cwd()
-    base = data_dir()
+    else:
+        base = data_dir()
     for folder in (RUNS_DIR, PACKS_DIR):
         (base / folder).mkdir(parents=True, exist_ok=True)
     return base

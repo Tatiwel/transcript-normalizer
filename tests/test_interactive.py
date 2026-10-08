@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from transcript_normalizer import cli, interactive, prompts
+from transcript_normalizer import cli, interactive, prompts, runs
 from transcript_normalizer.core.pack import load_learned
 from transcript_normalizer.ingest import fetch
 from transcript_normalizer.prompts import Option
@@ -55,13 +55,16 @@ def test_first_screen(tmp_path, monkeypatch, capsys):
     assert code == 0
     first = out.splitlines()
     assert first[0].startswith("transcript-normalizer ")
-    assert first[1] == f"Working in: {tmp_path}"
-    assert first[2] == "Typical flow: 1 fetch → 2 normalize → 3 review"
-    assert first[3].startswith("Keyboard: ")
+    assert first[1] in ("captions + local transcription", "captions only")
+    assert first[2] == f"Working in: {tmp_path}"
+    assert first[3] == "Typical flow: 1 fetch → 2 normalize → 3 review"
+    assert first[4].startswith("Keyboard: ")
     assert "What would you like to do?" in out
     assert "   1. Fetch a video or file   download a caption, or transcribe audio locally" in out
     assert "   6. Help                    what each action does and its command" in out
+    assert "   7. Settings                where to save your files, the pack offered first" in out
     assert "   q. Quit" in out
+    assert "Back" not in out  # the menu has Quit instead
     assert not ANSI.search(out)  # no colour without a terminal
 
 
@@ -73,7 +76,7 @@ def test_empty_input_or_end_of_input_at_the_menu_quits(tmp_path, monkeypatch, ca
 
 def test_a_key_not_on_the_menu_is_asked_again(tmp_path, monkeypatch, capsys):
     code, out, _ = menu(tmp_path, monkeypatch, capsys, ["9", "q"])
-    assert code == 0 and "'9' is not one of 1, 2, 3, 4, 5, 6, q" in out
+    assert code == 0 and "'9' is not one of 1, 2, 3, 4, 5, 6, 7, q" in out
 
 
 def test_question_mark_explains_each_option_and_asks_again(tmp_path, monkeypatch, capsys):
@@ -89,7 +92,7 @@ def test_question_mark_explains_each_option_and_asks_again(tmp_path, monkeypatch
 
 def test_actions_are_separated_by_a_rule(tmp_path, monkeypatch, capsys):
     _, out, _ = menu(tmp_path, monkeypatch, capsys, ["5", "q"])
-    rules = [line for line in out.splitlines() if line and set(line) == {"─"}]
+    rules = [line for line in out.splitlines() if line and set(line) == {"-"}]
     assert len(rules) == 1  # before the second menu, not the first
 
 
@@ -160,7 +163,8 @@ def test_empty_input_goes_back_from_any_question(tmp_path, monkeypatch, capsys):
 def test_a_run_is_picked_from_a_list_with_its_date_and_title(tmp_path, monkeypatch, capsys):
     _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "n", "4", "1", "q"])
     assert f"   1. {VIDEO_ID}   2026-08-25  Video sintetico de teste" in out
-    assert "not normalized yet (2)." in out.split("Show which run?")[1]
+    assert "not normalized yet." in out.split("Show which run?")[1]
+    assert "(2)" not in out
 
 
 def test_review_writes_confirmed_rejected_and_aliases(tmp_path, monkeypatch, capsys):
@@ -204,14 +208,14 @@ def test_a_bad_url_is_an_error_in_the_menu(tmp_path, monkeypatch, capsys):
     code, out, fake = menu(tmp_path, monkeypatch, capsys, ["1", "not-a-url", "q"])
     assert code == 0
     assert "no such file, and not a url" in out
-    assert "error: fetch did not finish (exit 1)" in out
+    assert "error: fetch did not finish" in out and "exit" not in out
     assert fake.calls == []
 
 
 def test_show_wraps_long_lines_with_a_margin(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("COLUMNS", "30")
     _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "", "1", "n", "", "4", "1", "q"])
-    shown = out.split("normalized.txt, first")[1].split("─")[0]
+    shown = out.split("normalized.txt, first")[1].split("-" * 30)[0]
     body = [line for line in shown.splitlines()[1:] if line.strip()]
     assert body and all(line.startswith("  ") and len(line) <= 30 for line in body)
 
@@ -326,12 +330,14 @@ def fake_questionary(monkeypatch):
 
 def test_select_goes_through_questionary_when_it_is_there(fake_questionary):
     options = [Option("Fetch", "download", value="1"), Option("Quit", value="q")]
-    fake_questionary.answers = [1, prompts._BACK]
+    fake_questionary.answers = [1, prompts._BACK, 2]
     assert prompts.select("What?", options) == "q"
     assert prompts.select("What?", options) is None  # Esc goes back
+    assert prompts.select("What?", options) is None  # so does the Back option
     kind, asked = fake_questionary.asked[0]
-    assert kind == "select" and [c.value for c in asked["choices"]] == [0, 1]
-    assert "esc back" in asked["instruction"]
+    assert kind == "select" and [c.value for c in asked["choices"]] == [0, 1, 2]
+    assert asked["choices"][-1].title.strip() == "← Back"
+    assert "esc back" in asked["instruction"] and asked["pointer"] == "»"
 
 
 def test_multi_select_and_confirm_go_through_questionary(fake_questionary):
@@ -360,8 +366,177 @@ def test_question_mark_in_real_questionary_explains_then_asks_again(monkeypatch,
         options = interactive.menu_options()
         keys.send_text("?")  # explain
         keys.send_text("\x1b[A\r")  # then: up (to Quit, the last), enter
-        assert prompts.select("What would you like to do?", options) == "q"
+        assert prompts.select("What would you like to do?", options, back=False) == "q"
         keys.send_text("\x1b")  # Esc goes back
-        assert prompts.select("What would you like to do?", options) is None
+        assert prompts.select("What would you like to do?", options, back=False) is None
     out = capsys.readouterr().out
     assert "`transcript-normalizer fetch <url|file>`" in out and "leave the menu" in out
+
+
+# ------------------------------------------------------------------ 0.5.0: Back, Settings, structure (D-061)
+
+
+def fetched(lines):
+    """Fetch the fake video, decline normalizing, then `lines`, then quit."""
+    return ["1", URL, "n", *lines, "q"]
+
+
+def nothing_written(tmp_path):
+    run = tmp_path / "runs" / VIDEO_ID
+    return not (run / NORMALIZED_FILE).exists() and learned(tmp_path).is_empty()
+
+
+def test_back_from_a_run_list_returns_to_the_menu(tmp_path, monkeypatch, capsys):
+    code, out, _ = menu(tmp_path, monkeypatch, capsys, fetched(["2", "b", "4", "b"]))
+    assert code == 0
+    assert "   b. <- Back" in out.split("Normalize which run?")[1]
+    assert out.count("What would you like to do?") == 4
+    assert nothing_written(tmp_path) and "error" not in out
+
+
+def test_back_from_the_pack_question_returns_to_the_run_list_then_the_menu(tmp_path, monkeypatch, capsys):
+    # From the fetch chain, Back at the pack question is the menu; from
+    # "Normalize a run", it is the run list, and Back there is the menu.
+    lines = ["1", URL, "", "b", "2", "1", "b", "b", "q"]
+    code, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
+    assert code == 0
+    assert out.count("What is this video about?") == 2
+    assert out.count("Normalize which run?") == 2
+    assert out.count("What would you like to do?") == 3
+    assert nothing_written(tmp_path)
+
+
+def test_back_from_the_review_returns_to_the_menu(tmp_path, monkeypatch, capsys):
+    code, out, _ = menu(tmp_path, monkeypatch, capsys, fetched(["3", "b"]))
+    assert code == 0
+    assert "Review which run?" in out and out.count("What would you like to do?") == 3
+    assert nothing_written(tmp_path)
+
+
+def test_review_with_nothing_pending_says_so_and_does_not_offer_the_folder(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, fetched(["3", "1"]))
+    assert interactive.NOTHING_TO_REVIEW in out
+    assert "Open the folder?" not in out and "Review against which pack?" not in out
+
+
+def test_review_on_a_run_whose_pack_did_not_fit_says_nothing_to_review(tmp_path, monkeypatch, capsys):
+    lines = ["1", URL, "", "1", "3", "1", "q"]  # fetch, normalize (unfit), review
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="rolling.vtt")
+    after = out.split("Review which run?")[1]
+    assert interactive.NOTHING_TO_REVIEW in after and "Open the folder?" not in after
+
+
+def test_stages_and_text_fields_are_marked(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", "", "7", "b", "q"])
+    lines = out.splitlines()
+    for label in ("* Fetch", "* Settings"):
+        at = lines.index(label)
+        assert set(lines[at - 1]) == {"-"}  # a rule above each stage label
+    assert "-- paste below --" in lines
+    assert "(empty or Esc: back)" in out
+
+
+def test_settings_writes_the_folder_and_the_menu_uses_it(tmp_path, monkeypatch, capsys, isolated_settings):
+    chosen = tmp_path / "my files"
+    # Settings -> Where to save -> Choose another folder (no dialog here: typed).
+    code, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", str(chosen), "b", "q"])
+    assert code == 0
+    assert "no folder dialog here; type the path instead" in out
+    assert "-- type a path --" in out
+    assert f"Saved. Your files go in {chosen}" in out
+    assert runs.read_config() == {"data_dir": str(chosen)}
+    assert runs.base_dir() == chosen and (chosen / "runs").is_dir() and (chosen / "packs").is_dir()
+    # The next start says where, and a fetch writes there.
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "n", "q"])
+    assert f"Your files: {chosen}" in out.splitlines()
+    assert (chosen / "runs" / VIDEO_ID / CAPTION_FILE).exists()
+    assert not (tmp_path / "runs").exists()
+
+
+def test_settings_can_go_back_to_the_default(tmp_path, monkeypatch, capsys):
+    runs.write_config({"data_dir": str(tmp_path / "elsewhere"), "pack": "financas-ptbr"})
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "2", "b", "q"])
+    assert "chosen in Settings" in out
+    assert runs.read_config() == {"pack": "financas-ptbr"}
+    assert runs.base_dir() == tmp_path
+
+
+def test_the_pack_offered_first_is_saved(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", "1", "b", "q"])
+    assert "Saved. Offered first: financas-ptbr" in out
+    assert runs.read_config() == {"pack": "financas-ptbr"}
+
+
+def test_the_config_file_round_trips_any_path(isolated_settings):
+    odd = 'C:\\Users\\Zoë\\My "files"'
+    runs.write_config({"data_dir": odd, "gone": None})
+    assert runs.read_config() == {"data_dir": odd}
+    assert isolated_settings.read_text(encoding="utf-8").startswith("data_dir = ")
+    isolated_settings.write_text("not toml [", encoding="utf-8")
+    assert runs.read_config() == {} and runs.configured_dir() is None
+
+
+def test_the_variable_wins_over_settings(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runs.write_config({"data_dir": str(tmp_path / "chosen")})
+    assert runs.base_dir() == tmp_path / "chosen"
+    monkeypatch.setenv(runs.DATA_DIR_ENV, str(tmp_path / "scripted"))
+    assert runs.base_dir() == tmp_path / "scripted"
+
+
+def fake_tkinter(monkeypatch, chosen):
+    """A stand-in tkinter whose folder dialog answers `chosen`."""
+    tk = types.ModuleType("tkinter")
+    tk.TclError = type("TclError", (Exception,), {})
+    tk.calls = []
+
+    class Tk:
+        def withdraw(self):
+            tk.calls.append("withdraw")
+
+        def attributes(self, *args):
+            pass
+
+        def destroy(self):
+            tk.calls.append("destroy")
+
+    dialog = types.ModuleType("tkinter.filedialog")
+    dialog.askdirectory = lambda **kwargs: tk.calls.append(("askdirectory", kwargs)) or chosen
+    tk.Tk, tk.filedialog = Tk, dialog
+    monkeypatch.setitem(sys.modules, "tkinter", tk)
+    monkeypatch.setitem(sys.modules, "tkinter.filedialog", dialog)
+    return tk
+
+
+def test_the_folder_dialog_is_used_and_its_answer_stored(tmp_path, monkeypatch, capsys):
+    chosen = tmp_path / "picked"
+    tk = fake_tkinter(monkeypatch, str(chosen))
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", "b", "q"])
+    (_, asked), = [c for c in tk.calls if isinstance(c, tuple)]
+    assert asked["initialdir"] == str(tmp_path) and asked["title"] == "Where to save your files"
+    assert tk.calls[-1] == "destroy"
+    assert "type a path" not in out
+    assert runs.read_config() == {"data_dir": str(chosen)}
+
+
+def test_cancelling_the_folder_dialog_changes_nothing(tmp_path, monkeypatch, capsys):
+    fake_tkinter(monkeypatch, "")
+    menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", "b", "q"])
+    assert runs.read_config() == {}
+
+
+@pytest.mark.parametrize("frozen,whisper,line", [
+    (False, True, "captions + local transcription"),
+    (False, False, "captions only"),
+    (True, True, "full build: captions and local transcription"),
+    (True, False, "lite build: platform captions only (no local transcription)"),
+])
+def test_the_first_screen_says_what_this_build_does(tmp_path, monkeypatch, capsys, frozen, whisper, line):
+    if frozen:
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setenv(runs.DATA_DIR_ENV, str(tmp_path / "home"))
+    module = types.ModuleType("faster_whisper")
+    module.__spec__ = importlib.machinery.ModuleSpec("faster_whisper", None)
+    monkeypatch.setitem(sys.modules, "faster_whisper", module if whisper else None)
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["q"])
+    assert out.splitlines()[1] == line

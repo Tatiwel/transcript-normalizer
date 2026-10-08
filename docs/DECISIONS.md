@@ -516,6 +516,20 @@ Measured, hits / false positives before → after, against the bundled pack 0.3.
 
 Pack 0.3.5 in the same release replaces the variant `trio` of tri with `primeiro trio`, `segundo trio`, `terceiro trio` and `quarto trio`. The garble of the unit of time matches only in its phrase, because alone `trio` is an ordinary word (D-032). R2Qgz8tFWVI 8:24 `segundo trio` → tri is still a hit, and no fixture moves.
 
+## D-061 Menu structure: settings, Back, stages
+
+The menu (the `[menu]` extra) gets a Settings screen, a Back option in every list, and a visible structure. Nothing under core/ changes, and no dependency is added.
+
+Settings writes `config.toml` in `platformdirs.user_config_dir("transcript-normalizer")`, with two keys: `data_dir`, the folder runs/ and packs/ go in, and `pack`, the pack offered first. `runs.base_dir()` now resolves in this order: `TRANSCRIPT_NORMALIZER_HOME` (for scripts, in every mode now, not only in the executable); `data_dir`; then the current directory for a pip install, or the documents folder for the executable (D-052). A folder other than the current directory is created with runs/ and packs/ on first use. The folder is chosen with `tkinter.filedialog.askdirectory`, which ships with Python; where tkinter is missing or there is no display (`TclError`), the menu asks for a typed path. Files already saved are not moved. A file that cannot be read counts as no settings. The menu's one setting a script cannot reach through a command is the pack offered first, which only orders a menu question; the folder is `TRANSCRIPT_NORMALIZER_HOME`, so D-051 holds.
+
+Every `prompts.select` ends with "← Back" (`b` in plain text) unless the caller says otherwise; the main menu has Quit instead. Back returns None, like Esc and empty input, so every caller already handled it. Where a question follows another inside one action, Back returns to the earlier question: the pack question to the run list in "Normalize a run" and "Review pending". In a chain from an earlier step (fetch, then normalize), Back returns to the menu, since the previous question was a yes or no. Multi-selects (the review) keep Esc and empty input; a Back checkbox would read as an answer.
+
+The structure: `prompts.stage` prints a dim rule and `◆ <Stage>` before each block, `prompts.field` prints `── paste below ──` or `── type a path ──` above each text field, and `prompts.detail` and `Output.detail` print label and value (label dim, value white, paths blue, numbers bold). questionary gets `◇` as its question mark, `»` as its pointer and a cyan style; its checkbox already uses ● and ○. In plain text the marks are ASCII (`-`, `*`, `>`, `<- Back`, `[*]`), because the plain adapter is what pipes, tests and narrow code pages see. The first screen adds a line under the version from whether `faster_whisper` can be found (`find_spec`, without importing it).
+
+From the first Windows run of 0.4.6: the menu prints no exit codes; "Review pending" on a run with nothing pending, or whose last normalize was refused for D-054, says "nothing to review for this run" and returns before asking for a pack, and does not offer the folder, since nothing was done. normalize has a hidden `--menu`, which the menu passes, so the D-054 refusal names what the menu has ("Pick another pack in Settings, or install one with pack install.") instead of `--force`, which the command line keeps.
+
+The executables are built with `--collect-submodules tkinter --hidden-import tkinter.filedialog`. A hidden `help --check-picker` imports `tkinter.filedialog` and starts a Tcl interpreter (no window, so no display), printing the Tcl version; the release workflow runs it in every executable. Checked locally on Linux with a lite build from uv's Python 3.12: `tkinter 9.0.4, filedialog tkinter.filedialog`.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0
+
+A clearer menu (D-061). Only the menu changed; normalizing works as before.
+
+- Settings (menu item 7). "Where to save your files" shows the folder in use and opens a folder dialog; where there is none (no display), you type the path. "The pack offered first" puts a pack at the top of "What is this video about?". Both are kept in `config.toml` in your user settings folder. The chosen folder is used by the executables and by pip installs alike; `TRANSCRIPT_NORMALIZER_HOME` still wins, for scripts. The first screen says which folder is in use.
+- Back everywhere: every list ends with "← Back", which returns to the previous screen (the menu, or the previous question: Back from "What is this video about?" returns to the run list). Esc does the same. Text fields say "(empty or Esc: back)".
+- A visible structure: a rule and a stage label before each block (◆ Fetch, ◆ Normalize, ◆ Review, ◆ Settings), ● and ○ in multi-selects, » for the cursor, a "── paste below ──" or "── type a path ──" line above each text field, and the video's details as label and value (paths blue, numbers bold). Without a terminal or questionary, the same structure in ASCII (`* Fetch`, `b. <- Back`, `[*]`).
+- The first screen says what the installation can do: "full build: captions and local transcription" or "lite build: platform captions only (no local transcription)" in the executables, "captions + local transcription" or "captions only" in a pip install.
+- From the Windows run: the menu never prints exit codes ("not normalized yet (2)" is "not normalized yet"); "Review pending" on a run with nothing pending, or whose pack did not fit, says "nothing to review for this run" and returns, without "Open the folder?"; when the pack does not fit, the menu says "Pick another pack in Settings, or install one with pack install." instead of the `--force` advice, which stays on the command line.
+- The executables carry tkinter for the folder dialog; the release smoke test checks that it loads.
+
 ## 0.4.6
 
 - Phonetic matches only ask (D-060). A name found by sound and not by spelling (the phonetic source of D-050) goes to "to confirm" and is never substituted until you confirm it. In a forced run on a video about prions, `proteínas` had been turned into BR Partners 40 times; now it is a question, and the text stays.
