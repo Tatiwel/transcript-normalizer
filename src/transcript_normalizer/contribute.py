@@ -169,8 +169,94 @@ def known_to_repository(name: str, path: Path) -> bool:
     return source_of(name, path) != MINE
 
 
+# ------------------------------------------------------------------ a copy's diff (D-069)
+
+
+def diff_against_base(base: dict, mine: dict) -> dict:
+    """What a copy changed since its base: new terms, added forms, removals, class changes."""
+    from .packedit import language_of
+
+    n = language_of(mine).normalize
+    B = {n(str(t["term"])): t for t in base.get("terms") or []}
+    M = {n(str(t["term"])): t for t in mine.get("terms") or []}
+    out = {"new_terms": [], "added": [], "removed": [], "class_changed": []}
+    for k, m in M.items():
+        b = B.get(k)
+        if b is None:
+            out["new_terms"].append(m)
+            continue
+        for kind, key in (("alias", "aliases"), ("variant", "variants")):
+            had = {n(str(x)) for x in b.get(key) or []}
+            has = {n(str(x)) for x in m.get(key) or []}
+            out["added"] += [{"term": m["term"], kind: x} for x in m.get(key) or [] if n(str(x)) not in had]
+            out["removed"] += [{"term": m["term"], kind: x} for x in b.get(key) or [] if n(str(x)) not in has]
+        if b.get("class") != m.get("class"):
+            out["class_changed"].append({"term": m["term"], "from": b.get("class"), "to": m.get("class")})
+    out["removed"] += [{"term": b["term"]} for k, b in B.items() if k not in M]
+    return {k: v for k, v in out.items() if v}
+
+
+def diff_lines(diff: dict) -> list[str]:
+    from .packedit import term_line
+
+    lines = [f"  + term     {term_line(t)}" for t in diff.get("new_terms", [])]
+    for item in diff.get("added", []):
+        kind = "alias" if "alias" in item else "variant"
+        lines.append(f"  + {kind:8s} {item[kind]} -> {item['term']}")
+    for item in diff.get("removed", []):
+        kind = "alias" if "alias" in item else "variant" if "variant" in item else ""
+        lines.append(f"  - {kind:8s} {item[kind]}  (of {item['term']})" if kind else f"  - term     {item['term']}")
+    for item in diff.get("class_changed", []):
+        lines.append(f"  ~ class    {item['term']}: {item['from']} -> {item['to']}")
+    return lines
+
+
+def run_propose_diff(name: str, path: Path, data: dict, base: dict, base_ref: tuple[str, str]) -> int:
+    """D-069: a copy with a base proposes what it changed, never the whole file."""
+    import getpass
+
+    from . import prompts
+    from .helptext import version as engine_version
+
+    diff = diff_against_base(base, data)
+    if not diff:
+        print(f"nothing to contribute: {name} is as its base {base_ref[0]}@{base_ref[1]}")
+        return 0
+    additions = len(diff.get("new_terms", [])) + len(diff.get("added", []))
+    removals = len(diff.get("removed", []))
+    user = getpass.getuser()
+    title = f"{name}: {additions} addition{'' if additions == 1 else 's'}" + (
+        f", {removals} removal{'' if removals == 1 else 's'}" if removals else "") + f" from {user}"
+    print(f'What would be proposed to the packs repository, as "{title}":')
+    print(f"  the changes in your copy since {base_ref[0]}@{base_ref[1]}:")
+    for line in diff_lines(diff):
+        print(line)
+    print("Only these changes are sent, never the whole file and never a transcript.")
+    if not prompts.confirm("Propose these changes?", default=False):
+        print("nothing written.")
+        return 0
+    version = str(data.get("version") or "0.0.0")
+    text = yaml.safe_dump({"pack": name, "based_on": f"{base_ref[0]}@{base_ref[1]}", "pack_version": version,
+                           "engine": engine_version(), "date": date.today().isoformat(), **diff},
+                          allow_unicode=True, sort_keys=False)
+    target = base_dir() / CONTRIBUTIONS_DIR / f"{name}-{version}-diff.yaml"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    print(f"written to {target}")
+    intro = (f"Proposed with `transcript-normalizer pack propose --whole`: what one user's copy of **{name}** "
+             f"changed since {base_ref[1]}. The changes only; no transcript.\n\n")
+    url = ""
+    for body in (f"{intro}```yaml\n{text}```\n", f"{intro}Too long for a link: attach `{target.name}`.\n"):
+        url = f"{ISSUE_URL}?{urllib.parse.urlencode({'title': title, 'body': body})}"
+        if len(url) <= MAX_URL:
+            break
+    open_issue(url)
+    return 0
+
+
 def run_propose_whole(name: str) -> int:
     from . import prompts
+    from .merge import base_path, based_on
 
     path = installed_packs().get(name)
     if path is None:
@@ -178,6 +264,10 @@ def run_propose_whole(name: str) -> int:
         return 1
     text = path.read_text(encoding="utf-8")
     data = yaml.safe_load(text) or {}
+    base_ref = based_on(data)
+    if base_ref and base_path(*base_ref).exists():
+        base = yaml.safe_load(base_path(*base_ref).read_text(encoding="utf-8")) or {}
+        return run_propose_diff(name, path, data, base, base_ref)
     version = str(data.get("version") or "0.0.0")
     summary = pack_summary(name, data)
     title = f"{'Update' if known_to_repository(name, path) else 'New pack'}: {name}"

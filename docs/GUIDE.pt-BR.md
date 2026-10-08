@@ -252,6 +252,30 @@ transcript-normalizer pack edit-term biomed-ptbr metformina --add-variant "met f
 transcript-normalizer pack show biomed-ptbr --search metf
 ```
 
+**Quando sai uma versão nova.** A sua cópia lembra de onde veio (`based_on: financas-ptbr@0.3.7`) e quantas mudanças você salvou desde então (`local_edits`). Quando sai uma versão mais nova, junto com uma nova versão do programa ou no repositório de pacotes, o menu avisa na primeira tela, Installed packs marca `↑ merge available`, e o `pack update` menciona:
+
+```
+financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits.
+Merge? [y/N]
+```
+
+Nada é mesclado sem você dizer sim. A mescla vai termo a termo: o que só o upstream mudou é aceito, o que só você mudou é mantido, e o que os dois mudaram é combinado quando dá. Quando não dá, ela pergunta, um conflito por vez, mostrando as duas versões e até três linhas das suas próprias runs em que a forma aparece (D-069):
+
+```
+Conflict 1: Echo: the class differs on both sides
+  base      Echo  (farmaco)
+  mine      Echo  (exame)
+  theirs    Echo  (doenca)
+  in your runs:
+    R2Qgz8tFWVI  3:10 o Echo saiu da lista
+Which one?
+   m. Keep mine
+   t. Take theirs
+   l. Decide later
+```
+
+"Decide later" mantém a sua versão e anota o conflito em `packs/<nome>.merge-pending.yaml`. Antes de gravar, a mescla guarda a sua cópia como `<nome>.yaml.bak-<data>`, e no fim imprime o que foi acrescentado, mantido, combinado e removido. A sua camada aprendida nunca é alterada; o resumo diz onde ela agora repete ou contradiz o pacote. `pack merge <nome> --dry-run` mostra tudo isso sem gravar nada; `--yes-theirs` e `--yes-mine` respondem todos os conflitos de um lado só.
+
 **Um termo que você notou.** Depois de normalizar, e em "Show a run's outputs", o menu pergunta "Add a term you noticed?". Pede a forma errada que você viu, mostra até cinco linhas da run com ela, para você conferir que é essa, e depois o que ela deveria ser. Se esse termo está no pacote, pergunta se o reconhecedor ouviu errado (uma variante, corrigida dali em diante) ou se a pessoa falou assim mesmo (um alias, mantido como foi dito); se não está, pede uma classe e acrescenta o termo com a forma como variante. Depois oferece normalizar a run de novo com ele (D-066):
 
 ```
@@ -284,7 +308,7 @@ Contribute these? [y/N]
 
 Com um sim, grava `contributions/financas-ptbr-<data>.yaml` e abre no navegador uma issue já preenchida no repositório de pacotes (ou imprime o link); você a envia por lá, e quem mantém o pacote decide o que entra (D-056). O menu oferece isso depois de uma revisão.
 
-Um pacote inteiro, seu para uma área nova ou um que veio com o programa e você melhorou, é proposto com `pack propose --whole <nome>` (menu: Packs → Contribute a pack). Ele mostra a área do pacote, as classes, o número de termos e cinco deles, e pergunta; com um sim, grava `contributions/<nome>-<versão>.yaml` e abre uma issue com o título "New pack: <nome>", ou "Update: <nome>" quando o repositório já tem esse pacote, com o arquivo no corpo, recolhido (ou, para um pacote longo, um aviso para anexar o arquivo). Nada sai do seu computador até você mesmo enviar a issue (D-067). O `pack export <nome>` grava o mesmo arquivo em qualquer lugar, para compartilhar de outro jeito.
+Um pacote inteiro, seu para uma área nova ou um que veio com o programa e você melhorou, é proposto com `pack propose --whole <nome>` (menu: Packs → Contribute a pack). Para uma cópia (um pacote com `based_on`), propõe só o que você mudou desde a base, com o título "financas-ptbr: 3 additions from <você>". Para um pacote seu, mostra a área do pacote, as classes, o número de termos e cinco deles, e pergunta; com um sim, grava `contributions/<nome>-<versão>.yaml` e abre uma issue com o título "New pack: <nome>", ou "Update: <nome>" quando o repositório já tem esse pacote, com o arquivo no corpo, recolhido (ou, para um pacote longo, um aviso para anexar o arquivo). Nada sai do seu computador até você mesmo enviar a issue (D-067). O `pack export <nome>` grava o mesmo arquivo em qualquer lugar, para compartilhar de outro jeito.
 
 ## 7. Outro idioma
 

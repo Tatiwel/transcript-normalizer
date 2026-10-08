@@ -82,6 +82,17 @@ def first_screen() -> None:
     detail("Working in" if base == Path.cwd() else "Your files", base, "path", indent="")
     say(TYPICAL_FLOW)
     say(mark(f"Keyboard: {prompts.legend('select')}", "hint"))
+    offer_merges()
+
+
+def offer_merges() -> None:
+    """D-069: a copy whose upstream is newer: say so and ask; never merge unasked."""
+    from .merge import offers
+
+    for offer in offers():
+        say(mark(offer.line(), "need"))
+        if prompts.confirm("Merge?", default=False):
+            run_command(["pack", "merge", offer.name])
 
 
 # ------------------------------------------------------------------ runs

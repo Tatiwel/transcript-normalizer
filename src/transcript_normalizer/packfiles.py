@@ -183,11 +183,19 @@ def run_installed(args) -> int:
     index = index_within(INDEX_WAIT_SECONDS, args.index)
     header = ["name", "version", "language", "terms", "size (KB)", "source"]
     lines = [[r.name, r.version, r.language, r.terms, r.size_kb, r.source] for r in table]
-    marked = False
-    if index is not None:
+    marked = merges = False
+    from .merge import copies, offer_for
+
+    copied = copies()
+    if index is not None or copied:
         header.append("update")
         for line, r in zip(lines, table):
-            entry = index.get(r.name)
+            if r.name in copied:  # D-069: a copy is merged, never replaced
+                offer = offer_for(r.name, copied[r.name][0], copied[r.name][1], index)
+                line.append(f"↑ merge available ({offer.upstream.version})" if offer else "")
+                merges |= offer is not None
+                continue
+            entry = (index or {}).get(r.name)
             update = r.source != MINE and entry is not None and newer(entry.version, r.version)
             line.append(f"↑ update ({entry.version})" if update else "")
             marked |= update
@@ -197,9 +205,11 @@ def run_installed(args) -> int:
                         for i, (cell, w) in enumerate(zip(line, widths))).rstrip())
     print()
     if index is None:
-        print("(the packs repository was not reached, so updates are not shown)")
-    elif marked:
+        print("(the packs repository was not reached, so its updates are not shown)")
+    if marked:
         print("↑ update: the packs repository has a newer version; `transcript-normalizer pack install <name>` gets it")
+    if merges:
+        print("↑ merge available: upstream is newer than your copy's base; `transcript-normalizer pack merge <name>` merges it, asking about each conflict")
     print(f"your packs: {packs_root()}{os.sep}")
     return 0
 

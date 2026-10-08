@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.2
+
+Three-way pack merge (D-069).
+
+- A copy of a pack (`pack copy`, or the menu's copy before editing) records `based_on: <name>@<version>` and `local_edits`, and keeps its base in `packs/.bases/`. Every saved edit counts.
+- When upstream (the bundled pack or the packs repository) is newer than a copy's base, the menu's first screen asks "Merge?", Installed packs shows `↑ merge available`, and `pack update` says so. Nothing is merged unasked.
+- `pack merge <name> [--dry-run] [--yes-theirs | --yes-mine]`: by canonical term, three-way with the base (two-way for a copy from before 0.6.2, which then gains a base). Conflicts are asked one at a time with both versions and lines from your runs: keep mine (`m`), take theirs (`t`), keep both (`k`, when compatible), decide later (`l`, recorded in `<name>.merge-pending.yaml`).
+- Before writing: a `<name>.yaml.bak-<timestamp>` backup, and the result checked as normalize loads it. A summary of what was added, updated, kept, combined and removed, the conflicts, and where the learned layer (never changed) now repeats or contradicts the pack.
+- `pack propose --whole` on a copy proposes only its changes since the base: "<name>: N additions from <user>".
+
 ## 0.6.1
 
 Editing packs (D-066), contributing a whole pack (D-067), English and phonetic classes (D-068).

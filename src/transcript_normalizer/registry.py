@@ -217,17 +217,35 @@ def run_install(args) -> int:
     return 0
 
 
+def offer_merges(entries: dict | None) -> None:
+    """D-069: a copy of the user's is never replaced; when its upstream is
+    newer, say so, and on a terminal ask whether to merge."""
+    from . import cli, merge, prompts
+
+    for offer in merge.offers(index=entries or {}):
+        print(offer.line())
+        if cli.is_interactive() and prompts.confirm("Merge?", default=False):
+            cli.main(["pack", "merge", offer.name])
+        else:
+            print(f"  `transcript-normalizer pack merge {offer.name}` merges it, asking about each conflict")
+
+
 def run_update(args) -> int:
     url = index_url(args.index)
     names = sorted(installed())
-    if not names:
-        print("no packs installed with `pack install`; nothing to update")
-        return 0
     try:
         entries = read_index(url)
     except RegistryError as error:
+        if not names:
+            offer_merges(None)
+            print("no packs installed with `pack install`; nothing to update")
+            return 0
         print(f"could not read the packs index: {error}", file=sys.stderr)
         return 1
+    offer_merges(entries)
+    if not names:
+        print("no packs installed with `pack install`; nothing to update")
+        return 0
     code = 0
     for name in names:
         entry, current = entries.get(name), installed()[name].get("version")

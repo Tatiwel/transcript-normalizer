@@ -81,6 +81,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("pack edit-term | remove-term", "change a term of a pack (--rename, --class, --add-variant, --remove-alias, …); remove one"),
             ("pack show <pack>", "a pack's terms with their forms; --search <text>, --page <n>"),
             ("pack export <name> [--to <path>]", "write <name>-<version>.yaml"),
+            ("pack merge <name>", "merge a newer upstream version into your copy, asking about each conflict; --dry-run, --yes-theirs, --yes-mine (D-069)"),
             ("pack propose --whole <name>", "propose a whole pack to the packs repository: shows it, asks, then opens a prefilled issue (D-067)"),
             ("pack propose [--pack <name>]", "contribute what your reviews taught the tool: shows it, asks, then opens a prefilled issue"),
             ("help", "this help; `<command> --help` lists a command's options"),

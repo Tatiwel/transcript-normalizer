@@ -252,6 +252,30 @@ transcript-normalizer pack edit-term biomed-ptbr metformina --add-variant "met f
 transcript-normalizer pack show biomed-ptbr --search metf
 ```
 
+**When upstream releases a new version.** Your copy remembers what it was copied from (`based_on: financas-ptbr@0.3.7`) and how many changes you saved since (`local_edits`). When a newer version comes out, bundled with a new release of the program or in the packs repository, the menu says so on its first screen, Installed packs marks it `↑ merge available`, and `pack update` mentions it:
+
+```
+financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits.
+Merge? [y/N]
+```
+
+Nothing is merged unless you say yes. A merge goes term by term: what only upstream changed is taken, what only you changed is kept, and what both changed is combined when it can be. Where it cannot, it asks, one conflict at a time, showing both versions and up to three lines from your own runs where the form occurs (D-069):
+
+```
+Conflict 1: Echo: the class differs on both sides
+  base      Echo  (farmaco)
+  mine      Echo  (exame)
+  theirs    Echo  (doenca)
+  in your runs:
+    R2Qgz8tFWVI  3:10 o Echo saiu da lista
+Which one?
+   m. Keep mine
+   t. Take theirs
+   l. Decide later
+```
+
+"Decide later" keeps yours and notes the conflict in `packs/<name>.merge-pending.yaml`. Before writing, the merge saves your copy as `<name>.yaml.bak-<date>`, and at the end it prints what was added, kept, combined and removed. Your learned layer is never changed; the summary says where it now repeats or contradicts the pack. `pack merge <name> --dry-run` shows all this without writing anything; `--yes-theirs` and `--yes-mine` answer every conflict one way.
+
 **A term you noticed.** After normalizing, and in "Show a run's outputs", the menu asks "Add a term you noticed?". It asks for the wrong form you saw, shows up to five of the run's lines with it so you can check it is the one, then what it should be. If that term is in the pack, it asks whether the recognizer misheard it (a variant, corrected from now on) or the speaker said it that way (an alias, kept as said); if not, it asks for a class and adds the term with the form as a variant. Then it offers to normalize the run again with it (D-066):
 
 ```
@@ -284,7 +308,7 @@ Contribute these? [y/N]
 
 On a yes it writes `contributions/financas-ptbr-<date>.yaml` and opens a prefilled issue on the packs repository in your browser (or prints the link); you submit it there, and the pack's maintainers decide what goes in (D-056). The menu offers this after a review.
 
-A whole pack, yours for a new field or a bundled one you have improved, is proposed with `pack propose --whole <name>` (menu: Packs → Contribute a pack). It shows the pack's field, classes, number of terms and five of them, and asks; on a yes it writes `contributions/<name>-<version>.yaml` and opens an issue titled "New pack: <name>", or "Update: <name>" when the repository has that pack, with the file in its body, collapsed (or, for a long pack, a note to attach the file). Nothing leaves your computer until you submit the issue yourself (D-067). `pack export <name>` writes the same file anywhere, to share it another way.
+A whole pack, yours for a new field or a bundled one you have improved, is proposed with `pack propose --whole <name>` (menu: Packs → Contribute a pack). For a copy (a pack with `based_on`), it proposes only what you changed since its base, titled "financas-ptbr: 3 additions from <you>". For a pack of your own, it shows the pack's field, classes, number of terms and five of them, and asks; on a yes it writes `contributions/<name>-<version>.yaml` and opens an issue titled "New pack: <name>", or "Update: <name>" when the repository has that pack, with the file in its body, collapsed (or, for a long pack, a note to attach the file). Nothing leaves your computer until you submit the issue yourself (D-067). `pack export <name>` writes the same file anywhere, to share it another way.
 
 ## 7. Another language
 

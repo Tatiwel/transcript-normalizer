@@ -30,7 +30,10 @@ MIN_VARIANT_LETTERS = 3
 #: `pack show`: terms per page.
 PAGE_SIZE = 20
 #: The keys a written pack starts with, in this order; the rest follow.
-KEY_ORDER = ("name", "field", "description", "language", "version", "classes", "phonetic_classes")
+KEY_ORDER = (
+    "name", "field", "description", "language", "version", "based_on", "local_edits",
+    "classes", "phonetic_classes",
+)
 
 
 class EditError(Exception):
@@ -197,6 +200,8 @@ def save(path: Path, head: str, data: dict) -> str:
     """Check the changed pack as normalize loads it, then write it with the
     next patch version. Returns that version."""
     data["version"] = bump(data.get("version"))
+    if "based_on" in data:  # D-069: a copy counts its edits since its base
+        data["local_edits"] = int(data.get("local_edits") or 0) + 1
     text = dump(head, data)
     trial = path.with_name(f".{path.stem}.check.yaml")
     try:
@@ -255,14 +260,20 @@ def run_copy(args) -> int:
     if source == packfiles.MINE:
         print(f"{args.name} is already yours: {path}")
         return 0
+    from .merge import keep_base, with_provenance
+
+    text = path.read_text(encoding="utf-8")
+    version = str((yaml.safe_load(text) or {}).get("version") or "0.0.0")
+    keep_base(args.name, version, text)  # D-069: the base a later merge needs
+    registry.write_atomic(target, with_provenance(text, args.name, version).encode("utf-8"))
     if source == packfiles.BUNDLED:
-        registry.write_atomic(target, path.read_bytes())
         print(f"copied the bundled {args.name} to {target}; that copy is used from now on (D-017)")
     else:  # from the repository: stop tracking it, so pack update leaves it alone
         record = registry.installed()
         record.pop(args.name, None)
         registry.write_installed(record)
         print(f"{target} is yours now; `pack update` no longer replaces it")
+    print(f"  based on {args.name}@{version}; `pack merge {args.name}` brings in a newer version later")
     return 0
 
 

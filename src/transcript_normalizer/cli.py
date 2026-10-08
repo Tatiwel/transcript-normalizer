@@ -6,6 +6,7 @@
     transcript-normalizer pack list [--installed] | install <name> | update | propose
     transcript-normalizer pack create --template <field> --name <n> --lang <l> | import <file> | remove <name>
     transcript-normalizer pack copy | add-term | edit-term | remove-term | show | export
+    transcript-normalizer pack merge <name> [--dry-run] [--yes-theirs | --yes-mine]
     transcript-normalizer help          (also --help; the same text as menu item 8)
     transcript-normalizer               (on a terminal: the interactive menu, D-051)
 
@@ -772,7 +773,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     listing.set_defaults(run=run_list)
 
-    from . import contribute, packedit, packfiles, registry
+    from . import contribute, merge, packedit, packfiles, registry
 
     packs = commands.add_parser(
         "pack",
@@ -784,6 +785,7 @@ def build_parser() -> argparse.ArgumentParser:
     contribute.add_arguments(actions)
     packfiles.add_arguments(actions)
     packedit.add_arguments(actions)
+    merge.add_arguments(actions)
 
     helping = commands.add_parser("help", help="how to use the tool, by section")
     # D-061: the release smoke test proves the folder dialog's parts are inside.

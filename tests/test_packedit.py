@@ -7,6 +7,7 @@ import yaml
 from transcript_normalizer import load_pack, packedit, registry, runs
 from transcript_normalizer.cli import main
 from transcript_normalizer.core.pack import Learned
+from transcript_normalizer.merge import base_path, with_provenance
 from transcript_normalizer.runs import BUNDLED_PACKS
 
 from .test_interactive import menu
@@ -101,13 +102,19 @@ def test_bundled_and_repository_packs_are_read_only(home, capsys):
 def test_copy_of_the_bundled_pack_is_used_instead_and_editable(home, capsys):
     assert main(["pack", "copy", "financas-ptbr"]) == 0
     target = home / "packs" / "financas-ptbr.yaml"
-    assert target.read_bytes() == BUNDLED.read_bytes() and runs.installed_packs()["financas-ptbr"] == target
+    version = data(BUNDLED)["version"]
+    text = BUNDLED.read_text(encoding="utf-8")
+    assert target.read_text(encoding="utf-8") == with_provenance(text, "financas-ptbr", version)  # D-069
+    assert data(target)["based_on"] == f"financas-ptbr@{version}" and data(target)["local_edits"] == 0
+    assert base_path("financas-ptbr", version).read_text(encoding="utf-8") == text
+    assert runs.installed_packs()["financas-ptbr"] == target
     assert main(["pack", "add-term", "financas-ptbr", "emissão", "--class", "conceito", "--variant", "mississões"]) == 0
     text = target.read_text(encoding="utf-8")
     assert text.startswith(packedit.header(BUNDLED.read_text(encoding="utf-8")))  # the comments on top stay
     before, after = data(BUNDLED), data(target)
     assert after["version"] == packedit.bump(before["version"])
     assert after["terms"][:-1] == before["terms"] and after["unit_rules"] == before["unit_rules"]
+    assert after["local_edits"] == 1
 
 
 def test_copy_of_a_repository_pack_stops_its_updates(home, capsys):

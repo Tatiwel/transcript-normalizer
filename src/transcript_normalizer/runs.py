@@ -160,13 +160,15 @@ def installed_packs() -> dict[str, Path]:
 
     The bundled packs, then the `.yaml` files in packs/ (installed with `pack
     install` or written by the user), which win over a bundled one of the
-    same name, as in `default_pack`. Learned layers are not packs.
+    same name, as in `default_pack`. Learned layers and a merge's pending
+    conflicts (D-069) are not packs.
     """
     found = {p.stem: p for p in sorted(BUNDLED_PACKS.glob("*.yaml"))}
     root = packs_root()
     if root.is_dir():
         found.update(
-            (p.stem, p) for p in sorted(root.glob("*.yaml")) if not p.name.endswith(".learned.yaml")
+            (p.stem, p) for p in sorted(root.glob("*.yaml"))
+            if not p.name.endswith((".learned.yaml", ".merge-pending.yaml"))
         )
     return found
 

@@ -19,6 +19,9 @@ def isolated_settings(tmp_path_factory, monkeypatch):
     config = tmp_path_factory.mktemp("config") / runs.CONFIG_FILE
     monkeypatch.setattr(runs, "config_file", lambda: config)
     monkeypatch.delenv(DATA_DIR_ENV, raising=False)
+    # D-069: the menu and the pack table look for newer upstream packs; no test
+    # reaches the real packs repository unless it says where (registry.INDEX_ENV).
+    monkeypatch.setenv("TRANSCRIPT_NORMALIZER_PACKS_INDEX", (tmp_path_factory.mktemp("offline") / "index.json").as_uri())
     monkeypatch.setitem(sys.modules, "tkinter", None)
     return config
 

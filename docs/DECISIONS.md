@@ -643,6 +643,57 @@ For a pack whose language still has no module, the menu now passes `--allow-gene
 
 **Phonetic classes.** This closes the second limit: D-050 compared only `companhia` and `pessoa`, finance's names, so a medicine pack's drugs were never compared by sound. A pack may declare `phonetic_classes: [..]`, each one of its classes (an unknown one is an error at load). Without the line, a pack that declares `classes:` gets `pessoa` and `organizacao`, plus `companhia` when it declares it; a pack with no `classes:` line, from before D-064, keeps D-050's two, so the frozen fixture packs match exactly as measured. `Pack.phonetic_classes` replaces the matcher's constant. financas-ptbr declares `[companhia, pessoa]` (pack 0.3.7), D-050's measured pair: adding `organizacao` to it would add questions no fixture has measured. The templates set their lists: medicina `farmaco, doenca, pessoa, organizacao`; tecnologia `produto, biblioteca, linguagem, pessoa, organizacao`; esportes `time, pessoa, competicao`; the others take the default. The phonetic source still only asks (D-060): a test shows a `farmaco` term proposed in the ask band, never applied, only when the pack names `farmaco`.
 
+## D-069 Three-way pack merge
+
+A copy of a bundled or repository pack (D-066) used to drift: when upstream released a new version, the copy kept the old terms and the user's edits, with nothing to bring the two together. `pack merge <name>` does that, by canonical term, and asks where it cannot decide.
+
+**Provenance.** `pack copy` (also the menu's automatic copy before editing or adding a term) writes `based_on: <name>@<version>` and `local_edits: 0` after the copy's `version:` line, leaving the rest of the file as it was. It also keeps the upstream file it copied in `packs/.bases/<name>@<version>.yaml`. A three-way merge needs the base's content, and neither the bundled pack (only the current version ships) nor the repository index (only the latest is listed) can give an old version back. Every saved edit increments `local_edits`. A copy made before 0.6.2 has no `based_on`; it merges two-way, and the merge writes `based_on` (the new upstream version) and its snapshot, so the next merge is three-way. A copy whose snapshot is missing also merges two-way, and says so.
+
+**Detection.** On the menu's first screen, in Installed packs (an `↑ merge available (<version>)` mark), and in `pack update`, each copy is compared with its upstream: the newer, by version, of the bundled pack of that name and the repository's (the index within 3 seconds). A copy is a pack of the user's own that has `based_on`, or that has the name of a bundled pack. When upstream is newer than `based_on` (or, without one, than the copy's version), it says "financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits." and the menu asks "Merge?" (default no). `pack update` asks only on a terminal, and otherwise prints the command. Nothing is merged without being asked for. `pack merge <name>` takes `--dry-run`, `--yes-theirs` and `--yes-mine` (every conflict answered one way), and `--force` (merge even when upstream is not newer).
+
+**Merging.** Terms are matched by their canonical name, folded by the pack's language (case and accents). Lists are aliases, variants and collocations within a term, and the pack's classes and phonetic_classes: both sides' additions, minus what either side removed from the base. Mine's spelling of a form wins when the two differ only in folding. Other pack keys come from upstream, except the copy's own `name`, `field`, `based_on` and `local_edits`.
+
+Three-way (with a base):
+
+| base | upstream | mine | result |
+|---|---|---|---|
+| - | has it | - | added from upstream |
+| - | - | has it | kept (mine) |
+| - | has it | has it | combined as two-way (both added the same term) |
+| has it | same as base | same as base | unchanged |
+| has it | changed | same as base | upstream's version |
+| has it | same as base | changed | mine |
+| has it | changed | changed | combined field by field: one side's change is taken, lists are combined; a class changed on both sides is a conflict |
+| has it | removed | same as base | removed |
+| has it | removed | changed | kept, with a notice |
+| has it | renamed (a new term holding its name or forms) | same as base | upstream's renamed term |
+| has it | renamed | changed | conflict |
+| has it | any | removed | left out, with a notice when upstream changed it |
+
+Each upstream removal of an alias or variant that is still in mine gets a notice. Two-way (no base): a term on one side only is added or kept; a term on both is the union of its forms, with no removals, since without a base nothing can be told apart from an addition. A class that differs is a conflict, and so is a form that is an alias on one side and a variant on the other.
+
+**Conflicts**, asked one at a time, each with the term's versions (base, mine, theirs) and up to three caption lines from the user's runs where one of its forms occurs:
+
+| conflict | keep mine | take theirs | keep both | decide later |
+|---|---|---|---|---|
+| class changed on both sides (two-way: differs) | my class | their class | - | my class |
+| a form is an alias in one, a variant in the other (two-way) | my kind | their kind | - | my kind |
+| the same form is a variant of two terms | removed from theirs | removed from mine | - | both stay |
+| my variant is upstream's alias of another term | removed from theirs | removed from mine | - | both stay |
+| my variant is upstream's canonical name of another term | (not possible) | removed from mine | - | both stay |
+| a form I confirmed in the learned layer was removed upstream | kept in the pack | removed (the learned layer still corrects it for me) | - | kept |
+| a form I rejected in the learned layer was added upstream | not added | added | - | not added |
+| my new term looks like a new upstream term (folded, rapidfuzz ratio ≥ 90) | mine only | theirs only | both, when no form collides | mine only |
+| upstream renamed a term I had added forms to | my term, old name | the renamed term, with my added forms | - | my term |
+
+The answers have fixed keys in plain text: `m` keep mine, `t` take theirs, `k` keep both, `l` decide later. Empty input or Esc decides later. "Decide later" leaves the term as mine and records the conflict in `packs/<name>.merge-pending.yaml`, which `installed_packs` does not list as a pack. `--yes-mine` decides later where keeping mine is not possible. Form conflicts and learned-layer conflicts are found after the term-level answers, on the merged terms.
+
+**Safety.** The result is loaded as normalize loads it (D-064, D-068), and a variant under 3 letters that upstream does not itself have is refused (D-005). Only then is the copy backed up as `<name>.yaml.bak-<timestamp>` beside it and replaced. The new upstream file becomes the base snapshot. The written pack has `based_on: <name>@<upstream version>`, `local_edits` set to the number of terms where it now differs from upstream, and as version upstream's, or upstream's next patch when anything of mine was kept. The summary prints terms added from upstream, updated from upstream, kept of mine, combined and removed; conflicts resolved and pending; the notices; and where the learned layer now repeats the pack (redundant) or contradicts it, though the learned layer itself is never changed. `--dry-run` prints the summary and the conflicts that would be asked, and writes nothing.
+
+**Contribution against the base.** `pack propose --whole <name>` for a copy with a base (and its snapshot) proposes the changes since that base, never the whole file: new terms, added aliases and variants, removed terms and forms, class changes. It shows them, asks, writes `contributions/<name>-<version>-diff.yaml`, and opens an issue titled "<name>: N additions from <user>" (with ", M removals" when there are any). <user> is the computer's login name, shown in the title before the question. A pack without a base is still proposed whole (D-067). `pack propose` without `--whole` still proposes learned entries (D-056).
+
+Tested with a synthetic base, upstream and mine that has one term per row of both tables, in both directions (`--yes-theirs`, `--yes-mine`, every conflict decided later), two-way mode, a backup, a dry run, detection in the menu, the table and `pack update`, and the diff-only contribution.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
