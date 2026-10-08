@@ -20,8 +20,10 @@
 # 0.3.4 tira `Ox` de OPEX: e o `oxe` nordestino, palavra comum (D-032, D-035).
 # 0.3.5 troca a variante `trio` de tri por `primeiro/segundo/terceiro/quarto trio`:
 # sozinha, `trio` e palavra comum (D-032; "trio de irmas" em yJxxTf0IQC8).
+# 0.3.6 declara as classes do pacote (D-064): as oito de D-021. Nenhum termo muda.
 language: pt-BR
-version: 0.3.5
+version: 0.3.6
+classes: [companhia, indicador, conceito, unidade, pessoa, organizacao, ferramenta, sigla]
 
 terms:
   - term: CEMIG

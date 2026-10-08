@@ -1,0 +1,13 @@
+# Field template engenharia (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template engenharia --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: engenharia
+name: NAME
+description:
+  en: "Engineering: materials, components, standards, processes."
+  pt-BR: "Engenharia: materiais, componentes, normas, processos."
+language: LANG
+version: 0.1.0
+classes: [material, componente, norma, processo]
+terms: []

@@ -72,8 +72,8 @@ def test_first_screen(tmp_path, monkeypatch, capsys):
     assert first[4].startswith("Keyboard: ")
     assert "What would you like to do?" in out
     assert "   1. Fetch a video or file   download a caption, or transcribe audio locally" in out
-    assert "   6. Help                    what each action does and its command" in out
-    assert "   7. Settings                where to save your files, the pack offered first" in out
+    assert "   8. Help                    what each action does and its command" in out
+    assert "   7. Settings                where to save your files" in out
     assert "   q. Quit" in out
     assert "Back" not in out  # the menu has Quit instead
     assert not ANSI.search(out)  # no colour without a terminal
@@ -87,7 +87,7 @@ def test_empty_input_or_end_of_input_at_the_menu_quits(tmp_path, monkeypatch, ca
 
 def test_a_key_not_on_the_menu_is_asked_again(tmp_path, monkeypatch, capsys):
     code, out, _ = menu(tmp_path, monkeypatch, capsys, ["9", "q"])
-    assert code == 0 and "'9' is not one of 1, 2, 3, 4, 5, 6, 7, q" in out
+    assert code == 0 and "'9' is not one of 1, 2, 3, 4, 5, 6, 7, 8, q" in out
 
 
 def test_question_mark_explains_each_option_and_asks_again(tmp_path, monkeypatch, capsys):
@@ -108,7 +108,7 @@ def test_actions_are_separated_by_a_rule(tmp_path, monkeypatch, capsys):
 
 
 def test_help_has_the_sections(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["8", "q"])
     assert all(header in lines_of(out) for header in SECTIONS)
     assert "`transcript-normalizer runs/<id>/legenda.txt --review`" in out
 
@@ -466,7 +466,7 @@ def test_review_on_a_run_whose_pack_did_not_fit_says_nothing_to_review(tmp_path,
 
 
 def test_stages_and_text_fields_are_marked(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", "1", "", "", "7", "b", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", "1", "", "", "7", "", "q"])
     lines = out.splitlines()
     for label in ("* Fetch", "* Settings"):
         at = lines.index(label)
@@ -478,7 +478,7 @@ def test_stages_and_text_fields_are_marked(tmp_path, monkeypatch, capsys):
 def test_settings_writes_the_folder_and_the_menu_uses_it(tmp_path, monkeypatch, capsys, isolated_settings):
     chosen = tmp_path / "my files"
     # Settings -> Where to save -> Choose another folder (no dialog here: typed).
-    code, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", str(chosen), "b", "q"])
+    code, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", str(chosen), "q"])
     assert code == 0
     assert "no folder dialog here; type the path instead" in out
     assert "-- type a path --" in out
@@ -494,14 +494,14 @@ def test_settings_writes_the_folder_and_the_menu_uses_it(tmp_path, monkeypatch, 
 
 def test_settings_can_go_back_to_the_default(tmp_path, monkeypatch, capsys):
     runs.write_config({"data_dir": str(tmp_path / "elsewhere"), "pack": "financas-ptbr"})
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "2", "b", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", "q"])
     assert "chosen in Settings" in out
     assert runs.read_config() == {"pack": "financas-ptbr"}
     assert runs.base_dir() == tmp_path
 
 
 def test_the_pack_offered_first_is_saved(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", "1", "b", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "6", "1", "b", "q"])
     assert "Saved. Offered first: financas-ptbr" in out
     assert runs.read_config() == {"pack": "financas-ptbr"}
 
@@ -551,7 +551,7 @@ def fake_tkinter(monkeypatch, chosen):
 def test_the_folder_dialog_is_used_and_its_answer_stored(tmp_path, monkeypatch, capsys):
     chosen = tmp_path / "picked"
     tk = fake_tkinter(monkeypatch, str(chosen))
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", "b", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "q"])
     (_, asked), = [c for c in tk.calls if isinstance(c, tuple)]
     assert asked["initialdir"] == str(tmp_path) and asked["title"] == "Where to save your files"
     assert tk.calls[-1] == "destroy"
@@ -561,7 +561,7 @@ def test_the_folder_dialog_is_used_and_its_answer_stored(tmp_path, monkeypatch, 
 
 def test_cancelling_the_folder_dialog_changes_nothing(tmp_path, monkeypatch, capsys):
     fake_tkinter(monkeypatch, "")
-    menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", "b", "q"])
+    menu(tmp_path, monkeypatch, capsys, ["7", "1", "q"])
     assert runs.read_config() == {}
 
 
@@ -718,9 +718,9 @@ def test_track_on_the_command_line_takes_that_exact_track(tmp_path, monkeypatch,
 
 
 def test_settings_hint_is_printed_once(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", "1", "b", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "", "q"])
     assert out.count("saved in your user settings, for every run of the menu") == 1
-    assert out.count("What would you like to change?") == 2
+    assert "The pack offered first" not in out.split("* Settings")[1]  # in Packs now (D-065)
 
 
 def test_a_fresh_frozen_start_reads_the_saved_folder(tmp_path, monkeypatch, capsys):

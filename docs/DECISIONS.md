@@ -138,6 +138,8 @@ Applied to `packs/financas-ptbr.yaml`, both fixture packs and `fixtures/R2Qgz8tF
 
 The eight `CPFE -> CPFL` rows of `fixtures/R2Qgz8tFWVI/gold.csv` are now status `alias` with `correct` equal to `wrong`, the same speaker habit as wxgFO_fyfXg. Measured: that fixture moves from 156 hits / 9 false positives to 148 / 17. The frozen pack still lists CPFE as a variant, so all eight are substituted, and each counts as a miss and as a false positive. New bounds: hits >= 148, false positives <= 17, in scope 168.
 
+Amended by D-064: a pack now declares its own classes; these eight are what a pack without a `classes:` line keeps, and what financas-ptbr declares.
+
 ## D-022 One run directory per video, described by meta.yaml
 
 Run directory is runs/<video-id>/ (unique, stable, filesystem-safe). fetch writes runs/<id>/meta.yaml with title, channel, url, published, fetched_at. `transcript-normalizer list` prints id, date, title for every run.
@@ -559,6 +561,53 @@ To measure the change, the Windows full job times `help` with PowerShell's `Meas
 The Linux executables are built on `ubuntu-22.04`, not `ubuntu-latest`. PyInstaller's bootloader and the manylinux wheels ask little of glibc, but what it collects from the runner (the uv-managed Python stays, D-061, and the system's libtk and libtcl beside it) is linked against the runner's glibc, so the oldest glibc the executables run on is the build runner's. 22.04 has glibc 2.35, which covers 22.04-based systems such as Zorin 17; the job writes `ldd --version` to its summary. The check, package and release jobs make no executable and stay on `ubuntu-latest`, which moves to 26.04 after 2026-10-19. When GitHub retires 22.04 runners, the oldest available one takes its place.
 
 From the last Windows run: the file dialog's first filter, its default, is "All supported (audio, video, captions)", the media and caption patterns together; "Audio or video", "Captions" and "All files" follow. In the track list, the automatic translations carry "(translations are rate-limited more often)", on "Other languages (automatic translations)…" and on each language in its list: YouTube answers HTTP 429 to a translated track more often than to the original. questionary printed a chosen option's whole line, label and description, as the answer; its choices now show the line in the list and only the label once answered (questionary reads `Choice.title` for both, so the title follows the question's `is_answered`). D-054 already wrote normalized.txt from the input with no annotation, so every line, stamp and text, is the input's, in normalized.txt's layout (no header, the two-space gap); a test checks it line for line.
+
+Measured on the v0.5.3 release run (GitHub's `windows-latest` and `ubuntu-22.04` runners, 2026-10-08), from its job summaries:
+
+| windows-full, `help`, `Measure-Command` | run 1 | run 2 | run 3 |
+|---|---|---|---|
+| onefile, 0.5.2 | 5.78 s | 5.59 s | 5.13 s |
+| onedir, 0.5.3 | 0.30 s | 0.29 s | 0.28 s |
+
+About 19 times faster to start (5.50 s against 0.29 s on average): the onefile time is the unpacking, every time. The Linux runner: `ldd (Ubuntu GLIBC 2.35-0ubuntu3.15) 2.35`.
+
+## D-064 Classes are declared by the pack (amends D-021)
+
+A pack declares `classes: [..]`, the classes its terms may use. Four are common and always allowed, whatever the pack declares: `pessoa`, `organizacao`, `sigla`, `unidade`; any field has people, organizations, abbreviations and units. A pack adds its own: a medicine pack has `farmaco` and `doenca`, which D-021's eight, written for finance, could only call `conceito`. D-021's closed list served one field; with packs for other fields (D-055, D-065) a closed list would either grow without end or squeeze every field into finance's words.
+
+The check stays at load, as D-021 had it: a term with a class that is neither declared nor common is a ValueError that names the file, the term, the class and the classes allowed, and says to add it to `classes:`. `classes:` that is not a list of names is an error too. `Pack.classes` keeps the allowed list (common first, then the pack's, without repeats), for the editor and for consumers.
+
+A pack with no `classes:` line is a pack from before this decision (the frozen fixture packs, packs already in the packs repository, anyone's own) and keeps D-021's eight, so nothing that loaded before is refused now. financas-ptbr declares its eight explicitly (pack 0.3.6; no term changes).
+
+Matching still does not read class (D-021 stands on that), with the two exceptions it already had: a `unidade` is never matched by similarity (D-028), and `companhia` and `pessoa` get phonetic proposals (D-050, which only ask, D-060). Both read common or finance names: a medicine pack's names are `pessoa` and get phonetic proposals; its `farmaco` terms do not. Whether a pack should be able to say which of its classes are names is left open until a pack needs it.
+
+## D-065 Field templates and the Packs menu
+
+**Templates.** `src/transcript_normalizer/templates/<field>.yaml` holds ten field templates, data only: a pack with zero terms, `name: NAME` and `language: LANG` as placeholders, a `description` with one line in English (`en`) and one in Portuguese (`pt-BR`), and the field's classes (the common four of D-064 come with every pack):
+
+| template | classes |
+|---|---|
+| financas | companhia, indicador, conceito, ferramenta |
+| medicina | doenca, farmaco, procedimento, anatomia, exame |
+| direito | lei, instituicao, instrumento, conceito |
+| tecnologia | linguagem, biblioteca, protocolo, produto, conceito |
+| engenharia | material, componente, norma, processo |
+| educacao-ciencias | conceito, metodo, grandeza |
+| esportes | time, competicao, posicao, regra |
+| politica-governo | orgao, cargo, programa, lei |
+| agro | cultura, insumo, praga, tecnica |
+| geral | conceito, produto, lugar |
+
+Class names are lowercase and without accents, like D-021's. The templates ship in the package and in the executables (`--collect-data transcript_normalizer`). The menu lists them in this order, geral last.
+
+**Commands.** In `packfiles.py`, beside registry.py's repository commands; every check is `load_pack`'s own, with `allow_generic`, so a file accepted here is a file normalize accepts:
+
+- `pack list --installed`: name, version, language, terms, size (KB) and source: `bundled`, `repository` (packs/ holds the file `pack install` wrote, by installed.json's sha256) or `mine` (created, imported, or edited). It reads the repository's index in a thread and waits at most 3 seconds, since urllib's timeout does not cover a name lookup; with the index, an `update` column marks `↑ update (<version>)` where the index has a later version (numeric comparison) of a bundled or repository pack, never of `mine`. Without it, the column is absent and a line says the repository was not reached.
+- `pack create --template <field> --name <n> --lang <l>` writes `packs/<n>.yaml`: the template's name, description, classes and no terms, version 0.1.0. It refuses a name that is not a pack name (registry's: lowercase, digits, hyphens), the name of a bundled pack (an empty pack in packs/ would hide it, D-017), a file already there, and a language that is not a code. A language with no module is created, and the command says normalize needs `--allow-generic` for it (D-033).
+- `pack import <file>` checks the file and copies it, byte for byte, to `packs/<stem>.yaml`; the file name is the pack's name. A file already there needs `--force`. Importing a bundled pack's name is allowed, and said: the copy is used instead (D-017).
+- `pack remove <name>` deletes `packs/<name>.yaml` and its installed.json record. It refuses a bundled pack. The learned layer is kept and named: it holds the user's review answers, and a pack installed again finds them.
+
+**The menu.** "Packs" is menu item 6; Settings stays 7 and holds only the folder, and Help moves to 8. Packs lists: Installed packs, Get a pack, Create a pack, Import a pack file, Remove a pack, The pack offered first (moved from Settings; the config key is unchanged), and Back. Each runs its command through `cli.main`: Get reads the index (up to 10 seconds) to offer the list, then runs `pack install <name>`; Create asks for a template, a name and a language, runs `pack create`, and on a yes saves the new pack as the one offered first; Import opens the file dialog of D-062 on `*.yaml`, or asks for a typed path; Remove shows the file and asks twice (both default no) before `pack remove`, and for a bundled pack runs `pack remove` at once, which says why not. The D-054 refusal in the menu now says "Pick another pack, or get or create one in Packs."
 
 ## Open, not yet decided
 

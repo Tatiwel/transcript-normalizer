@@ -23,8 +23,10 @@ LEARNED_VERSION = 1
 SOURCE_PACK = "pack"
 SOURCE_LEARNED = "learned"
 
-#: D-021: the closed list of term classes. A label for consumers; matching
-#: never reads it.
+#: D-021: the eight classes of the first pack. A label for consumers; matching
+#: never reads it (D-028 and D-050 read `unidade`, `companhia` and `pessoa`).
+#: D-064: a pack now declares its own `classes:`; a pack written before that,
+#: with no `classes:` line, keeps these eight.
 CLASSES = (
     "companhia",  # has a ticker and a balance sheet
     "indicador",  # a number per company or asset
@@ -35,6 +37,9 @@ CLASSES = (
     "ferramenta",
     "sigla",  # a sector or regulatory abbreviation
 )
+
+#: D-064: the classes every pack may use, whatever it declares.
+COMMON_CLASSES = ("pessoa", "organizacao", "sigla", "unidade")
 
 
 def nfc(s: str) -> str:
@@ -246,6 +251,7 @@ class Pack:
     rejected: frozenset[tuple[str, str]] = frozenset()  # (folded text, term)
     language: ModuleType = field(default=None)  # D-033: the pack's language module
     language_code: str = ""
+    classes: tuple[str, ...] = ()  # D-064: what its terms may be labelled
 
     def normalize(self, text: str) -> str:
         """Text as this pack's language compares it (D-033)."""
@@ -280,6 +286,19 @@ def _strings(raw: dict, key: str) -> tuple[str, ...]:
     return tuple(nfc(str(s)) for s in raw.get(key) or ())
 
 
+def pack_classes(data: dict, path: Path) -> tuple[str, ...]:
+    """D-064: the classes a pack's terms may use: the common ones, then the
+    pack's own `classes:`; D-021's eight for a pack with no `classes:` line."""
+    declared = data.get("classes")
+    if declared is None:
+        own: tuple[str, ...] = CLASSES
+    elif isinstance(declared, list) and all(isinstance(c, str) and c.strip() for c in declared):
+        own = tuple(nfc(c.strip()) for c in declared)
+    else:
+        raise ValueError(f"{path}: `classes:` must be a list of names, e.g. `classes: [doenca, farmaco]`")
+    return tuple(dict.fromkeys(COMMON_CLASSES + own))
+
+
 def load_pack(
     path: str | Path,
     learned: Learned | None = None,
@@ -301,6 +320,7 @@ def load_pack(
     except languages.LanguageNotFound as error:
         raise languages.LanguageNotFound(f"{path}: {error}") from None
     norm = language.normalize
+    classes = pack_classes(data, path)
     if learned is None:
         learned = load_learned(learned_file(path, learned_from))
 
@@ -322,10 +342,10 @@ def load_pack(
             if norm(a.alias) not in known
         )
         klass = nfc(str(raw["class"])) if raw.get("class") else None
-        if klass is not None and klass not in CLASSES:
+        if klass is not None and klass not in classes:
             raise ValueError(
                 f"{path}: term {name!r} has class {klass!r}, which is not one of "
-                f"D-021's {', '.join(CLASSES)}"
+                f"this pack's classes ({', '.join(classes)}); add it to `classes:` (D-064)"
             )
         term = Term(
             term=name,
@@ -366,4 +386,5 @@ def load_pack(
         learned=learned,
         language=language,
         language_code=code or language.CODE,
+        classes=classes,
     )

@@ -1,0 +1,13 @@
+# Field template agro (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template agro --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: agro
+name: NAME
+description:
+  en: "Agriculture: crops, inputs, pests, techniques."
+  pt-BR: "Agro: culturas, insumos, pragas, técnicas."
+language: LANG
+version: 0.1.0
+classes: [cultura, insumo, praga, tecnica]
+terms: []

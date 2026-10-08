@@ -1,4 +1,4 @@
-"""The help text (D-051): `transcript-normalizer help`, `--help`, menu item 6.
+"""The help text (D-051): `transcript-normalizer help`, `--help`, menu item 8.
 
 Sections, one line per entry, aligned, like `gh help`. Plain text, so a pipe or
 a test reads the same thing a terminal shows; long entries wrap at the width
@@ -44,13 +44,18 @@ ACTIONS = (
     Action("5", "List runs", "everything under runs/",
            "id, publication date and title of every run",
            f"{PROG} list"),
-    Action("6", "Help", "what each action does and its command",
+    Action("6", "Packs", "installed, get, create, import, remove",
+           "the packs on this machine (with an update mark when the repository has a newer one); "
+           "get one from the packs repository; create one from a field template; import a pack "
+           "file; remove one; and the pack the menu offers first",
+           f"{PROG} pack list --installed"),
+    Action("7", "Settings", "where to save your files",
+           "a folder dialog for where runs/ and packs/ go, kept in config.toml in your user "
+           "settings. In a script, the variable wins",
+           f"TRANSCRIPT_NORMALIZER_HOME=<folder> {PROG}"),
+    Action("8", "Help", "what each action does and its command",
            "this help; `?` on any question explains its options",
            f"{PROG} help"),
-    Action("7", "Settings", "where to save your files, the pack offered first",
-           "a folder dialog for where runs/ and packs/ go, and the pack the menu offers first; "
-           "kept in config.toml in your user settings. In a script, the variable wins",
-           f"TRANSCRIPT_NORMALIZER_HOME=<folder> {PROG}"),
 )
 QUIT = Action("q", "Quit", "", "", "")
 
@@ -67,6 +72,9 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("normalize <legenda.txt>", "fix domain terms (a .srt or .vtt is converted first); --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack; --force when the pack does not seem to fit"),
             ("list", "every run under runs/, with its date and title"),
             ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),
+            ("pack list --installed", "the packs on this machine: version, language, terms, size, source, and ↑ where the repository has a newer one"),
+            ("pack create --template <field> --name <n> --lang <l>", "a new pack in packs/, with the field's classes and no terms (D-065)"),
+            ("pack import <file> | remove <name>", "check a pack file and copy it into packs/; delete one from packs/ (never a bundled one)"),
             ("pack propose [--pack <name>]", "contribute what your reviews taught the tool: shows it, asks, then opens a prefilled issue"),
             ("help", "this help; `<command> --help` lists a command's options"),
         ]),

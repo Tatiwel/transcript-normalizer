@@ -6,9 +6,10 @@ uses, so nothing here is reachable only through the menu, and the menu never
 does a subcommand's work in its own way. The questions go through `prompts`:
 arrow keys with questionary, numbered text without it.
 
-The one exception is Settings (D-061), which writes the user's config.toml:
-where runs/ and packs/ go, and the pack offered first. A script reaches the
-same with TRANSCRIPT_NORMALIZER_HOME and --pack.
+The one exception is what the menu remembers (D-061), in the user's
+config.toml: where runs/ and packs/ go (Settings) and the pack offered first
+(Packs, D-065). A script reaches the same with TRANSCRIPT_NORMALIZER_HOME and
+--pack.
 """
 
 from __future__ import annotations
@@ -441,7 +442,7 @@ def normalize_run(run: Path, caption: Path | None = None, chained: bool = False)
         return BACK
     if pack == NO_PACK:
         say(mark("No pack for this area, so nothing was normalized.", "need"))
-        say(mark("  `transcript-normalizer pack list` shows the packs you can install.", "hint"))
+        say(mark("  Packs (6) gets a pack from the repository, or creates one for your field.", "hint"))
         return None
     say(mark(f"Normalizing {run.name}", "title"))
     code = run_command(["normalize", str(caption), "--summary", "--menu", "--pack", str(pack)])
@@ -689,7 +690,7 @@ def choose_first_pack() -> None:
     picked = prompts.select(
         "Which pack should be offered first?",
         [Option(name, pack_line(path), value=name) for name, path in packs.items()],
-        hint="`transcript-normalizer pack install <name>` adds more",
+        hint="the first answer to \"What is this video about?\"",
     )
     if picked is None:
         return
@@ -698,22 +699,134 @@ def choose_first_pack() -> None:
 
 
 def settings() -> None:
+    """Where to save your files; the pack offered first moved to Packs (D-065)."""
     stage("Settings")
-    hint = "saved in your user settings, for every run of the menu"
+    say(mark("  saved in your user settings, for every run of the menu", "hint"))
+    choose_folder()
+
+
+# ------------------------------------------------------------------ packs (D-065)
+
+
+def installed_table() -> None:
+    run_command(["pack", "list", "--installed"])
+
+
+def get_pack() -> None:
+    """The repository's index as a list; the pick is `pack install <name>`."""
+    from .packfiles import index_within
+    from .registry import status
+
+    say(mark("  reading the packs repository…", "hint"))
+    index = index_within(GET_WAIT_SECONDS)
+    if index is None:
+        error("the packs repository could not be reached; try again when online")
+        return
+    if not index:
+        say(mark("the packs repository lists no packs yet", "need"))
+        return
+    picked = prompts.select("Which pack?", [
+        Option(e.name, " · ".join(filter(None, [e.version, e.description, status(e.name)])), value=e.name)
+        for e in index.values()
+    ], hint="installed into your packs/ folder, checked against the index's sha256")
+    if picked is not None:
+        run_command(["pack", "install", picked])
+
+
+def create_pack() -> None:
+    """A field template, then a name and a language; `pack create`."""
+    from .packfiles import templates
+
+    known = templates()
+    field = prompts.select("Which field?", [
+        Option(t.field, t.description.get("en", ""), value=t.field) for t in known.values()
+    ], hint="the template gives the pack its classes; the terms are yours to add")
+    if field is None:
+        return
+    name = prompts.text("The pack's name", hint="lowercase letters, digits and hyphens, e.g. medicina-ptbr", kind="type")
+    if not name:
+        return
+    lang = prompts.text("Its language", hint="a code such as pt-BR or en", kind="type")
+    if not lang:
+        return
+    if run_command(["pack", "create", "--template", field, "--name", name, "--lang", lang]) != 0:
+        return
+    if prompts.confirm(f"Offer {name} first when the menu asks what a video is about?", default=True):
+        save_setting(FIRST_PACK, name)
+        say(mark("Saved. ", "ok"), "Offered first: ", mark(name, "path"))
+
+
+def pick_pack_file(initial: Path):
+    """The system's file dialog, on .yaml files: a Path, None, or NO_PICKER."""
+    chosen = system_dialog(lambda dialog, root: dialog.askopenfilename(
+        parent=root, initialdir=str(initial), title="The pack file to import",
+        filetypes=[("Pack files", "*.yaml"), ("All files", "*")],
+    ))
+    return chosen if chosen is NO_PICKER else (Path(chosen) if chosen else None)
+
+
+def import_pack() -> None:
+    path = pick_pack_file(Path.home())
+    if path is NO_PICKER:
+        say(mark("  no file dialog here; type the path instead", "hint"))
+        answer = prompts.text("The pack file to import", hint="a .yaml pack", kind="path")
+        path = Path(answer.strip().strip("'\"")).expanduser() if answer else None
+    if path is not None:
+        run_command(["pack", "import", str(path)])
+
+
+def remove_pack() -> None:
+    """Asks twice and shows the path; a bundled pack is refused by `pack remove`."""
+    from .packfiles import BUNDLED, source_of
+
+    packs = installed_packs()
+    picked = prompts.select("Remove which pack?", [
+        Option(name, source_of(name, path), value=name) for name, path in packs.items()
+    ], hint="only packs in your packs/ folder can be removed")
+    if picked is None:
+        return
+    path = packs[picked]
+    if source_of(picked, path) == BUNDLED:
+        run_command(["pack", "remove", picked])  # says why not
+        return
+    detail("file", path, "path")
+    if not prompts.confirm(f"Remove {picked}?", default=False):
+        return
+    if not prompts.confirm("Really remove it? The file is deleted.", default=False):
+        return
+    run_command(["pack", "remove", picked])
+
+
+#: How long "Get a pack" waits for the repository's index.
+GET_WAIT_SECONDS = 10
+
+PACK_ACTIONS = {
+    "installed": installed_table, "get": get_pack, "create": create_pack,
+    "import": import_pack, "remove": remove_pack, "first": choose_first_pack,
+}
+
+
+def packs() -> None:
+    stage("Packs")
     while True:
         first = next(iter(packs_in_order()), "")
-        choice = prompts.select("What would you like to change?", [
-            Option("Where to save your files", str(base_dir()), value="folder"),
-            Option("The pack offered first", first, value="pack"),
-        ], hint=hint)
-        hint = ""  # once: the list comes back after each change
+        choice = prompts.select("What would you like to do with packs?", [
+            Option("Installed packs", "name, version, language, terms, size, source", value="installed"),
+            Option("Get a pack", "from the packs repository", value="get"),
+            Option("Create a pack", "from a field template, with no terms", value="create"),
+            Option("Import a pack file", "a .yaml pack, checked, copied into packs/", value="import"),
+            Option("Remove a pack", "from packs/; never a bundled one", value="remove"),
+            Option("The pack offered first", first, value="first"),
+        ])
         if choice is None:
             return
-        (choose_folder if choice == "folder" else choose_first_pack)()
+        PACK_ACTIONS[choice]()
+        print()
 
 
 ACTIONS = {
-    "1": fetch, "2": normalize, "3": review, "4": show, "5": listing, "6": help_text, "7": settings,
+    "1": fetch, "2": normalize, "3": review, "4": show, "5": listing, "6": packs, "7": settings,
+    "8": help_text,
 }
 
 

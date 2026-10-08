@@ -1,4 +1,4 @@
-"""D-021: eight classes, a closed list. A label for consumers, never for matching."""
+"""D-021: the eight classes, which a pack without `classes:` keeps (D-064)."""
 
 import csv
 from pathlib import Path

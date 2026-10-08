@@ -1,0 +1,13 @@
+# Field template medicina (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template medicina --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: medicina
+name: NAME
+description:
+  en: "Medicine: diseases, drugs, procedures, anatomy, exams."
+  pt-BR: "Medicina: doenças, fármacos, procedimentos, anatomia, exames."
+language: LANG
+version: 0.1.0
+classes: [doenca, farmaco, procedimento, anatomia, exame]
+terms: []

@@ -153,7 +153,7 @@ def stage(label: str, detail: str = "") -> None:
 
 
 #: What `field` says above a text input.
-FIELDS = {"paste": "paste below", "path": "type a path"}
+FIELDS = {"paste": "paste below", "path": "type a path", "type": "type below"}
 
 
 def field(kind: str = "paste") -> None:

@@ -3,8 +3,9 @@
     transcript-normalizer [normalize] <legenda.txt> --pack <pack.yaml>
     transcript-normalizer fetch <url>
     transcript-normalizer list
-    transcript-normalizer pack list | install <name> | update | propose
-    transcript-normalizer help          (also --help; the same text as menu item 6)
+    transcript-normalizer pack list [--installed] | install <name> | update | propose
+    transcript-normalizer pack create --template <field> --name <n> --lang <l> | import <file> | remove <name>
+    transcript-normalizer help          (also --help; the same text as menu item 8)
     transcript-normalizer               (on a terminal: the interactive menu, D-051)
 
 `normalize` is the default, so a caption file may be given straight away.
@@ -507,7 +508,7 @@ NOT_FIT = (
 #: D-061: the same, in the menu, which has no --force to offer.
 NOT_FIT_MENU = (
     "pack {name} does not seem to fit this transcript ({found} terms found); "
-    "nothing applied. Pick another pack in Settings, or install one with pack install."
+    "nothing applied. Pick another pack, or get or create one in Packs."
 )
 
 
@@ -770,14 +771,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     listing.set_defaults(run=run_list)
 
-    from . import contribute, registry
+    from . import contribute, packfiles, registry
 
     packs = commands.add_parser(
         "pack",
-        help="list, install and update packs from the packs repository (D-055); propose what you taught the tool (D-056)",
-        description=f"Domain packs from {registry.REPOSITORY}, installed into packs/.",
+        help="list, install and update packs from the packs repository (D-055); propose what you "
+        "taught the tool (D-056); create, import and remove your own (D-065)",
+        description=f"Domain packs from {registry.REPOSITORY}, installed into packs/, and your own.",
     )
-    contribute.add_arguments(registry.add_arguments(packs))
+    actions = registry.add_arguments(packs)
+    contribute.add_arguments(actions)
+    packfiles.add_arguments(actions)
 
     helping = commands.add_parser("help", help="how to use the tool, by section")
     # D-061: the release smoke test proves the folder dialog's parts are inside.

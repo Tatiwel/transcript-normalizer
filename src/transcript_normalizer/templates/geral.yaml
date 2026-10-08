@@ -1,0 +1,13 @@
+# Field template geral (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template geral --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: geral
+name: NAME
+description:
+  en: "General: concepts, products, places, for a field with no template of its own."
+  pt-BR: "Geral: conceitos, produtos, lugares, para uma área sem modelo próprio."
+language: LANG
+version: 0.1.0
+classes: [conceito, produto, lugar]
+terms: []

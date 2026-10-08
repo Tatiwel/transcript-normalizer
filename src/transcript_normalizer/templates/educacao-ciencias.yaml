@@ -1,0 +1,13 @@
+# Field template educacao-ciencias (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template educacao-ciencias --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: educacao-ciencias
+name: NAME
+description:
+  en: "Education and science: concepts, methods, physical quantities."
+  pt-BR: "Educação e ciências: conceitos, métodos, grandezas."
+language: LANG
+version: 0.1.0
+classes: [conceito, metodo, grandeza]
+terms: []

@@ -1,0 +1,13 @@
+# Field template esportes (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template esportes --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: esportes
+name: NAME
+description:
+  en: "Sports: teams, competitions, positions, rules."
+  pt-BR: "Esportes: times, competições, posições, regras."
+language: LANG
+version: 0.1.0
+classes: [time, competicao, posicao, regra]
+terms: []

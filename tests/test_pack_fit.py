@@ -102,5 +102,5 @@ def test_the_menu_does_not_offer_a_review_when_the_pack_does_not_fit(tmp_path, m
     assert "does not seem to fit this transcript" in out
     assert "Nothing to confirm" not in out and "Open the folder?" not in out
     # D-061: the menu has no --force to offer, so it names what it has.
-    assert "Pick another pack in Settings, or install one with pack install." in out
+    assert "Pick another pack, or get or create one in Packs." in out
     assert "--force" not in out

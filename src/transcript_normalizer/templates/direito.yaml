@@ -1,0 +1,13 @@
+# Field template direito (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template direito --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: direito
+name: NAME
+description:
+  en: "Law: statutes, institutions, legal instruments, concepts."
+  pt-BR: "Direito: leis, instituições, instrumentos jurídicos, conceitos."
+language: LANG
+version: 0.1.0
+classes: [lei, instituicao, instrumento, conceito]
+terms: []

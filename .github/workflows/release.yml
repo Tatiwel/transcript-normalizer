@@ -221,6 +221,9 @@ jobs:
           export TRANSCRIPT_NORMALIZER_HOME="$RUNNER_TEMP/tn-home"
           "$EXE" fixtures/R2Qgz8tFWVI/legenda.txt
           test -f "$TRANSCRIPT_NORMALIZER_HOME/runs/R2Qgz8tFWVI/normalized.txt"
+          # D-065: the field templates are inside, and a pack made from one loads.
+          "$EXE" pack create --template medicina --name smoke-ptbr --lang pt-BR
+          "$EXE" pack list --installed | grep -q '^smoke-ptbr '
 
       # D-061: the folder dialog's parts are inside: tkinter.filedialog imports
       # and a Tcl interpreter starts (its library files were bundled). No

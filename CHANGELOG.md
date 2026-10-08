@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0
+
+Packs for other fields: classes per pack (D-064), field templates and a Packs menu (D-065).
+
+- A pack declares its classes (`classes: [farmaco, doenca]`). `pessoa`, `organizacao`, `sigla` and `unidade` are allowed in every pack. A term with any other class is an error at load, naming the file and the term. A pack with no `classes:` line keeps the eight finance classes, so every existing pack still loads. Pack 0.3.6: financas-ptbr declares its eight; no term changes.
+- Ten field templates: financas, medicina, direito, tecnologia, engenharia, educacao-ciencias, esportes, politica-governo, agro, geral. Each gives a new pack its classes and no terms.
+- Menu item 6, Packs: Installed packs, Get a pack, Create a pack, Import a pack file, Remove a pack, and The pack offered first (moved from Settings). Settings is now 7 and only the folder; Help is 8.
+- New commands: `pack list --installed` (version, language, terms, size, source, and `↑ update` when the packs repository has a newer version; offline, no wait over 3 seconds), `pack create --template <field> --name <n> --lang <l>`, `pack import <file>`, `pack remove <name>` (never a bundled pack; the learned layer is kept).
+- When a pack does not fit, the menu says "Pick another pack, or get or create one in Packs."
+- D-063 records the 0.5.3 measurements: `help` on windows-full in 5.78, 5.59, 5.13 s as one file, 0.30, 0.29, 0.28 s as a folder; the Linux runner has glibc 2.35.
+
 ## 0.5.3
 
 Packaging (D-063), and four fixes from the last Windows run.

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 
 import pytest
 
@@ -80,13 +81,15 @@ def test_an_unreachable_index_is_a_message(tmp_path, monkeypatch, capsys):
 
 def test_update_installs_a_newer_version(index, tmp_path, capsys):
     assert main(["pack", "install", "financas-ptbr"]) == 0
-    newer = BUNDLED.read_text(encoding="utf-8").replace("version: 0.3.4", "version: 0.3.5")
-    publish(index, version="0.3.5", text=newer)
+    bundled = BUNDLED.read_text(encoding="utf-8")
+    newer = re.sub(r"(?m)^version: .*$", "version: 9.9.9", bundled)
+    assert newer != bundled
+    publish(index, version="9.9.9", text=newer)
     assert main(["pack", "update"]) == 0
-    assert "financas-ptbr: 0.3.4 → 0.3.5" in capsys.readouterr().out
-    assert "version: 0.3.5" in (tmp_path / "work" / "packs" / "financas-ptbr.yaml").read_text("utf-8")
+    assert "financas-ptbr: 0.3.4 → 9.9.9" in capsys.readouterr().out
+    assert "version: 9.9.9" in (tmp_path / "work" / "packs" / "financas-ptbr.yaml").read_text("utf-8")
     assert main(["pack", "update"]) == 0
-    assert "0.3.5 is the latest" in capsys.readouterr().out
+    assert "9.9.9 is the latest" in capsys.readouterr().out
 
 
 def test_update_and_install_leave_a_pack_edited_here_alone(index, tmp_path, capsys):

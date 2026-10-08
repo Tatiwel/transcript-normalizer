@@ -55,8 +55,9 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Review pending          answer what the tool was unsure about
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
+   Packs                   installed, get, create, import, remove
+   Settings                where to save your files
    Help                    what each action does and its command
-   Settings                where to save your files, the pack offered first
    Quit
 ```
 
@@ -69,7 +70,7 @@ to confirm 6  (the tool was unsure; your answer is remembered)
 result: runs/4wCtn8BWR4o/normalized.txt
 ```
 
-`transcript-normalizer help` (or `--help`, or menu item 6) prints the whole reference in sections: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE.
+`transcript-normalizer help` (or `--help`, or menu item 8) prints the whole reference in sections: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE.
 
 **The three commands.**
 
@@ -161,27 +162,44 @@ If you selected any, a second screen asks which of those the speaker really said
 pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing applied. Use --force to apply anyway.
 ```
 
-`normalized.txt` is then the transcript as it was. `--force` applies the pack anyway, for a short clip that really is from the field. In the menu, "What is this video about?" asks first: pick the pack, or "none / another area", which normalizes nothing. When the pack does not fit, the menu ends the sentence with "Pick another pack in Settings, or install one with pack install." instead of the `--force` advice: Settings → "The pack offered first" puts a pack at the top of that question.
+`normalized.txt` is then the transcript as it was. `--force` applies the pack anyway, for a short clip that really is from the field. In the menu, "What is this video about?" asks first: pick the pack, or "none / another area", which normalizes nothing. When the pack does not fit, the menu ends the sentence with "Pick another pack, or get or create one in Packs." instead of the `--force` advice; Packs → "The pack offered first" puts a pack at the top of that question.
 
-**Installing packs.** Packs live in their own repository, [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), one directory per pack, each with the people who maintain it (D-055). The finance pack also ships inside the tool, so it works offline.
+**The Packs menu.** Menu item 6, Packs, is where packs are managed (D-065). Each entry runs a command, so a script can do the same:
+
+| in the menu | the command | what it does |
+|---|---|---|
+| Installed packs | `pack list --installed` | a table: name, version, language, terms, size (KB), source (`bundled`, `repository` or `mine`); when the packs repository answers within 3 seconds, an `↑ update` mark where it has a newer version |
+| Get a pack | `pack install <name>` | lists the packs repository (name, version, description) and installs the one you pick into your `packs/` |
+| Create a pack | `pack create --template <field> --name <n> --lang <l>` | a new pack from a field template, with the field's classes and no terms; the menu then offers to put it first |
+| Import a pack file | `pack import <file>` | a file dialog on `.yaml` files (or a typed path); the file is checked as `normalize` would load it, then copied into `packs/` |
+| Remove a pack | `pack remove <name>` | asks twice and shows the file; a bundled pack cannot be removed |
+| The pack offered first | (the menu's own setting) | the pack at the top of "What is this video about?" |
 
 ```
-transcript-normalizer pack list
-transcript-normalizer pack install financas-ptbr
-transcript-normalizer pack update
+name           version  language  terms  size (KB)  source   update
+financas-ptbr  0.3.6    pt-BR        70        7.9  bundled
+medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
-`pack install` puts the pack in your `packs/` after checking it against the checksum the repository publishes; from then on it is the one the tool uses, and the menu lists it. `pack update` installs newer versions, and leaves alone a pack you edited.
+Packs live in their own repository, [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), one directory per pack, each with the people who maintain it (D-055). The finance pack also ships inside the tool, so it works offline. `pack list` lists the repository, `pack install <name>` puts a pack in your `packs/` after checking it against the checksum the repository publishes (from then on it is the one the tool uses, and the menu lists it), and `pack update` installs newer versions and leaves alone a pack you edited. `pack remove` deletes the pack's file but keeps its learned layer (`packs/<name>.learned.yaml`), which holds your review answers.
 
-**Your own domain.** A pack is a YAML file. Here is a first biomedicine pack with six terms, one of each kind you are likely to need:
+**Your own domain.** A pack is a YAML file. Start from a field template, which gives the pack its classes:
+
+```
+transcript-normalizer pack create --template medicina --name biomed-ptbr --lang pt-BR
+```
+
+The ten templates are `financas`, `medicina`, `direito`, `tecnologia`, `engenharia`, `educacao-ciencias`, `esportes`, `politica-governo`, `agro` and `geral` (for a field with none of its own). Then add terms. Here is a first biomedicine pack with six terms, one of each kind you are likely to need:
 
 ```yaml
 # Biomedicina, pt-BR. 0.1.0: first terms, from one lecture.
+name: biomed-ptbr
 language: pt-BR
 version: 0.1.0
+classes: [doenca, farmaco, procedimento, anatomia, exame]
 terms:
   - term: metformina          # a drug
-    class: conceito
+    class: farmaco
     aliases: [Glifage]
     variants: [metiformina, met forming]
   - term: PCR                 # an acronym
@@ -195,7 +213,7 @@ terms:
     class: pessoa
     variants: [Oswald Cruise]
   - term: Western blot        # a method
-    class: conceito
+    class: procedimento
     variants: [western blood, uéstern blot]
   - term: Anvisa              # an organization
     class: organizacao
@@ -203,10 +221,10 @@ terms:
 ```
 
 - `term` is how it should be written. `aliases` are other correct names (a brand, a plural, the full form of an acronym). `variants` are what the recognizer produced instead.
-- `class` must be one of eight: `companhia`, `indicador`, `conceito`, `unidade`, `pessoa`, `organizacao`, `ferramenta`, `sigla` (D-021). They were written for finance: a drug or a method is a `conceito`. Names (`companhia`, `pessoa`) also get phonetic matching, which finds garbles never seen before and asks you about them; it never changes the text by itself (D-050, D-060).
+- `class` must be one of the pack's `classes:`, or one of the four every pack has: `pessoa`, `organizacao`, `sigla`, `unidade` (D-064). A class is a label for whoever reads the output; it does not change what is matched, except that a `unidade` is never matched by similarity (D-028). A pack with no `classes:` line, written before 0.6.0, keeps the eight finance classes of D-021. Names (`companhia`, `pessoa`) also get phonetic matching, which finds garbles never seen before and asks you about them; it never changes the text by itself (D-050, D-060).
 - Keep out variants of one or two letters and variants that are ordinary words, even if the caption used them (D-005, D-032).
 
-Put the file in `packs/` in the directory you work in, and point at it:
+`pack create` puts the file in your `packs/`; a pack you wrote elsewhere goes there with `pack import <file>`. Point at it:
 
 ```
 transcript-normalizer aula.txt --pack packs/biomed-ptbr.yaml

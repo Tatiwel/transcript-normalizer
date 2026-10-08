@@ -67,14 +67,33 @@ A pack in a language with no module is an error. `--allow-generic` runs it with 
 
 A pack is the list of terms the tool is allowed to touch (D-001, D-002). Nothing outside it is ever changed. The curated one, used by default, is `src/transcript_normalizer/packs/financas-ptbr.yaml` and ships in the package; `packs/` at the root is for your learned layers and your own packs (D-043).
 
+A new pack starts from a field template (D-065): `transcript-normalizer pack create --template <field> --name <name> --lang <code>` writes `packs/<name>.yaml` with the field's classes and no terms. The templates are in `src/transcript_normalizer/templates/<field>.yaml`; each has the same fields as a pack, with `NAME` and `LANG` as placeholders, a `description` with one line in English (`en`) and one in Portuguese (`pt-BR`), and its `classes:`:
+
+| template | its classes |
+|---|---|
+| `financas` | companhia, indicador, conceito, ferramenta |
+| `medicina` | doenca, farmaco, procedimento, anatomia, exame |
+| `direito` | lei, instituicao, instrumento, conceito |
+| `tecnologia` | linguagem, biblioteca, protocolo, produto, conceito |
+| `engenharia` | material, componente, norma, processo |
+| `educacao-ciencias` | conceito, metodo, grandeza |
+| `esportes` | time, competicao, posicao, regra |
+| `politica-governo` | orgao, cargo, programa, lei |
+| `agro` | cultura, insumo, praga, tecnica |
+| `geral` | conceito, produto, lugar |
+
+A template for another field is a new file in that folder, with the same keys and zero terms; the tests load every template there, and `ORDER` in `packfiles.py` places it in the menu's list. A pack written elsewhere goes into `packs/` with `pack import <file>`, which checks it as `normalize` loads it.
+
 **2.1 The schema.**
 
 ```yaml
+name: financas-ptbr      # optional; the file name is what names the pack
 language: pt-BR          # required; selects the language module (D-033)
 version: 0.2.3           # see 2.7
+classes: [companhia, indicador, conceito, ferramenta]   # this pack's classes, 2.2
 terms:
   - term: CPFL           # the canonical name, as it should be written
-    class: companhia     # one of the eight classes, 2.2
+    class: companhia     # one of the pack's classes, or a common one, 2.2
     aliases: [CPFE, CPFE3, CPFL Energia]   # other correct names (2.3)
     variants: [CPFS, CPF]                  # observed misrecognitions (2.3)
     collocations: []     # reserved: read, not used for matching yet (D-032)
@@ -82,7 +101,9 @@ terms:
 
 `term` and `class` are required; the rest are optional lists. A `unit_rules:` block at the end of a pack is descriptive only: the rules that run are the language module's (1.2).
 
-**2.2 Classes (D-021).** A closed list; the loader refuses any other value. Class is a label for consumers, and matching reads only `unidade` (D-028).
+**2.2 Classes (D-064, amending D-021).** A pack declares its classes in `classes:`. Four are allowed in every pack whatever it declares: `pessoa`, `organizacao`, `sigla` and `unidade`. A term whose class is neither declared nor common is an error when the pack is loaded, naming the file and the term. A pack with no `classes:` line (every pack written before 0.6.0) keeps D-021's eight, below. Class is a label for consumers and for the editor; matching reads only `unidade`, never matched by similarity (D-028), and `companhia` and `pessoa`, which also get phonetic proposals (D-050). A class name is lowercase, without accents (`doenca`, not `doença`), like the eight.
+
+The eight of `financas-ptbr`, which declares them all:
 
 | class | what it is |
 |---|---|

@@ -1,0 +1,13 @@
+# Field template tecnologia (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template tecnologia --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: tecnologia
+name: NAME
+description:
+  en: "Technology: programming languages, libraries, protocols, products, concepts."
+  pt-BR: "Tecnologia: linguagens, bibliotecas, protocolos, produtos, conceitos."
+language: LANG
+version: 0.1.0
+classes: [linguagem, biblioteca, protocolo, produto, conceito]
+terms: []

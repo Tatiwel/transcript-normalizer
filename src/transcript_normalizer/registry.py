@@ -58,10 +58,10 @@ def index_url(override: str | None = None) -> str:
     return override or os.environ.get(INDEX_ENV) or INDEX_URL
 
 
-def fetch(url: str) -> bytes:
+def fetch(url: str, timeout: float = TIMEOUT_SECONDS) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": "transcript-normalizer"})
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.read()
     except urllib.error.HTTPError as error:
         raise RegistryError(f"{url}: HTTP {error.code}") from None
@@ -70,10 +70,10 @@ def fetch(url: str) -> bytes:
         raise RegistryError(f"could not reach {url}: {reason}") from None
 
 
-def read_index(url: str) -> dict[str, Entry]:
+def read_index(url: str, timeout: float = TIMEOUT_SECONDS) -> dict[str, Entry]:
     """Every pack the index names, by name."""
     try:
-        data = json.loads(fetch(url).decode("utf-8"))
+        data = json.loads(fetch(url, timeout).decode("utf-8"))
         entries = [Entry(**{f: str(raw[f]) for f in FIELDS}) for raw in data["packs"]]
     except (ValueError, KeyError, TypeError) as error:
         raise RegistryError(f"{url} is not a packs index: {error}") from None
@@ -125,7 +125,7 @@ def edited(name: str, root: Path | None = None) -> bool:
     return record is None or sha256(path.read_bytes()) != record.get("sha256")
 
 
-def _write(path: Path, data: bytes) -> None:
+def write_atomic(path: Path, data: bytes) -> None:
     """Atomically, as the learned layer is written (D-037)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
@@ -138,13 +138,17 @@ def _write(path: Path, data: bytes) -> None:
         raise
 
 
+def write_installed(record: dict[str, dict], root: Path | None = None) -> None:
+    write_atomic((root or packs_root()) / INSTALLED_FILE, (json.dumps(record, indent=2, sort_keys=True) + "\n").encode())
+
+
 def install(entry: Entry, url: str, root: Path | None = None) -> Path:
     data = download(entry, url)
     target = pack_path(entry.name, root)
-    _write(target, data)
+    write_atomic(target, data)
     record = installed(root)
     record[entry.name] = {"version": entry.version, "sha256": entry.sha256.lower()}
-    _write(target.parent / INSTALLED_FILE, (json.dumps(record, indent=2, sort_keys=True) + "\n").encode())
+    write_installed(record, root)
     return target
 
 
@@ -164,6 +168,10 @@ def status(name: str) -> str:
 
 
 def run_list(args) -> int:
+    if args.installed:  # D-064: what this machine has, not the repository
+        from .packfiles import run_installed
+
+        return run_installed(args)
     url = index_url(args.index)
     try:
         entries = read_index(url)
@@ -241,7 +249,8 @@ def run_update(args) -> int:
 
 
 def add_arguments(parser) -> None:
-    """`pack list | install | update` (and `propose`, D-056, added by the CLI)."""
+    """`pack list | install | update` (and `propose`, D-056, and `create`,
+    `import`, `remove`, D-065, added by the CLI)."""
     commands = parser.add_subparsers(dest="pack_command", required=True, metavar="ACTION")
 
     def with_index(sub):
@@ -251,6 +260,10 @@ def add_arguments(parser) -> None:
         return sub
 
     listing = with_index(commands.add_parser("list", help="the packs in the packs repository"))
+    listing.add_argument(
+        "--installed", action="store_true",
+        help="the packs on this machine instead: bundled, from the repository, and yours",
+    )
     listing.set_defaults(run=run_list)
 
     installing = with_index(commands.add_parser("install", help="download a pack into packs/"))

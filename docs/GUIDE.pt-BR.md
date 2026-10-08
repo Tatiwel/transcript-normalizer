@@ -55,8 +55,9 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Review pending          answer what the tool was unsure about
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
+   Packs                   installed, get, create, import, remove
+   Settings                where to save your files
    Help                    what each action does and its command
-   Settings                where to save your files, the pack offered first
    Quit
 ```
 
@@ -69,7 +70,7 @@ to confirm 6  (the tool was unsure; your answer is remembered)
 result: runs/4wCtn8BWR4o/normalized.txt
 ```
 
-`transcript-normalizer help` (ou `--help`, ou o item 6 do menu) imprime a referência inteira, em seções: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE.
+`transcript-normalizer help` (ou `--help`, ou o item 8 do menu) imprime a referência inteira, em seções: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE.
 
 **Os três comandos.**
 
@@ -161,27 +162,44 @@ O `--confirm` pergunta a mesma coisa uma forma por vez, com `y` (é o termo), `n
 pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing applied. Use --force to apply anyway.
 ```
 
-O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote mesmo assim, para um trecho curto que é mesmo da área. No menu, "What is this video about?" pergunta antes: escolha o pacote, ou "none / another area", que não normaliza nada. Quando o pacote não serve, o menu termina a frase com "Pick another pack in Settings, or install one with pack install." em vez do conselho do `--force`: Settings → "The pack offered first" põe um pacote no topo dessa pergunta.
+O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote mesmo assim, para um trecho curto que é mesmo da área. No menu, "What is this video about?" pergunta antes: escolha o pacote, ou "none / another area", que não normaliza nada. Quando o pacote não serve, o menu termina a frase com "Pick another pack, or get or create one in Packs." em vez do conselho do `--force`; Packs → "The pack offered first" põe um pacote no topo dessa pergunta.
 
-**Instalando pacotes.** Os pacotes ficam num repositório próprio, [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), um diretório por pacote, cada um com as pessoas que o mantêm (D-055). O pacote de finanças também vem dentro da ferramenta, para funcionar sem internet.
+**O menu Packs.** O item 6 do menu, Packs, é onde se cuida dos pacotes (D-065). Cada entrada executa um comando, então um script faz o mesmo:
+
+| no menu | o comando | o que faz |
+|---|---|---|
+| Installed packs | `pack list --installed` | uma tabela: nome, versão, idioma, termos, tamanho (KB), origem (`bundled`, `repository` ou `mine`); quando o repositório de pacotes responde em até 3 segundos, uma marca `↑ update` onde ele tem versão mais nova |
+| Get a pack | `pack install <nome>` | lista o repositório de pacotes (nome, versão, descrição) e instala no seu `packs/` o que você escolher |
+| Create a pack | `pack create --template <área> --name <n> --lang <l>` | um pacote novo a partir de um modelo de área, com as classes da área e nenhum termo; depois o menu oferece pô-lo em primeiro |
+| Import a pack file | `pack import <arquivo>` | uma janela de arquivos com filtro `.yaml` (ou um caminho digitado); o arquivo é conferido como o `normalize` o leria, e copiado para `packs/` |
+| Remove a pack | `pack remove <nome>` | pergunta duas vezes e mostra o arquivo; um pacote que vem com o programa não pode ser removido |
+| The pack offered first | (configuração do próprio menu) | o pacote no topo de "What is this video about?" |
 
 ```
-transcript-normalizer pack list
-transcript-normalizer pack install financas-ptbr
-transcript-normalizer pack update
+name           version  language  terms  size (KB)  source   update
+financas-ptbr  0.3.6    pt-BR        70        7.9  bundled
+medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
-O `pack install` põe o pacote no seu `packs/` depois de conferi-lo contra o checksum que o repositório publica; dali em diante é ele que a ferramenta usa, e o menu o lista. O `pack update` instala versões novas e não mexe num pacote que você editou.
+Os pacotes ficam num repositório próprio, [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), um diretório por pacote, cada um com as pessoas que o mantêm (D-055). O pacote de finanças também vem dentro da ferramenta, para funcionar sem internet. O `pack list` lista o repositório, o `pack install <nome>` põe um pacote no seu `packs/` depois de conferi-lo contra o checksum que o repositório publica (dali em diante é ele que a ferramenta usa, e o menu o lista), e o `pack update` instala versões novas e não mexe num pacote que você editou. O `pack remove` apaga o arquivo do pacote mas guarda a camada aprendida (`packs/<nome>.learned.yaml`), que tem as suas respostas da revisão.
 
-**A sua área.** Um pacote é um arquivo YAML. Eis um primeiro pacote de biomedicina, com seis termos, um de cada tipo que você deve precisar:
+**A sua área.** Um pacote é um arquivo YAML. Comece de um modelo de área, que dá ao pacote as suas classes:
+
+```
+transcript-normalizer pack create --template medicina --name biomed-ptbr --lang pt-BR
+```
+
+Os dez modelos são `financas`, `medicina`, `direito`, `tecnologia`, `engenharia`, `educacao-ciencias`, `esportes`, `politica-governo`, `agro` e `geral` (para uma área sem modelo próprio). Depois acrescente os termos. Eis um primeiro pacote de biomedicina, com seis termos, um de cada tipo que você deve precisar:
 
 ```yaml
 # Biomedicina, pt-BR. 0.1.0: first terms, from one lecture.
+name: biomed-ptbr
 language: pt-BR
 version: 0.1.0
+classes: [doenca, farmaco, procedimento, anatomia, exame]
 terms:
   - term: metformina          # um fármaco
-    class: conceito
+    class: farmaco
     aliases: [Glifage]
     variants: [metiformina, met forming]
   - term: PCR                 # uma sigla
@@ -195,7 +213,7 @@ terms:
     class: pessoa
     variants: [Oswald Cruise]
   - term: Western blot        # um método
-    class: conceito
+    class: procedimento
     variants: [western blood, uéstern blot]
   - term: Anvisa              # uma organização
     class: organizacao
@@ -203,10 +221,10 @@ terms:
 ```
 
 - `term` é como o termo deve ser escrito. `aliases` são outros nomes corretos (uma marca, um plural, a sigla por extenso). `variants` é o que o reconhecedor produziu no lugar.
-- `class` tem de ser uma de oito: `companhia`, `indicador`, `conceito`, `unidade`, `pessoa`, `organizacao`, `ferramenta`, `sigla` (D-021). Elas nasceram para finanças; fármaco e método entram como `conceito`. Nomes (`companhia`, `pessoa`) também passam pela comparação fonética, que acha erros nunca vistos antes e pergunta a você; ela nunca muda o texto sozinha (D-050, D-060).
+- `class` tem de ser uma das `classes:` do pacote, ou uma das quatro que todo pacote tem: `pessoa`, `organizacao`, `sigla`, `unidade` (D-064). A classe é um rótulo para quem lê o resultado; não muda o que é encontrado, exceto que uma `unidade` nunca é encontrada por semelhança (D-028). Um pacote sem a linha `classes:`, escrito antes da 0.6.0, fica com as oito classes de finanças de D-021. Nomes (`companhia`, `pessoa`) também passam pela comparação fonética, que acha erros nunca vistos antes e pergunta a você; ela nunca muda o texto sozinha (D-050, D-060).
 - Deixe de fora variantes de uma ou duas letras e variantes que são palavras comuns, mesmo que a legenda as tenha usado (D-005, D-032).
 
-Ponha o arquivo em `packs/`, no diretório em que você trabalha, e aponte para ele:
+O `pack create` põe o arquivo no seu `packs/`; um pacote que você escreveu em outro lugar vai para lá com `pack import <arquivo>`. Aponte para ele:
 
 ```
 transcript-normalizer aula.txt --pack packs/biomed-ptbr.yaml

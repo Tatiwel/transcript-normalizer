@@ -1,0 +1,13 @@
+# Field template financas (D-065): a pack with no terms.
+# `transcript-normalizer pack create --template financas --name <name> --lang <code>`
+# writes packs/<name>.yaml from it, with NAME and LANG filled in.
+# pessoa, organizacao, sigla and unidade are allowed in every pack (D-064).
+template: financas
+name: NAME
+description:
+  en: "Finance and investing: listed companies, indicators, concepts, tools."
+  pt-BR: "Finanças e investimentos: companhias listadas, indicadores, conceitos, ferramentas."
+language: LANG
+version: 0.1.0
+classes: [companhia, indicador, conceito, ferramenta]
+terms: []
