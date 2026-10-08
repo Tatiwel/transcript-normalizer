@@ -113,11 +113,29 @@ jobs:
       # [ingest] (the same, plus faster-whisper). --no-dev leaves pytest out;
       # --no-editable installs the package itself, not a link to src/.
       # PyInstaller is a build tool, not a dependency, so it is added on top.
+      #
+      # Linux (D-061): setup-uv's python-version takes the runner's own
+      # /usr/bin/python3.12 when there is one, and that Python has no tkinter,
+      # so the folder dialog was missing from 0.5.0's Linux executables. There
+      # the venv is built from a uv-managed Python, which ships tkinter, and
+      # the step stops at once if tkinter does not import.
+      - name: Tk libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # Belt and braces: the system's libtk and libtcl, for PyInstaller to collect.
+          sudo apt-get update -q
+          sudo apt-get install -y python3-tk tk
       - name: Install
         run: |
           if [ "$FLAVOR" = lite ]; then extra=captions; else extra=ingest; fi
-          uv sync --locked --no-dev --no-editable --extra "$extra"
+          python_args=()
+          if [ "$RUNNER_OS" = Linux ]; then
+            uv python install 3.12
+            python_args=(--python 3.12 --python-preference only-managed)
+          fi
+          uv sync --locked --no-dev --no-editable --extra "$extra" "${python_args[@]}"
           uv pip install pyinstaller
+          uv run --no-sync python -c 'import sys, tkinter; print(sys.executable, "tkinter", tkinter.TkVersion)'
 
       # Build one executable file. What each flag is for:
       #   --onefile              one file to download and double-click

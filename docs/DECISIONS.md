@@ -530,6 +530,8 @@ From the first Windows run of 0.4.6: the menu prints no exit codes; "Review pend
 
 The executables are built with `--collect-submodules tkinter --hidden-import tkinter.filedialog`. A hidden `help --check-picker` imports `tkinter.filedialog` and starts a Tcl interpreter (no window, so no display), printing the Tcl version; the release workflow runs it in every executable. Checked locally on Linux with a lite build from uv's Python 3.12: `tkinter 9.0.4, filedialog tkinter.filedialog`.
 
+The Linux build needs a Python with Tk (0.5.1). In 0.5.0's release, setup-uv's `python-version: 3.12` took the Ubuntu runner's `/usr/bin/python3.12`, which has no tkinter, so `help --check-picker` failed in both Linux executables with `No module named 'tkinter'` and the release was not published; Windows and macOS passed. On Linux the workflow now runs `uv python install 3.12` and builds the venv with `--python 3.12 --python-preference only-managed`, a uv-managed Python that ships tkinter and its Tcl/Tk libraries, and stops at once if `import tkinter` fails. It also installs `python3-tk` and `tk` with apt first, so the system's libtk and libtcl are there too. `--collect-all tkinter` was not needed. The check stays strict on all three systems. Checked locally by building lite the same way: `tkinter 9.0.4, filedialog tkinter.filedialog`.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- Fix for the Linux executables of 0.5.0, which were not published: their build used the runner's Python, which has no tkinter, so the folder dialog was missing and the release check stopped them. Linux executables are now built from a uv-managed Python that ships tkinter (D-061).
+
 ## 0.5.0
 
 A clearer menu (D-061). Only the menu changed; normalizing works as before.
