@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.3
+
+Packaging (D-063), and four fixes from the last Windows run.
+
+- The full executables for Windows and macOS are a folder, shipped as a zip (`transcript-normalizer-0.5.3-windows-full.zip`): unzip, then open `transcript-normalizer.exe` inside the folder (`transcript-normalizer` on macOS). As one file, the full build unpacked about 100 MB to a temporary folder on every start, which made it slow to open on Windows. lite stays one file, and so does Linux full. The release runner measures `help`'s start time against 0.5.2's one-file build.
+- The Linux executables are built on Ubuntu 22.04 (glibc 2.35), so they run on 22.04-based systems such as Zorin 17; 0.5.2's needed the glibc of the newest runner.
+- The file dialog opens on "All supported (audio, video, captions)"; the separate filters are still there.
+- Automatic translations in the track list carry "(translations are rate-limited more often)".
+- A chosen option is echoed by its label, without its description.
+- Checked: when a pack does not fit, normalized.txt is written with the input's text, line for line (D-054); a test now says so.
+
 ## 0.5.2
 
 The fetch flow (D-062). Only the menu and fetch's options changed; normalizing works as before.

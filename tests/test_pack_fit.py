@@ -57,6 +57,16 @@ def test_an_unfit_pack_applies_nothing(tmp_path, monkeypatch, capsys):
     assert not (run / "needs-review").exists()
 
 
+def test_an_unfit_normalized_txt_is_the_input_line_for_line(tmp_path, monkeypatch):
+    """D-063: every caption line, stamp and text, as the input has it, in
+    normalized.txt's layout (no header, the two-space gap of every run)."""
+    _, run = unfit_run(tmp_path, monkeypatch)
+    source = (DATA / "rolling.legenda.txt").read_text(encoding="utf-8").splitlines()
+    caption_lines = [" ".join(line.split(maxsplit=1)) for line in source if line and not line.startswith("#")]
+    normalized = (run / NORMALIZED_FILE).read_text(encoding="utf-8").splitlines()
+    assert [" ".join(line.split("  ", 1)) for line in normalized] == caption_lines
+
+
 def test_force_applies_anyway(tmp_path, monkeypatch, capsys):
     code, run = unfit_run(tmp_path, monkeypatch, "--force")
     assert code == 0 and "does not seem to fit" not in capsys.readouterr().out

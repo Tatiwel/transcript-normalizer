@@ -386,15 +386,52 @@ def _style() -> dict:
     ])}
 
 
+def _labelled_choice(questionary):
+    """D-063: a Choice that shows label and description in the list, and only
+    its label on the answer line questionary prints once it is chosen."""
+
+    class Labelled(questionary.Choice):
+        control = None  # the question's InquirerControl, set by _echo_labels
+
+        def __init__(self, label, line, **kwargs):
+            self.label, self.line = label, line
+            super().__init__(title=line, **kwargs)
+
+        @property
+        def title(self):
+            return self.label if getattr(self.control, "is_answered", False) else self.line
+
+        @title.setter
+        def title(self, _):
+            pass  # questionary sets it once, to `line`
+
+    return Labelled
+
+
+def _echo_labels(question):
+    """Hand each choice its control, so it knows when it has been answered.
+    A no-op on anything without an application."""
+    app = getattr(question, "application", None)
+    if app is None:
+        return question
+    for control in app.layout.find_all_controls():
+        for choice in getattr(control, "choices", ()):
+            if hasattr(choice, "control"):
+                choice.control = control
+    return question
+
+
 class _Questionary:
     @staticmethod
     def _choices(options, preselected=()):
         import questionary
 
         width = max(len(o.label) for o in options)
+        Labelled = _labelled_choice(questionary)
         return [
-            questionary.Choice(
-                title=f"{o.label.ljust(width)}   {o.description}".rstrip(),
+            Labelled(
+                o.label.strip(),
+                f"{o.label.ljust(width)}   {o.description}".rstrip(),
                 value=i,
                 checked=o.result in preselected,
                 disabled=o.disabled or None,
@@ -409,10 +446,10 @@ class _Questionary:
         while True:
             if hint:
                 say(mark(f"  {hint}", "hint"))
-            answer = _bind(questionary.select(
+            answer = _bind(_echo_labels(questionary.select(
                 title, choices=_Questionary._choices(options), instruction=legend("select"),
                 pointer=UNICODE["pointer"], default=default, **_style(),
-            )).unsafe_ask()
+            ))).unsafe_ask()
             if answer is _EXPLAIN:
                 explain(options)
                 continue

@@ -234,6 +234,8 @@ def transcribe_link(source: str) -> int:
 
 #: The track-list option that opens the automatic translations.
 TRANSLATIONS = "\0translations"
+#: D-063: YouTube answers HTTP 429 to a translated track more often.
+RATE_LIMITED = "(translations are rate-limited more often)"
 
 
 def default_track(meta, listed) -> str | None:
@@ -256,7 +258,7 @@ def choose_track(meta, listed, translations) -> str | None:
     options = [Option(t.name, value=t.code) for t in listed]
     if translations:
         options.append(Option("Other languages (automatic translations)…",
-                              f"{len(translations)} language(s)", value=TRANSLATIONS))
+                              f"{len(translations)} language(s) {RATE_LIMITED}", value=TRANSLATIONS))
     while True:
         picked = prompts.select(
             "Which caption?",
@@ -268,7 +270,7 @@ def choose_track(meta, listed, translations) -> str | None:
             return picked
         picked = prompts.select(
             "Which language?",
-            [Option(t.name, value=t.code) for t in translations],
+            [Option(t.name, RATE_LIMITED, value=t.code) for t in translations],
             hint="a machine translation of the original audio's caption",
         )
         if picked is not None:
@@ -620,7 +622,8 @@ def pick_file(initial: Path):
     pattern = lambda suffixes: " ".join(f"*{s}" for s in suffixes)  # noqa: E731
     chosen = system_dialog(lambda dialog, root: dialog.askopenfilename(
         parent=root, initialdir=str(initial), title="The file to fetch",
-        filetypes=[
+        filetypes=[  # the first is the dialog's default (D-063)
+            ("All supported (audio, video, captions)", pattern(MEDIA_SUFFIXES + CAPTION_SUFFIXES)),
             ("Audio or video", pattern(MEDIA_SUFFIXES)),
             ("Captions", pattern(CAPTION_SUFFIXES)),
             ("All files", "*"),

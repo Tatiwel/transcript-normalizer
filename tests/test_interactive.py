@@ -384,6 +384,34 @@ def test_question_mark_in_real_questionary_explains_then_asks_again(monkeypatch,
     assert "`transcript-normalizer fetch <url|file> [--track <code>]`" in out and "leave the menu" in out
 
 
+def test_a_chosen_option_is_echoed_by_its_label_only(monkeypatch):
+    """D-063: the list shows each description; the answer line, the label."""
+    questionary = pytest.importorskip("questionary")
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    asked = []
+
+    def select(*args, **kwargs):
+        question = real(*args, input=keys, output=DummyOutput(), **kwargs)
+        asked.append(question)
+        return question
+
+    real = questionary.select
+    monkeypatch.setattr(prompts, "interactive_terminal", lambda: True)
+    monkeypatch.setattr(questionary, "select", select)
+    options = [Option("Fetch", "a video or a file", value="f"), Option("Quit", value="q")]
+    with create_pipe_input() as keys:
+        choices = []
+        monkeypatch.setattr(prompts._Questionary, "_choices", staticmethod(
+            lambda o, p=(), make=prompts._Questionary._choices: choices.extend(make(o, p)) or choices
+        ))
+        keys.send_text("\r")
+        assert prompts.select("What?", options) == "f"
+    assert asked and "a video or a file" in choices[0].line  # the list
+    assert choices[0].title == "Fetch"  # the answer line
+
+
 # ------------------------------------------------------------------ 0.5.0: Back, Settings, structure (D-061)
 
 
@@ -572,9 +600,13 @@ def test_a_media_file_from_the_dialog_is_transcribed(tmp_path, monkeypatch, caps
     tk = fake_tkinter(monkeypatch, str(media))
     _, out, fake = menu(tmp_path, monkeypatch, capsys, ["1", "2", "n", "q"])
     (_, asked), = [c for c in tk.calls if isinstance(c, tuple)]
-    assert asked["filetypes"][0] == ("Audio or video", "*.mp3 *.m4a *.wav *.ogg *.opus *.mp4 *.mkv *.webm *.mov")
-    assert asked["filetypes"][1] == ("Captions", "*.txt *.srt *.vtt")
-    assert asked["filetypes"][2] == ("All files", "*")
+    assert asked["filetypes"][0] == (  # D-063: the default filter
+        "All supported (audio, video, captions)",
+        "*.mp3 *.m4a *.wav *.ogg *.opus *.mp4 *.mkv *.webm *.mov *.txt *.srt *.vtt",
+    )
+    assert asked["filetypes"][1] == ("Audio or video", "*.mp3 *.m4a *.wav *.ogg *.opus *.mp4 *.mkv *.webm *.mov")
+    assert asked["filetypes"][2] == ("Captions", "*.txt *.srt *.vtt")
+    assert asked["filetypes"][3] == ("All files", "*")
     assert "step 2: local speech recognition" in out
     assert (tmp_path / "runs" / "aula" / CAPTION_FILE).exists()
     assert fake.calls == []  # a file: nothing asked of the platform
@@ -622,7 +654,10 @@ def test_the_track_list_names_the_tracks_and_takes_the_original_by_default(tmp_p
     _, out, fake = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "n", "q"], platform)
     listed = out.split("Which caption?")[1].split("> ")[0]
     assert "   1. Portuguese, original audio (automatic)" in listed
-    assert "   2. Other languages (automatic translations)…   2 language(s)" in listed
+    assert (
+        "   2. Other languages (automatic translations)…   2 language(s) (translations are rate-limited more often)"
+        in listed
+    )
     assert "enter alone: Portuguese, original audio (automatic)" in listed
     assert "pt-orig" not in listed  # names, not codes
     assert fake.downloads == [("writeautomaticsub", "pt-orig")]  # enter: today's choice (D-045)
@@ -632,8 +667,8 @@ def test_a_translation_is_picked_from_its_own_list(tmp_path, monkeypatch, capsys
     platform = FakeYtDlp(automatic=("en", "pt", "pt-orig"))
     _, out, fake = menu(tmp_path, monkeypatch, capsys, [*LINK, "2", "1", "n", "q"], platform)
     listed = out.split("Which language?")[1].split("> ")[0]
-    assert "   1. English (automatic translation)" in listed
-    assert "   2. Portuguese (automatic translation)" in listed
+    assert "   1. English (automatic translation)      (translations are rate-limited more often)" in listed
+    assert "   2. Portuguese (automatic translation)   (translations are rate-limited more often)" in listed
     assert fake.downloads == [("writeautomaticsub", "en")]
 
 
