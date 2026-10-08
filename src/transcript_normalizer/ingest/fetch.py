@@ -276,6 +276,68 @@ def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> t
     return "", ""
 
 
+#: D-062: language names for the track list, by base code; others show their code.
+LANGUAGE_NAMES = {
+    "pt": "Portuguese", "en": "English", "es": "Spanish", "fr": "French", "de": "German",
+    "it": "Italian", "ja": "Japanese", "ko": "Korean", "zh": "Chinese",
+}
+
+
+def language_name(code: str) -> str:
+    """`pt` is Portuguese, `pt-BR` is Portuguese (pt-BR), `xx` stays `xx`."""
+    base = code.split("-")[0]
+    name = LANGUAGE_NAMES.get(base)
+    if name is None:
+        return code
+    return name if code == base else f"{name} ({code})"
+
+
+@dataclass(frozen=True)
+class Track:
+    """One caption track, as `--track` names it and as a person reads it."""
+
+    code: str  # yt-dlp's: `pt-orig`, `pt`, `en`
+    source: str  # MANUAL, AUTOMATIC or AUTOMATIC_ORIGINAL (D-045)
+    translated: bool = False  # automatic, beside an original-audio track
+
+    @property
+    def name(self) -> str:
+        if self.source == AUTOMATIC_ORIGINAL:
+            return f"{language_name(self.code[: -len(ORIGINAL_SUFFIX)])}, original audio (automatic)"
+        if self.source == MANUAL:
+            return f"{language_name(self.code)} (written by the channel)"
+        return f"{language_name(self.code)} (automatic{' translation' if self.translated else ''})"
+
+
+def tracks(meta: Metadata) -> tuple[list[Track], list[Track]]:
+    """D-062: (the tracks to list, the automatic translations), in D-045's order.
+
+    Listed: the original-audio tracks, the manual ones, and the plain automatic
+    ones when the video has no original-audio track (then they are not
+    translations). A code with a manual track is listed once, as manual,
+    which is what `--track` takes for it.
+    """
+    originals = [Track(c, AUTOMATIC_ORIGINAL) for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+    manual = [Track(c, MANUAL) for c in meta.manual_captions]
+    automatic = [
+        Track(c, AUTOMATIC, translated=bool(originals))
+        for c in meta.automatic_captions
+        if not c.endswith(ORIGINAL_SUFFIX) and c not in meta.manual_captions
+    ]
+    if originals:
+        return originals + manual, automatic
+    return manual + automatic, []
+
+
+def track_named(meta: Metadata, code: str) -> Track | None:
+    """`--track`: the track with exactly this code, manual first, or None."""
+    if code.endswith(ORIGINAL_SUFFIX):
+        return Track(code, AUTOMATIC_ORIGINAL) if code in meta.automatic_captions else None
+    if code in meta.manual_captions:
+        return Track(code, MANUAL)
+    return Track(code, AUTOMATIC) if code in meta.automatic_captions else None
+
+
 def summarise(codes: tuple[str, ...]) -> str:
     if not codes:
         return "none"
@@ -536,7 +598,17 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
 
 def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Output) -> Step:
     """Step 1: the platform's caption. Raises NoCaption, RateLimited or FetchError."""
-    code, source = choose_language(meta, args.lang, out)
+    if getattr(args, "track", None):  # D-062: this exact track, or nothing
+        track = track_named(meta, args.track)
+        if track is None:
+            raise NoCaption(
+                f"there is no caption track '{args.track}' for this video "
+                f"(manual: {summarise(meta.manual_captions)}; "
+                f"automatic: {summarise(meta.automatic_captions)})"
+            )
+        code, source = track.code, track.source
+    else:
+        code, source = choose_language(meta, args.lang, out)
     if not code:
         raise NoCaption(
             f"there is no caption in '{args.lang}' for this video "
@@ -613,6 +685,12 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--lang", default=DEFAULT_LANG, help=f"caption language code. default: {DEFAULT_LANG}"
+    )
+    parser.add_argument(
+        "--track",
+        metavar="CODE",
+        help="take exactly this caption track, as `--list` names it (`pt-orig`, `pt`, `en`); "
+        "a code with a manual track takes that one. Instead of --lang's choice (D-062)",
     )
     parser.add_argument(
         "--model",
@@ -768,6 +846,8 @@ def run(args: argparse.Namespace) -> int:
         except NoCaption as error:
             failures.append(str(error))
             reason, plainly = "sem legenda na plataforma", NO_CAPTION
+            if args.track:  # other tracks exist: name the one that does not
+                plainly = str(error)
         except RateLimited as error:
             failures.append(str(error))
             reason = f"legenda falhou: HTTP 429 em {MAX_ATTEMPTS} tentativas"

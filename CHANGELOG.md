@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.2
+
+The fetch flow (D-062). Only the menu and fetch's options changed; normalizing works as before.
+
+- "Fetch a video or file" asks "Where is it?": a link, or a file on this computer. A file opens the system's file dialog (audio and video, captions, or all files), or asks for a typed path where there is none. A caption file (.srt, .vtt, .txt) goes straight to normalizing; an audio or video file to local transcription.
+- For a link, the menu shows the video's details and asks "Use the platform's caption, or transcribe the audio on this computer?". In the lite build the second option is shown, disabled, "(full build only)". With no caption, the full build asks whether to transcribe, and the lite build says why it cannot.
+- The caption track is picked by name: "Portuguese, original audio (automatic)" first, and Enter takes it, as before (D-045); then the channel's own ("Portuguese (written by the channel)"); then "Other languages (automatic translations)…", which opens the list. A video with one track names it without asking.
+- `fetch --track <code>` takes exactly that track (`pt-orig`, `pt`, `en`). `--lang` is unchanged.
+- Settings prints its hint once, not again after each change.
+
 ## 0.5.1
 
 - Fix for the Linux executables of 0.5.0, which were not published: their build used the runner's Python, which has no tkinter, so the folder dialog was missing and the release check stopped them. Linux executables are now built from a uv-managed Python that ships tkinter (D-061).

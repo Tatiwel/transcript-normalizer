@@ -10,7 +10,7 @@ from transcript_normalizer.cli import main
 from transcript_normalizer.core.pack import Learned, save_learned
 from transcript_normalizer.runs import BUNDLED_PACKS
 
-from .fetch_fakes import URL
+from .fetch_fakes import LINK, URL
 from .test_interactive import menu
 
 BUNDLED = BUNDLED_PACKS / "financas-ptbr.yaml"
@@ -111,7 +111,7 @@ def test_a_long_contribution_asks_for_the_file_instead(tmp_path):
 def test_the_menu_offers_to_contribute_after_a_review(tmp_path, monkeypatch, capsys):
     urls = []
     monkeypatch.setattr(contribute.webbrowser, "open", lambda url: urls.append(url) or True)
-    lines = ["1", URL, "", "1", "", "a", "-", "y", "y", "", "q"]
+    lines = [*LINK, "", "1", "", "a", "-", "y", "y", "", "q"]
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert "Contribute what you taught the tool? [y/N]" in out
     assert "  + variant   Klabine -> Klabin" in out

@@ -96,6 +96,7 @@ class Option:
     key: str = ""  # what to type in plain text; a number when empty
     help: str = ""  # what `?` prints: a longer entry than the description
     command: str = ""  # the equivalent command, shown under `help`
+    disabled: str = ""  # shown, not choosable, with this reason (D-062)
 
     @property
     def result(self):
@@ -171,6 +172,7 @@ def legend(kind: str = "select") -> str:
     if use_questionary():
         keys = {
             "select": "↑↓ move · enter confirm · esc back · ? explain",
+            "select_default": "↑↓ move · enter confirm · esc back · ? explain",
             "multi": "↑↓ move · space select · enter confirm · esc back · ? explain",
             "confirm": "y / n · enter takes the default · esc back",
             "text": "type, then enter · ? alone explains",
@@ -178,6 +180,7 @@ def legend(kind: str = "select") -> str:
     else:
         keys = {
             "select": "a number or letter shown, then enter · empty goes back · ? explains",
+            "select_default": "a number or letter shown, then enter · enter alone takes the default · b goes back · ? explains",
             "multi": "letters (e.g. a c), - for none, then enter · empty goes back · ? explains",
             "confirm": "y or n, then enter · enter alone takes the default",
             "text": "type, then enter · ? alone explains",
@@ -207,13 +210,16 @@ def back_option() -> Option:
     return Option(f"{glyph('back')} Back", value=_GO_BACK, key="b", help="return to the previous screen")
 
 
-def select(title: str, options: list[Option], hint: str = "", back: bool = True):
+def select(title: str, options: list[Option], hint: str = "", back: bool = True, default=None):
     """One option's `result`, or None for back (the Back option, Esc or empty).
 
-    `back` adds the Back option; the menu itself has Quit instead.
+    `back` adds the Back option; the menu itself has Quit instead. `default`
+    is the result the cursor starts on (D-062); in plain text, enter alone
+    takes it, and only `b` goes back.
     """
     options = list(options) + ([back_option()] if back else [])
-    answer = (_Questionary if use_questionary() else _Plain).select(title, options, hint)
+    at = next((i for i, o in enumerate(options) if default is not None and o.result == default), None)
+    answer = (_Questionary if use_questionary() else _Plain).select(title, options, hint, at)
     return None if answer is _GO_BACK else answer
 
 
@@ -253,23 +259,29 @@ def _letters(n: int) -> list[str]:
 
 class _Plain:
     @staticmethod
-    def select(title, options, hint):
-        _header(title, hint, "select")
+    def select(title, options, hint, default=None):
+        _header(title, hint, "select" if default is None else "select_default")
         keys = [o.key or str(i) for i, o in enumerate(options, 1)]
         width = max(len(o.label) for o in options)
         for key, o in zip(keys, options):
-            label = o.label.ljust(width) if o.description else o.label
+            label = o.label.ljust(width) if o.description or o.disabled else o.label
+            if o.disabled:
+                say("   -. ", mark(label, "hint"), mark(f"   ({o.disabled})", "hint"))
+                continue
             say(f"  {key:>2}. ", mark(label, "need"), f"   {o.description}" if o.description else "")
+        if default is not None:
+            say(mark(f"  enter alone: {options[default].label.strip()}", "hint"))
         while True:
             answer = _read()
             if not answer:
-                return None
+                return None if default is None else options[default].result
             if answer == "?":
                 explain(options)
                 continue
-            if answer.lower() in keys:
+            if answer.lower() in keys and not options[keys.index(answer.lower())].disabled:
                 return options[keys.index(answer.lower())].result
-            say(mark(f"  {answer!r} is not one of {', '.join(keys)}", "bad"))
+            allowed = [k for k, o in zip(keys, options) if not o.disabled]
+            say(mark(f"  {answer!r} is not one of {', '.join(allowed)}", "bad"))
 
     @staticmethod
     def multi_select(title, options, preselected, hint):
@@ -385,12 +397,13 @@ class _Questionary:
                 title=f"{o.label.ljust(width)}   {o.description}".rstrip(),
                 value=i,
                 checked=o.result in preselected,
+                disabled=o.disabled or None,
             )
             for i, o in enumerate(options)
         ]
 
     @staticmethod
-    def select(title, options, hint):
+    def select(title, options, hint, default=None):
         import questionary
 
         while True:
@@ -398,7 +411,7 @@ class _Questionary:
                 say(mark(f"  {hint}", "hint"))
             answer = _bind(questionary.select(
                 title, choices=_Questionary._choices(options), instruction=legend("select"),
-                pointer=UNICODE["pointer"], **_style(),
+                pointer=UNICODE["pointer"], default=default, **_style(),
             )).unsafe_ask()
             if answer is _EXPLAIN:
                 explain(options)

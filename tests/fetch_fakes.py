@@ -135,3 +135,7 @@ def install(monkeypatch, fetch, ytdlp=None):
     monkeypatch.setattr(fetch, "load_whisper", FakeWhisper)
     monkeypatch.setattr(fetch, "sleep", waits.append)
     return ytdlp, waits
+
+#: D-062: the menu's way to the platform caption: Fetch, a link, the url, and
+#: enter on "Use the platform's caption, or transcribe…" (the caption).
+LINK = ["1", "1", URL, ""]

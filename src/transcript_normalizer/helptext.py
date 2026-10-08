@@ -29,8 +29,9 @@ class Action:
 
 ACTIONS = (
     Action("1", "Fetch a video or file", "download a caption, or transcribe audio locally",
-           "asks for a URL or a path; platform caption first, local speech recognition if you agree",
-           f"{PROG} fetch <url|file>"),
+           "a link or a file; for a link, the platform's caption (you pick the track) or local "
+           "transcription; a caption file goes straight to normalizing",
+           f"{PROG} fetch <url|file> [--track <code>]"),
     Action("2", "Normalize a run", "fix domain terms in a fetched caption",
            "pick a run; shows three counters, then offers the review if anything is pending",
            f"{PROG} runs/<id>/legenda.txt --summary"),
@@ -62,7 +63,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             (f"{PROG} <legenda.txt>", "same as `normalize <legenda.txt>`"),
         ]),
         ("COMMANDS", [
-            ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `fetch --check` lists the fetch tools installed"),
+            ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `--list` shows the caption tracks and `--track <code>` takes one; `fetch --check` lists the fetch tools installed"),
             ("normalize <legenda.txt>", "fix domain terms (a .srt or .vtt is converted first); --review (term by term) or --confirm (form by form) to answer what it was unsure about; --pack for your own pack; --force when the pack does not seem to fit"),
             ("list", "every run under runs/, with its date and title"),
             ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),

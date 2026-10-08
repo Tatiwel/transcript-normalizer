@@ -532,6 +532,22 @@ The executables are built with `--collect-submodules tkinter --hidden-import tki
 
 The Linux build needs a Python with Tk (0.5.1). In 0.5.0's release, setup-uv's `python-version: 3.12` took the Ubuntu runner's `/usr/bin/python3.12`, which has no tkinter, so `help --check-picker` failed in both Linux executables with `No module named 'tkinter'` and the release was not published; Windows and macOS passed. On Linux the workflow now runs `uv python install 3.12` and builds the venv with `--python 3.12 --python-preference only-managed`, a uv-managed Python that ships tkinter and its Tcl/Tk libraries, and stops at once if `import tkinter` fails. It also installs `python3-tk` and `tk` with apt first, so the system's libtk and libtcl are there too. `--collect-all tkinter` was not needed. The check stays strict on all three systems. Checked locally by building lite the same way: `tkinter 9.0.4, filedialog tkinter.filedialog`.
 
+## D-062 The fetch flow: where, which track, caption or transcription
+
+"Fetch a video or file" asks three things, each with Back: "Where is it?" (a link, a file on this computer); for a link, "Use the platform's caption, or transcribe the audio on this computer?"; for the caption, which track. Then the existing "Next: normalize this run now?". Nothing under core/ changes.
+
+A file is chosen with `tkinter.filedialog.askopenfilename` (filters: audio or video, mp3 m4a wav ogg opus mp4 mkv webm mov; captions, srt vtt txt; all files), in the same dialog wrapper as D-061's folder picker, and typed where there is no dialog. A caption file goes to the Normalize stage directly (`normalize <file>`, which converts a .srt or .vtt); there is nothing to fetch. An audio or video file runs `fetch <file>`, which transcribes it (D-038).
+
+For a link, the menu reads the video itself (`fetch.read_metadata`, the function fetch uses) and shows its title, channel, date and duration, because the questions depend on what tracks exist. It then runs `fetch <url> --track <code> --caption-only --no-video-info` or `fetch <url> --whisper --no-video-info`, so every choice is a command a script can type (D-051). That reads the video twice, as the menu's step-1-then-step-2 path did before. If the caption download fails, the menu still offers transcription when the build has it.
+
+The tracks (`fetch.tracks`) are listed by name in D-045's order: the original-audio tracks (`<lang>-orig`, "Portuguese, original audio (automatic)"), then the manual ones ("Portuguese (written by the channel)"), then the automatic translations under one entry, "Other languages (automatic translations)…", which opens their list ("English (automatic translation)"). When a video has no original-audio track, its plain automatic tracks are not translations, so they are listed directly as "(automatic)". A code that has a manual track is listed once, as manual. Names come from a table of nine languages (pt en es fr de it ja ko zh); a regional code keeps its code (`Portuguese (pt-BR)`), and an unknown one is its code. The default is the original-audio track, or what `--lang` would choose when there is none, so Enter does what the menu did before. A video with one track names it and does not ask.
+
+`prompts.select` takes a `default`: questionary starts the cursor there, and in plain text enter alone takes it (only `b` goes back, and the key legend says so). An Option can be `disabled` with a reason: questionary shows it greyed with the reason, plain text shows it with `-` for a key and refuses it. The transcription option is disabled with "full build only" in the lite executable and "needs the ingest extra" in a pip install without faster-whisper.
+
+`fetch --track <code>` takes exactly that track, as `--list` names it; for a code with both a manual and an automatic track, the manual one. A track that does not exist is a NoCaption that names it ("there is no caption track 'fr' for this video", with the tracks there are), also under `--caption-only`, where "This video has no caption." would be wrong. Without `--track`, `--lang` chooses as before.
+
+In the same release, Settings prints its hint ("saved in your user settings…") once, not again each time its list comes back after a change; seen on Windows. A test starts the executable afresh with a saved folder and finds it on the first screen.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

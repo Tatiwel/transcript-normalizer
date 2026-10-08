@@ -18,7 +18,7 @@ from transcript_normalizer.runs import (
     installed_packs,
 )
 
-from .fetch_fakes import URL
+from .fetch_fakes import LINK, URL
 from .test_interactive import DATA, menu
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,7 +79,7 @@ def test_a_pack_in_packs_wins_over_the_bundled_one(tmp_path, monkeypatch):
 
 
 def test_the_menu_asks_what_the_video_is_about(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "", "2", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "2", "q"])
     assert "What is this video about?" in out
     assert "   1. financas-ptbr         pt-BR · " in out
     assert "   2. none / another area   skip normalization" in out
@@ -88,7 +88,7 @@ def test_the_menu_asks_what_the_video_is_about(tmp_path, monkeypatch, capsys):
 
 
 def test_the_menu_does_not_offer_a_review_when_the_pack_does_not_fit(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", URL, "", "1", "q"], vtt="rolling.vtt")
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "q"], vtt="rolling.vtt")
     assert "does not seem to fit this transcript" in out
     assert "Nothing to confirm" not in out and "Open the folder?" not in out
     # D-061: the menu has no --force to offer, so it names what it has.

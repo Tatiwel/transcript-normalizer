@@ -132,31 +132,176 @@ def pending_count(run: Path) -> int:
 # ------------------------------------------------------------------ actions
 
 
-def fetch() -> None:
-    from .ingest.fetch import is_lite_build, missing_extra
+#: D-062: what the file dialog of "A file on this computer" offers.
+MEDIA_SUFFIXES = (".mp3", ".m4a", ".wav", ".ogg", ".opus", ".mp4", ".mkv", ".webm", ".mov")
 
+
+def fetch() -> None:
+    """D-062: a link or a file; for a link, the platform's caption (which
+    track) or local transcription; then the offer to normalize."""
     stage("Fetch")
-    source = prompts.text(
-        "A video URL, or the path to an audio or video file",
-        hint="a link (YouTube and others) or a file on this computer",
-    )
+    while True:
+        where = prompts.select("Where is it?", [
+            Option("A link (YouTube and others)", value="link"),
+            Option("A file on this computer", value="file"),
+        ])
+        if where is None:
+            return
+        if (fetch_link() if where == "link" else fetch_file()) != BACK:
+            return
+
+
+def fetch_link() -> str | None:
+    """Paste a link, read the video, choose caption or transcription."""
+    from .ingest.console import Output
+    from .ingest.fetch import NO_CAPTION, FetchError, missing_extra, read_metadata, tracks
+
+    source = prompts.text("The video's link", hint="YouTube, Vimeo, TikTok, Instagram and others")
     if not source:
-        return
-    if "://" not in source or is_lite_build():
-        # A local file goes straight to step 2 (D-038). In the lite build there
-        # is no step 2 to offer, so the plain chain runs: step 1's own error
-        # comes first, and the lite notice only if step 2 is reached (D-057).
-        code = run_command(["fetch", source])
-    else:
-        code = run_command(["fetch", source, "--caption-only"])
-        if code == 1:  # fetch has said why, in plain words
-            if not missing_extra("faster_whisper") and prompts.confirm(
-                "Transcribe the audio on this computer instead?",
-                default=True,
-                hint="downloads the audio and runs speech recognition; this can take minutes",
-            ):
-                # The title, channel and duration were shown by the first call.
-                code = run_command(["fetch", source, "--whisper", "--no-video-info"])
+        return BACK
+    if "://" not in source or missing_extra("yt_dlp"):
+        # Not a link (a path typed here still works), or nothing to read links
+        # with: fetch says which, in its own words.
+        return after_fetch(run_command(["fetch", source]))
+    try:
+        meta = read_metadata(source, Output())
+    except FetchError as failure:
+        error(f"could not read the video: {failure}")
+        return None
+    for label, value, kind in (
+        ("title", meta.title, "value"), ("channel", meta.channel, "value"),
+        ("published", meta.published, "value"),
+        ("duration", f"{meta.duration // 60}min{meta.duration % 60:02d}s", "number"),
+    ):
+        detail(label, value, kind)
+    listed, translations = tracks(meta)
+    if not listed and not translations:
+        say(mark(NO_CAPTION, "need"))
+        if transcription_unavailable():
+            say(mark(f"  {transcription_unavailable()}", "hint"))
+            return None
+        if not prompts.confirm(
+            "Transcribe the audio on this computer instead?",
+            default=True,
+            hint="downloads the audio and runs speech recognition; this can take minutes",
+        ):
+            return None
+        return after_fetch(transcribe_link(source))
+    while True:
+        how = prompts.select(
+            "Use the platform's caption, or transcribe the audio on this computer?",
+            [
+                Option("The platform's caption", "quick; the text the platform shows", value="caption"),
+                Option("Transcribe the audio on this computer", "downloads the audio; can take minutes",
+                       value="speech", disabled=transcription_unavailable(short=True)),
+            ],
+            default="caption",
+        )
+        if how is None:
+            return BACK
+        if how == "speech":
+            return after_fetch(transcribe_link(source))
+        track = choose_track(meta, listed, translations)
+        if track is None:
+            continue
+        code = run_command(["fetch", source, "--track", track, "--caption-only", "--no-video-info"])
+        if code == 1 and not transcription_unavailable() and prompts.confirm(
+            "Transcribe the audio on this computer instead?",
+            default=True,
+            hint="downloads the audio and runs speech recognition; this can take minutes",
+        ):
+            code = transcribe_link(source)
+        return after_fetch(code)
+
+
+def transcription_unavailable(short: bool = False) -> str:
+    """Why this installation cannot transcribe audio; "" when it can."""
+    from .ingest.fetch import LITE_BUILD, is_lite_build, missing_extra
+
+    if is_lite_build():
+        return "full build only" if short else LITE_BUILD
+    if missing_extra("faster_whisper"):
+        return "needs the ingest extra" if short else (
+            "Local transcription needs the ingest extra: pip install 'transcript-normalizer[ingest]'"
+        )
+    return ""
+
+
+def transcribe_link(source: str) -> int:
+    # The title, channel and duration are on screen already.
+    return run_command(["fetch", source, "--whisper", "--no-video-info"])
+
+
+#: The track-list option that opens the automatic translations.
+TRANSLATIONS = "\0translations"
+
+
+def default_track(meta, listed) -> str | None:
+    """D-045: the original-audio track; without one, what --lang would take."""
+    from .ingest.fetch import AUTOMATIC_ORIGINAL, DEFAULT_LANG, choose_language
+
+    for track in listed:
+        if track.source == AUTOMATIC_ORIGINAL:
+            return track.code
+    code, _ = choose_language(meta, DEFAULT_LANG)
+    return code or (listed[0].code if listed else None)
+
+
+def choose_track(meta, listed, translations) -> str | None:
+    """D-062: the caption track, by name; the default is today's choice.
+    A video with one track has nothing to choose: it is named, not asked."""
+    if len(listed) == 1 and not translations:
+        detail("caption", listed[0].name)
+        return listed[0].code
+    options = [Option(t.name, value=t.code) for t in listed]
+    if translations:
+        options.append(Option("Other languages (automatic translations)…",
+                              f"{len(translations)} language(s)", value=TRANSLATIONS))
+    while True:
+        picked = prompts.select(
+            "Which caption?",
+            options,
+            hint="the original audio's own caption is the closest to what was said",
+            default=default_track(meta, listed),
+        )
+        if picked != TRANSLATIONS:
+            return picked
+        picked = prompts.select(
+            "Which language?",
+            [Option(t.name, value=t.code) for t in translations],
+            hint="a machine translation of the original audio's caption",
+        )
+        if picked is not None:
+            return picked
+
+
+def fetch_file() -> str | None:
+    """A file: a caption goes straight to normalizing, audio or video to
+    local transcription."""
+    from .cli import caption_run
+
+    path = pick_file(Path.home())
+    if path is NO_PICKER:
+        say(mark("  no file dialog here; type the path instead", "hint"))
+        answer = prompts.text(
+            "Path to the file",
+            hint="audio or video (transcribed here), or a .srt, .vtt or legenda.txt caption",
+            kind="path",
+        )
+        path = Path(answer.strip().strip("'\"")).expanduser() if answer else None
+    if path is None:
+        return BACK
+    if not path.is_file():
+        error(f"no file at {path}")
+        return None
+    if path.suffix.lower() in CAPTION_SUFFIXES:  # already a text: nothing to transcribe
+        normalize_run(caption_run(path), path, chained=True)
+        return None
+    return after_fetch(run_command(["fetch", str(path)]))
+
+
+def after_fetch(code: int) -> None:
+    """The step after a fetch: normalize, if the user wants."""
     if code != 0:
         error("fetch did not finish")
         return
@@ -442,8 +587,8 @@ def folder_source() -> str:
     return "the documents folder" if is_frozen() else "the current folder"
 
 
-def pick_folder(initial: Path):
-    """The system's folder dialog: a Path, None when cancelled, or NO_PICKER
+def system_dialog(ask):
+    """`ask(filedialog, parent)` in the system's dialog: its answer, or NO_PICKER
     when there is no dialog here (no tkinter, or no display)."""
     try:
         import tkinter
@@ -457,12 +602,31 @@ def pick_folder(initial: Path):
     try:
         root.withdraw()
         root.attributes("-topmost", True)  # above the terminal, not behind it
-        chosen = filedialog.askdirectory(
-            parent=root, initialdir=str(initial), mustexist=False, title="Where to save your files"
-        )
+        return ask(filedialog, root)
     finally:
         root.destroy()
-    return Path(chosen) if chosen else None
+
+
+def pick_folder(initial: Path):
+    """The system's folder dialog: a Path, None when cancelled, or NO_PICKER."""
+    chosen = system_dialog(lambda dialog, root: dialog.askdirectory(
+        parent=root, initialdir=str(initial), mustexist=False, title="Where to save your files"
+    ))
+    return chosen if chosen is NO_PICKER else (Path(chosen) if chosen else None)
+
+
+def pick_file(initial: Path):
+    """D-062: the system's file dialog: a Path, None when cancelled, or NO_PICKER."""
+    pattern = lambda suffixes: " ".join(f"*{s}" for s in suffixes)  # noqa: E731
+    chosen = system_dialog(lambda dialog, root: dialog.askopenfilename(
+        parent=root, initialdir=str(initial), title="The file to fetch",
+        filetypes=[
+            ("Audio or video", pattern(MEDIA_SUFFIXES)),
+            ("Captions", pattern(CAPTION_SUFFIXES)),
+            ("All files", "*"),
+        ],
+    ))
+    return chosen if chosen is NO_PICKER else (Path(chosen) if chosen else None)
 
 
 def picker_check() -> str:
@@ -532,12 +696,14 @@ def choose_first_pack() -> None:
 
 def settings() -> None:
     stage("Settings")
+    hint = "saved in your user settings, for every run of the menu"
     while True:
         first = next(iter(packs_in_order()), "")
         choice = prompts.select("What would you like to change?", [
             Option("Where to save your files", str(base_dir()), value="folder"),
             Option("The pack offered first", first, value="pack"),
-        ], hint="saved in your user settings, for every run of the menu")
+        ], hint=hint)
+        hint = ""  # once: the list comes back after each change
         if choice is None:
             return
         (choose_folder if choice == "folder" else choose_first_pack)()
