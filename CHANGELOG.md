@@ -7,6 +7,7 @@
 - Docs: the `pip install` lines point at v0.6.3 instead of v0.4.2, whose `ingest` extra lacked D-058's faster-whisper/av bounds. GUIDE §8 and the README's Status give the current measured numbers and name `scripts/measure.py` as their source. The `ask` band (D-060) is documented. Smaller fixes to sample output, the merge backup name, the phonetic classes in CONTRIBUTING and the release page's Windows full row.
 - Residue removed after the 2026-10 inspection (docs/INSPECTION-2026-10.md): the unused `contains_words` and its test, `META_FIELDS`, evaluate's two one-line wrappers; `fits()` is now what normalize and measure.py call. Tests share one bundled-pack fixture and cache the fixture's medium band, which they used to recompute per call.
 - Tests pin three matcher rules no test covered: D-047's ranking (a canonical term at 80 beats a variant at 84 for the same span) and the D-040 and D-049 guards, before and after overlap resolution, including the case that shows why they are needed (a rejection that removes the longer name). Matching is unchanged.
+- Normalizing is about three times faster, with byte-identical results: each caption window is compared only with the pack forms that can match it (its exact equals, and fuzzy forms within two letters of its length, D-005), and the phonetic pass no longer checks every window against every applied change, which made it quadratic in caption length. wxgFO_fyfXg (40 min): 2.29 s → 0.69 s; the same caption four times over: 13.2 s → 3.2 s.
 
 ## 0.6.3
 

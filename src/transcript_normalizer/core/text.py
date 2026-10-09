@@ -9,6 +9,7 @@ from __future__ import annotations
 import bisect
 import unicodedata
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 #: What caption lines are joined with. One character, so offsets stay simple.
@@ -38,12 +39,15 @@ class Transcript:
                 return line[len(prefix) :].strip()
         return ""
 
+    @cached_property
     def _starts(self) -> list[int]:
+        """Each line's start offset, worked out once (a frozen dataclass still has
+        an instance dict, which is where cached_property keeps it)."""
         return [line.start for line in self.lines]
 
     def line_at(self, offset: int) -> Line:
         """The caption line a character offset belongs to."""
-        i = bisect.bisect_right(self._starts(), offset) - 1
+        i = bisect.bisect_right(self._starts, offset) - 1
         return self.lines[max(i, 0)]
 
     def locate(self, offset: int) -> tuple[int, str]:

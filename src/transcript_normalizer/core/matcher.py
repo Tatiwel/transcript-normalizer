@@ -11,7 +11,9 @@ sentence punctuation all come from the pack's language module.
 from __future__ import annotations
 
 import re
+from bisect import bisect_left
 from dataclasses import dataclass, replace
+from itertools import accumulate
 
 from rapidfuzz import fuzz
 
@@ -216,6 +218,28 @@ def find_annotations(
     unit_terms = frozenset(t.term for t in pack.terms if t.klass == UNIT_CLASS)
     scored = [(c, fuzzy_allowed(c, unit_terms)) for c in candidates]
 
+    # Which candidates a window can reach at all. `_score` gives 0 to everything
+    # else: a candidate that is not exactly the window and that fuzzy may not
+    # compare (D-025, D-028) or that fails D-005's length rules. So a window is
+    # scored against its exact equals (a dict) and the fuzzy candidates within
+    # MAX_LEN_DIFF of its length (buckets), and the best of those is the best of
+    # all whenever it reaches the threshold, which is all that is used below.
+    exact_equals: dict[str, list[tuple[Candidate, bool]]] = {}
+    fuzzy_by_length: dict[int, list[tuple[Candidate, bool]]] = {}
+    for c, fuzzy in scored:
+        exact_equals.setdefault(c.folded, []).append((c, fuzzy))
+        if fuzzy and len(c.folded) >= MIN_FUZZY_LEN:
+            fuzzy_by_length.setdefault(len(c.folded), []).append((c, fuzzy))
+
+    def reachable(span: str) -> list[tuple[Candidate, bool]]:
+        if threshold <= 0:
+            return scored  # a zero score would count; compare with everything
+        found = list(exact_equals.get(span, ()))
+        if len(span) >= MIN_FUZZY_LEN:
+            for size in range(len(span) - MAX_LEN_DIFF, len(span) + MAX_LEN_DIFF + 1):
+                found += fuzzy_by_length.get(size, ())
+        return found
+
     # D-031 (b): folded text -> the terms it is an exact form of.
     exact_forms: dict[str, set[str]] = {}
     for c in candidates:
@@ -247,12 +271,15 @@ def find_annotations(
                     continue  # D-024: `Warn Buffet. Tem` is two sentences, not one term
                 yield i, window, norm(" ".join(t.text for t in window))
 
+    # Folded once; the three passes below each walk them.
+    every_window = list(windows())
+
     # D-034: every stretch of text that is exactly a form of some term, found
     # before any fuzzy guess, as the terms each token takes part in. Whether that
     # stretch produces an annotation does not matter: `market cap` spelled out
     # produces none, and still rules `market` out as a guess at market share.
     exact_at: list[set[str]] = [set() for _ in tokens]
-    for i, window, folded_span in windows():
+    for i, window, folded_span in every_window:
         terms = exact_terms(" ".join(folded_span.split()))
         if terms:
             for k in range(i, i + len(window)):
@@ -262,7 +289,7 @@ def find_annotations(
     # (first token, past the last, terms). A shorter correction of another term
     # overlapping it is not a correction: `Dividend` in `Dividend Yield`.
     exact_names: list[tuple[int, int, set[str]]] = []
-    for i, window, folded_span in windows():
+    for i, window, folded_span in every_window:
         run = " ".join(folded_span.split())
         names = set(name_forms.get(run, ()))
         if " " not in run and (owner := inflection_of(run)) is not None:
@@ -280,7 +307,7 @@ def find_annotations(
             for s, e, names in exact_names
         )
 
-    for i, window, folded_span in windows():
+    for i, window, folded_span in every_window:
         if len(folded_span) < 2:
             continue
 
@@ -318,7 +345,7 @@ def find_annotations(
             return rank, score, c.term, c.folded
 
         rank, score, term, candidate = max(
-            (ranked(c, fuzzy) for c, fuzzy in scored),
+            (ranked(c, fuzzy) for c, fuzzy in reachable(folded_span)),
             default=(0, 0, None, None),
         )
         if rank < threshold:
@@ -405,7 +432,16 @@ def phonetic_proposals(
     names = [(term, code) for term, code in names if len(code) >= MIN_SKELETON_LEN]
     if not names:
         return []
-    taken = [(a.start, a.end) for a in resolve_overlaps(found) if a.applied]
+    # Whether a window overlaps an applied annotation, without scanning them all:
+    # by start, and the furthest end among those starting before the window ends.
+    taken = sorted((a.start, a.end) for a in resolve_overlaps(found) if a.applied)
+    taken_starts = [s for s, _ in taken]
+    reach = list(accumulate((e for _, e in taken), max))
+
+    def overlaps_taken(start: int, end: int) -> bool:
+        before = bisect_left(taken_starts, end)  # these start before the window ends
+        return before > 0 and reach[before - 1] > start
+
     norm = pack.language.normalize
     def best(original: str) -> tuple[float, str | None]:
         code = skeleton(original)
@@ -421,7 +457,7 @@ def phonetic_proposals(
             if any(t.closes_sentence for t in window[:-1]):
                 continue  # D-024, D-044
             start, end = window[0].start, window[-1].end
-            if any(start < e and s < end for s, e in taken):
+            if overlaps_taken(start, end):
                 continue
             original = text[start:end]
             score, term = single[i] if n == 1 else best(original)
