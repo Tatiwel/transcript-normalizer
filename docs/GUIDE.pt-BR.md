@@ -258,14 +258,13 @@ transcript-normalizer pack edit-term biomed-ptbr metformina --add-variant "met f
 transcript-normalizer pack show biomed-ptbr --search metf
 ```
 
-**Quando sai uma versão nova.** A sua cópia lembra de onde veio (`based_on: financas-ptbr@0.3.7`) e quantas mudanças você salvou desde então (`local_edits`). Quando sai uma versão mais nova, junto com uma nova versão do programa ou no repositório de pacotes, o menu avisa na primeira tela, Installed packs marca `↑ merge available`, e o `pack update` menciona:
+**Quando sai uma versão nova.** A sua cópia lembra de onde veio (`based_on: financas-ptbr@0.3.7`) e quantas mudanças você salvou desde então (`local_edits`). Quando sai uma versão mais nova, junto com uma nova versão do programa ou no repositório de pacotes, o menu avisa numa linha (ele verifica em segundo plano, então nunca faz você esperar; a resposta fica guardada por um dia), Packs oferece "Merge an update", Installed packs marca `↑ merge available`, e o `pack update` menciona:
 
 ```
-financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits.
-Merge? [y/N]
+financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
 ```
 
-Nada é mesclado sem você dizer sim. A mescla vai termo a termo: o que só o upstream mudou é aceito, o que só você mudou é mantido, e o que os dois mudaram é combinado quando dá. Quando não dá, ela pergunta, um conflito por vez, mostrando as duas versões e até três linhas das suas próprias runs em que a forma aparece (D-069):
+Nada é mesclado sem você pedir. A mescla vai termo a termo: o que só o upstream mudou é aceito, o que só você mudou é mantido, e o que os dois mudaram é combinado quando dá. Quando não dá, ela pergunta, um conflito por vez, mostrando as duas versões e até três linhas das suas próprias runs em que a forma aparece (D-069):
 
 ```
 Conflict 1: Echo: the class differs on both sides

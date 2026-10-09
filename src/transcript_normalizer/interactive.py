@@ -86,17 +86,39 @@ def first_screen() -> None:
         say(mark(f"portable mode: everything stays in {portable_dir()}", "hint"))
     say(TYPICAL_FLOW)
     say(mark(f"Keyboard: {prompts.legend('select')}", "hint"))
-    offer_merges()
+    start_merge_check()
 
 
-def offer_merges() -> None:
-    """D-069: a copy whose upstream is newer: say so and ask; never merge unasked."""
-    from .merge import offers
+#: D-069, amended: the look for merges the menu started, if any.
+_merge_check = None
+#: The tests turn it off, so what the look finds is there when the menu is drawn.
+MERGE_CHECK_IN_BACKGROUND = True
 
-    for offer in offers():
-        say(mark(offer.line(), "need"))
-        if prompts.confirm("Merge?", default=False):
-            run_command(["pack", "merge", offer.name])
+
+def start_merge_check() -> None:
+    """In the background: the first screen never waits for the packs repository."""
+    global _merge_check
+    from .merge import OfferCheck
+
+    _merge_check = OfferCheck().start(background=MERGE_CHECK_IN_BACKGROUND)
+
+
+def merge_offers() -> list:
+    """What the background look found, or nothing while it is still looking."""
+    return (_merge_check.ready() or []) if _merge_check is not None else []
+
+
+def merge_notice(offer) -> str:
+    return f"{offer.line()} Packs → Merge an update merges it."
+
+
+def announce_merges() -> None:
+    """Once, the first time the menu is drawn after the look has finished."""
+    if _merge_check is None or _merge_check.announced or _merge_check.ready() is None:
+        return
+    _merge_check.announced = True
+    for offer in merge_offers():
+        say(mark(merge_notice(offer), "need"))
 
 
 # ------------------------------------------------------------------ runs
@@ -1140,21 +1162,39 @@ def remove_pack() -> None:
     run_command(["pack", "remove", picked])
 
 
+def merge_update() -> None:
+    """D-069: merge an upstream update into a copy, asking about each conflict."""
+    found = {o.name: o for o in merge_offers()}
+    if not found:
+        return
+    picked = next(iter(found)) if len(found) == 1 else prompts.select("Merge which pack?", [
+        Option(o.name, f"{o.upstream.version} into your copy", value=o.name) for o in found.values()
+    ])
+    if picked is not None and run_command(["pack", "merge", picked]) == 0:
+        _merge_check.merged(picked)
+
+
 #: How long "Get a pack" waits for the repository's index.
 GET_WAIT_SECONDS = 10
 
 PACK_ACTIONS = {
     "installed": installed_table, "get": get_pack, "create": create_pack, "edit": edit_pack,
     "import": import_pack, "export": export_pack, "remove": remove_pack,
-    "contribute": contribute_pack, "first": choose_first_pack,
+    "contribute": contribute_pack, "first": choose_first_pack, "merge": merge_update,
 }
 
 
 def packs() -> None:
     stage("Packs")
+    for offer in merge_offers():
+        say(mark(offer.line(), "need"))
     while True:
         first = next(iter(packs_in_order()), "")
-        choice = prompts.select("What would you like to do with packs?", [
+        offered = merge_offers()
+        merge_option = [Option(
+            "Merge an update", ", ".join(f"{o.name} {o.upstream.version}" for o in offered), value="merge",
+        )] if offered else []
+        choice = prompts.select("What would you like to do with packs?", merge_option + [
             Option("Installed packs", "name, version, language, terms, size, source", value="installed"),
             Option("Get a pack", "from the packs repository", value="get"),
             Option("Create a pack", "from a field template, with no terms", value="create"),
@@ -1186,6 +1226,7 @@ def run() -> int:
             if not first:
                 separator()
             first = False
+            announce_merges()
             choice = prompts.select(
                 "What would you like to do?",
                 menu_options(),

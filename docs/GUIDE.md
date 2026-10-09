@@ -258,14 +258,13 @@ transcript-normalizer pack edit-term biomed-ptbr metformina --add-variant "met f
 transcript-normalizer pack show biomed-ptbr --search metf
 ```
 
-**When upstream releases a new version.** Your copy remembers what it was copied from (`based_on: financas-ptbr@0.3.7`) and how many changes you saved since (`local_edits`). When a newer version comes out, bundled with a new release of the program or in the packs repository, the menu says so on its first screen, Installed packs marks it `↑ merge available`, and `pack update` mentions it:
+**When upstream releases a new version.** Your copy remembers what it was copied from (`based_on: financas-ptbr@0.3.7`) and how many changes you saved since (`local_edits`). When a newer version comes out, bundled with a new release of the program or in the packs repository, the menu says so in one line (it looks in the background, so it never makes you wait; the answer is kept for a day), Packs offers "Merge an update", Installed packs marks it `↑ merge available`, and `pack update` mentions it:
 
 ```
-financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits.
-Merge? [y/N]
+financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
 ```
 
-Nothing is merged unless you say yes. A merge goes term by term: what only upstream changed is taken, what only you changed is kept, and what both changed is combined when it can be. Where it cannot, it asks, one conflict at a time, showing both versions and up to three lines from your own runs where the form occurs (D-069):
+Nothing is merged unless you ask. A merge goes term by term: what only upstream changed is taken, what only you changed is kept, and what both changed is combined when it can be. Where it cannot, it asks, one conflict at a time, showing both versions and up to three lines from your own runs where the form occurs (D-069):
 
 ```
 Conflict 1: Echo: the class differs on both sides

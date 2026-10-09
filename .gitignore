@@ -225,4 +225,6 @@ packs/*.learned.yaml
 
 # what `pack install` wrote (D-055) and what `pack propose` wrote (D-056)
 packs/installed.json
+# the menu's day-old copy of the packs index (D-069, amended)
+packs/.index-cache.json
 contributions/

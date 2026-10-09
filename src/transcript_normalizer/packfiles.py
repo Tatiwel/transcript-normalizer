@@ -13,7 +13,8 @@ import os
 import re
 import sys
 import threading
-from dataclasses import dataclass
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import yaml
@@ -166,6 +167,51 @@ def index_within(seconds: float, url: str | None = None) -> dict | None:
     worker.start()
     worker.join(seconds)
     return result.get("index")
+
+
+#: D-069, amended: the menu's background check keeps the index this long, in
+#: packs/ under the data directory, so a portable install keeps it inside.
+INDEX_CACHE_FILE = ".index-cache.json"
+INDEX_CACHE_SECONDS = 24 * 60 * 60
+
+
+def index_cache() -> Path:
+    return packs_root() / INDEX_CACHE_FILE
+
+
+def cached_index(
+    url: str | None = None, now: float | None = None, cache: Path | None = None
+) -> dict | None:
+    """The index as cached under a day ago from the same url, or None."""
+    url = registry.index_url(url)
+    try:
+        data = json.loads((cache or index_cache()).read_text(encoding="utf-8"))
+        age = (time.time() if now is None else now) - float(data["fetched_at"])
+        if data["url"] != url or not 0 <= age < INDEX_CACHE_SECONDS:
+            return None
+        return {e["name"]: registry.Entry(**{f: str(e[f]) for f in registry.FIELDS}) for e in data["packs"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def index_cached_within(
+    seconds: float, url: str | None = None, cache: Path | None = None
+) -> dict | None:
+    """The cached index when it is fresh; otherwise `index_within`, cached on success."""
+    url = registry.index_url(url)
+    cache = cache or index_cache()
+    index = cached_index(url, cache=cache)
+    if index is not None:
+        return index
+    index = index_within(seconds, url)
+    if index is not None:
+        try:
+            cache.write_text(json.dumps({
+                "url": url, "fetched_at": time.time(), "packs": [asdict(e) for e in index.values()],
+            }), encoding="utf-8")
+        except OSError:
+            pass  # a cache that cannot be written is only a slower next start
+    return index
 
 
 def _version(text: str) -> tuple[int, ...] | None:

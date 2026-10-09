@@ -696,6 +696,8 @@ The answers have fixed keys in plain text: `m` keep mine, `t` take theirs, `k` k
 
 Tested with a synthetic base, upstream and mine that has one term per row of both tables, in both directions (`--yes-theirs`, `--yes-mine`, every conflict decided later), two-way mode, a backup, a dry run, detection in the menu, the table and `pack update`, and the diff-only contribution.
 
+Amended (2026-10): the menu no longer waits for the index, nor asks at startup. With a copy installed and the index unreachable (packets dropped rather than refused), every menu start took 3.2 s, the full wait (docs/INSPECTION-2026-10.md, F27). The look now runs in a background thread with the same 3-second wait, and the index it reads is kept for 24 hours in `packs/.index-cache.json` under the data directory (so a portable install keeps it inside its folder), keyed by the index's url; a cache that cannot be written is ignored. The copies are found before the thread starts, in the menu's own directory. When the look finds an update, the next time the main menu is drawn it prints one line, "financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.", once per session. Packs prints the same line and offers "Merge an update" as its first entry, which runs `pack merge` as before. Measured offline with a copy: the first screen in 0.19 s instead of 3.21 s. `pack list --installed` and `pack update` still read the index themselves, since the user asked for them.
+
 ## D-070 A Windows installer with a folder choice, and a portable build
 
 No change under core/; packaging and the product layer only.

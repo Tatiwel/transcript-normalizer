@@ -8,6 +8,7 @@
 - Residue removed after the 2026-10 inspection (docs/INSPECTION-2026-10.md): the unused `contains_words` and its test, `META_FIELDS`, evaluate's two one-line wrappers; `fits()` is now what normalize and measure.py call. Tests share one bundled-pack fixture and cache the fixture's medium band, which they used to recompute per call.
 - Tests pin three matcher rules no test covered: D-047's ranking (a canonical term at 80 beats a variant at 84 for the same span) and the D-040 and D-049 guards, before and after overlap resolution, including the case that shows why they are needed (a rejection that removes the longer name). Matching is unchanged.
 - Normalizing is about three times faster, with byte-identical results: each caption window is compared only with the pack forms that can match it (its exact equals, and fuzzy forms within two letters of its length, D-005), and the phonetic pass no longer checks every window against every applied change, which made it quadratic in caption length. wxgFO_fyfXg (40 min): 2.29 s → 0.69 s; the same caption four times over: 13.2 s → 3.2 s.
+- The menu never waits for the packs repository at startup (D-069, amended). It looks for pack updates in the background, keeps the index for a day in `packs/.index-cache.json` (inside the folder in portable mode), and when a copy of yours can be merged it says so in one line and offers "Merge an update" in Packs, instead of asking "Merge?" on the first screen. Offline with a copy, the first screen went from 3.2 s to 0.2 s.
 
 ## 0.6.3
 

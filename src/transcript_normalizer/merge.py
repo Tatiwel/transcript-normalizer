@@ -18,6 +18,7 @@ contradicts the pack.
 from __future__ import annotations
 
 import sys
+import threading
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -166,6 +167,52 @@ def offers(wait: float = packfiles.INDEX_WAIT_SECONDS, index: dict | None = None
         if offer is not None:
             out.append(offer)
     return out
+
+
+class OfferCheck:
+    """D-069, amended: the menu's look for merges, in a background thread, so
+    the menu never waits for the packs repository. `ready()` is None until it
+    is done; nothing here asks or merges."""
+
+    def __init__(self) -> None:
+        self._offers: list[Offer] = []
+        self._done = threading.Event()
+        self.announced = False
+
+    def start(self, background: bool = True) -> "OfferCheck":
+        """The copies and where the cache is are read here, in the caller's
+        directory; only the index is waited for in the thread."""
+        found = copies()
+        if not found:
+            self._done.set()
+            return self
+        args = (found, registry.index_url(), packfiles.index_cache())
+        if background:
+            threading.Thread(target=self.run, args=args, daemon=True).start()
+        else:
+            self.run(*args)
+        return self
+
+    def run(self, found: dict, url: str, cache: Path) -> None:
+        try:
+            index = packfiles.index_cached_within(packfiles.INDEX_WAIT_SECONDS, url, cache)
+            self._offers = [
+                offer for name, (path, data) in found.items()
+                if (offer := offer_for(name, path, data, index)) is not None
+            ]
+        except Exception:  # a failed look is no offer, never a traceback in the menu
+            self._offers = []
+        finally:
+            self._done.set()
+
+    def ready(self) -> list[Offer] | None:
+        return list(self._offers) if self._done.is_set() else None
+
+    def wait(self, seconds: float) -> bool:
+        return self._done.wait(seconds)
+
+    def merged(self, name: str) -> None:
+        self._offers = [o for o in self._offers if o.name != name]
 
 
 def offer_for(name: str, path: Path, data: dict, index: dict | None) -> Offer | None:

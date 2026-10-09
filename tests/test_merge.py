@@ -13,7 +13,7 @@ import urllib.parse
 import pytest
 import yaml
 
-from transcript_normalizer import contribute, merge, registry
+from transcript_normalizer import contribute, interactive, merge, packfiles, registry
 from transcript_normalizer.cli import main
 from transcript_normalizer.core.pack import Learned, save_learned
 
@@ -260,11 +260,48 @@ def test_pack_update_offers_the_merge_and_never_merges_unasked(triple, capsys):
     assert triple.read_bytes() == before
 
 
-def test_the_menu_asks_on_startup(triple, tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["n", "q"])
-    assert "med 0.2.0 is available; your copy is based on 0.1.0 with 4 local edits.\nMerge? [y/N]" in out
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["y", *(["l"] * 7), "q"])
+NOTICE = ("med 0.2.0 is available; your copy is based on 0.1.0 with 4 local edits. "
+          "Packs → Merge an update merges it.")
+
+
+def test_the_menu_says_so_once_and_never_asks(triple, tmp_path, monkeypatch, capsys):
+    """D-069, amended: a one-line notice when the menu is drawn; no question at startup."""
+    monkeypatch.setattr(interactive, "MERGE_CHECK_IN_BACKGROUND", False)
+    before = triple.read_bytes()
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["5", "q"])
+    assert out.count(NOTICE) == 1  # drawn twice, said once
+    assert "Merge? [y/N]" not in out
+    assert triple.read_bytes() == before
+
+
+def test_packs_offers_the_merge(triple, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(interactive, "MERGE_CHECK_IN_BACKGROUND", False)
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "1", *(["l"] * 7), "b", "q"])
+    assert "Merge an update" in out and "med 0.2.0" in out
     assert "Merging med" in out and yaml.safe_load(triple.read_text(encoding="utf-8"))["based_on"] == "med@0.2.0"
+
+
+def test_the_first_screen_never_waits_for_the_index(triple, tmp_path, monkeypatch, capsys):
+    """Offline (the index never answers), the menu is drawn at once, without the notice."""
+    import time
+
+    monkeypatch.setattr(packfiles, "index_within", lambda seconds, url=None: time.sleep(seconds))
+    started = time.monotonic()
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["q"])
+    assert time.monotonic() - started < 1
+    assert "What would you like to do?" in out and NOTICE not in out
+
+
+def test_the_index_is_cached_for_a_day(triple, monkeypatch):
+    url = registry.index_url()
+    assert packfiles.index_cache().parent == triple.parent  # packs/ under the data directory
+    assert packfiles.index_cached_within(3)["med"].version == "0.2.0"
+    assert packfiles.index_cache().exists()
+    monkeypatch.setattr(packfiles, "index_within", lambda seconds, url=None: None)  # offline now
+    assert packfiles.index_cached_within(3)["med"].version == "0.2.0"  # from the cache
+    later = __import__("time").time() + packfiles.INDEX_CACHE_SECONDS + 1
+    assert packfiles.cached_index(url, now=later) is None  # a day old: read again
+    assert packfiles.cached_index("file:///elsewhere/index.json") is None  # another index
 
 
 def test_edits_count_since_the_base(triple, capsys):
