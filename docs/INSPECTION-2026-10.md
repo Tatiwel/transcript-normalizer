@@ -278,3 +278,15 @@ See F30. The `v2` fixture is defined 4 times and the one-line `annotate`/`applie
 - Splitting `interactive.py` or `merge.py` for their MI scores (F33). The size is honest, and the tests are organised around the current structure.
 - Turning on the ruff ANN/D/E501 families. That is 3,000+ changes for no behavioural gain.
 - Refactoring `find_annotations` (F32) on its own. Do it as part of F3, when the loop is being rewritten anyway and the regression bounds are watching.
+
+---
+
+## Follow-up (same day, during the cleanup)
+
+- **F4 and F5 were wrong.** The guards are not redundant with `resolve_overlaps`. They matter when a rejection by containment (D-027) removes the longer name's own annotation, so that nothing longer is left to win the span. Measured by rejecting the first or the last word of every multi-word name, on all eight fixture × pack runs, with and without each guard:
+  - D-040: on 4wCtn8BWR4o (frozen pack), `Dividend` in `Dividend Yield` becomes an applied correction to dividendo, twice.
+  - D-049: on wxgFO_fyfXg (bundled pack), `preços` in `preços tetos` becomes a low mark on preço teto, three times.
+
+  Both guards stay, and tests in `test_exact_over_exact.py` and `test_whole_word_guard.py` now pin them before and after resolution.
+- **F6 is closed** by two tests in `test_bands.py`. All three surviving mutants (M1, M3, M9) are now killed.
+- **Part of F37 was wrong.** The three `noqa`s reported as stale (`E731` ×2, `S606`), and `E402` in packaging/entry.py, are stale only under the rule selection used for this report. ruff's default rules include E4 and E7, so they stay.

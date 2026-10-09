@@ -99,3 +99,33 @@ def test_the_same_score_applies_from_the_term_and_only_marks_from_a_variant(tmp_
     [guess] = [a for a in annotate(as_term, "quero aportar mais") if a.original == "aportar"]
     assert mark.score == guess.score == 80
     assert (mark.band, guess.band) == ("low", "medium")
+
+
+# D-047's other half: a variant's fuzzy score of 80-84 ranks as a mark when
+# candidates compete for one span, so a candidate that reaches 80 or more on its
+# own (here the canonical term) wins the span and applies. Deliberately synthetic:
+# 25 letters, the term sharing 20 of them (80), the variant 21 (84).
+SPAN = "abcdefghijklmnopqrstuvwxy"
+TERM = "abcdefghijklmnopqrstzzzzz"
+VARIANT = "abcdefghijklmnopqrstuzzzz"
+
+
+def test_the_synthetic_scores_are_80_from_the_term_and_84_from_the_variant():
+    from rapidfuzz import fuzz
+
+    assert (fuzz.ratio(SPAN, TERM), fuzz.ratio(SPAN, VARIANT)) == (80, 84)
+
+
+def test_the_term_at_80_beats_its_own_variant_at_84(tmp_path):
+    pack = tiny(tmp_path, [{"term": TERM, "class": "conceito", "variants": [VARIANT]}])
+    [a] = [a for a in annotate(pack, f"o {SPAN} subiu") if a.original == SPAN]
+    assert (a.term, a.rule, a.score, a.band) == (TERM, "term:fuzzy", 80, "medium")
+
+
+def test_another_term_at_80_beats_a_variant_at_84(tmp_path):
+    pack = tiny(tmp_path, [
+        {"term": TERM, "class": "conceito"},
+        {"term": "Outro Termo", "class": "conceito", "variants": [VARIANT]},
+    ])
+    [a] = [a for a in annotate(pack, f"o {SPAN} subiu") if a.original == SPAN]
+    assert (a.term, a.score, a.band) == (TERM, 80, "medium")
