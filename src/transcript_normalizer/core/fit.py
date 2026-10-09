@@ -21,4 +21,5 @@ def fitting_terms(annotations: list[Annotation]) -> set[str]:
 
 
 def fits(annotations: list[Annotation]) -> bool:
+    """Whether the pack names at least `MIN_FIT_TERMS` of its terms with confidence."""
     return len(fitting_terms(annotations)) >= MIN_FIT_TERMS

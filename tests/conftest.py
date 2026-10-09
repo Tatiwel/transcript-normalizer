@@ -1,15 +1,25 @@
 import sys
+from functools import cache
 from pathlib import Path
 
 import pytest
 
-from transcript_normalizer import find_annotations, load_pack, read_caption, runs
-from transcript_normalizer.runs import DATA_DIR_ENV, run_dir
+from transcript_normalizer import (
+    find_annotations,
+    load_pack,
+    parse_caption,
+    read_caption,
+    runs,
+)
+from transcript_normalizer.core.pack import Learned
+from transcript_normalizer.runs import BUNDLED_PACKS, DATA_DIR_ENV, run_dir
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "R2Qgz8tFWVI"
 CAPTION = FIXTURE / "legenda.txt"
 PACK = FIXTURE / "pack.yaml"
 GOLD = FIXTURE / "gold.csv"
+#: The bundled finance pack, as most matcher tests use it.
+PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +51,17 @@ def annotations(transcript, pack):
     return find_annotations(transcript, pack)
 
 
+@pytest.fixture(scope="session")
+def v2():
+    """The bundled pack with no learned layer."""
+    return load_pack(PACK_V2, learned=Learned())
+
+
+def annotate(pack, line):
+    """Every annotation `pack` proposes for one caption line, unresolved."""
+    return find_annotations(parse_caption(f"0:01 {line}"), pack)
+
+
 #: The video the fixture caption came from; its header declares the url.
 FIXTURE_VIDEO_ID = "R2Qgz8tFWVI"
 
@@ -56,17 +77,29 @@ def medium_order():
     Derived from the loop's own grouping, so a matcher change that reshapes the
     band does not have to be copied into every test that scripts answers.
     """
+    from transcript_normalizer.core import matcher
+
+    return list(_medium_order(*(getattr(matcher, name) for name in _PATCHED)))
+
+
+#: The matcher settings tests monkeypatch; the cache is keyed on their values.
+_PATCHED = ("APPLY_THRESHOLD", "MARK_THRESHOLD", "VARIANT_APPLY_THRESHOLD", "PHONETIC_THRESHOLD")
+
+
+@cache
+def _medium_order(*settings):
+    """Cached: the caption and the pack are fixed files, and this runs the whole
+    matcher. `settings` only keys the cache; the matcher reads its own."""
     from transcript_normalizer import resolve_overlaps
     from transcript_normalizer.cli import confirm_groups, variant_groups
-    from transcript_normalizer.core.pack import Learned
 
     transcript = read_caption(CAPTION)
     found = resolve_overlaps(find_annotations(transcript, load_pack(PACK, learned=Learned())))
-    return [
+    return tuple(
         (term, variant)
         for term, group in confirm_groups(found)
         for variant, _ in variant_groups(group)
-    ]
+    )
 
 
 def answers_for(term, answers):

@@ -16,8 +16,6 @@ import yaml
 from .core.text import read_caption
 from .runs import ANNOTATIONS_FILE, CAPTION_FILE, META_FILE, runs_root
 
-META_FIELDS = ("title", "channel", "url", "published", "fetched_at")
-
 
 def iso_date(value: str) -> str:
     """`20260825` (as platforms give it) -> `2026-08-25`; anything else unchanged."""

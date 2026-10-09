@@ -24,7 +24,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .core.fit import MIN_FIT_TERMS, fitting_terms
+from .core.fit import MIN_FIT_TERMS, fits, fitting_terms
 from .core.matcher import find_annotations, resolve_overlaps
 from .core.pack import Learned, Pack, load_pack, save_learned
 from .core.render import render_normalized
@@ -562,9 +562,8 @@ def run_normalize(args: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # D-054: a pack that names fewer than three of its terms here does not fit.
-    found = len(fitting_terms(annotations))
-    if found < MIN_FIT_TERMS and not args.force:
-        return refuse_unfit(args, transcript, out_dir, found)
+    if not fits(annotations) and not args.force:
+        return refuse_unfit(args, transcript, out_dir, len(fitting_terms(annotations)))
 
     written = [write_json(annotations, out_dir / ANNOTATIONS_FILE)]
 
@@ -605,8 +604,6 @@ def run_normalize(args: argparse.Namespace) -> int:
     elif not args.quiet:
         print(text, end="")
 
-    if args.gold_draft_used:
-        print("--gold-draft is now --corrections (D-023)", file=sys.stderr)
 
     if args.confirm or args.review:
         # D-013 and D-017: the learned layer under packs/, never pack.yaml.
@@ -697,10 +694,6 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="also write needs-review/corrections.csv, the applied annotations "
         "as a gold draft with status `draft`",
-    )
-    # D-023: the old name, kept hidden for one release.
-    parser.add_argument(
-        "--gold-draft", dest="gold_draft_used", action="store_true", help=argparse.SUPPRESS
     )
     asking = parser.add_mutually_exclusive_group()
     asking.add_argument(
@@ -818,8 +811,6 @@ def main(argv: list[str] | None = None) -> int:
     if argv and argv[0] not in COMMANDS and not argv[0].startswith("-"):
         argv.insert(0, "normalize")
     args = build_parser().parse_args(argv)
-    if getattr(args, "gold_draft_used", False):
-        args.corrections = True
     try:
         return args.run(args)
     except FileNotFoundError as error:  # a message, never a traceback

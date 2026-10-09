@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from transcript_normalizer.core.fit import MIN_FIT_TERMS, fitting_terms
+from transcript_normalizer.core.fit import MIN_FIT_TERMS, fits, fitting_terms
 from transcript_normalizer.core.text import read_caption
 
 from transcript_normalizer.core.matcher import MARK_THRESHOLD, find_annotations, resolve_overlaps
@@ -87,12 +87,13 @@ def pack_fit(found: list[Fixture], extra: list[Path]) -> str:
     cases = [(f.name, f.load_transcript(), f.load_pack()) for f in found]
     cases += [(path.parent.name, read_caption(path), None) for path in extra]
     for name, transcript, frozen in cases:
-        counts = [
-            len(fitting_terms(resolve_overlaps(find_annotations(transcript, pack)))) if pack else None
+        found = [
+            resolve_overlaps(find_annotations(transcript, pack)) if pack else None
             for pack in (frozen, bundled)
         ]
+        counts = [len(fitting_terms(f)) if f is not None else None for f in found]
         cells = f"{counts[0] if counts[0] is not None else '-':>6}  {counts[1]:>14d}"
-        out.append(f"{name:16s}  {cells}  {'yes' if counts[1] >= MIN_FIT_TERMS else 'no'}")
+        out.append(f"{name:16s}  {cells}  {'yes' if fits(found[1]) else 'no'}")
     return "\n".join(out)
 
 

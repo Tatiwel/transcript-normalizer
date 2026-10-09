@@ -7,14 +7,6 @@ from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.languages.pt_br import inflections
 from transcript_normalizer.core.render import render_lines
 from transcript_normalizer.core.standoff import KIND_ALIAS
-from transcript_normalizer.runs import BUNDLED_PACKS
-
-PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
-
-
-@pytest.fixture(scope="module")
-def v2():
-    return load_pack(PACK_V2, learned=Learned())
 
 
 def applied(pack, line):

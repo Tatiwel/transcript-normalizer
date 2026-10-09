@@ -1,10 +1,6 @@
 """D-005: short strings match by exact equality only."""
 
-from transcript_normalizer import find_annotations, parse_caption
-
-
-def annotate(pack, line):
-    return find_annotations(parse_caption(f"0:01 {line}"), pack)
+from .conftest import annotate
 
 
 def applied_terms(pack, line):

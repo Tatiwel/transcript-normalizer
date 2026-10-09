@@ -9,10 +9,8 @@ from transcript_normalizer import find_annotations, load_pack, parse_caption, re
 from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.core.render import render_lines
 from transcript_normalizer.core.standoff import KIND_ALIAS, RULE_UNIT
-from transcript_normalizer.runs import BUNDLED_PACKS
 
 ROOT = Path(__file__).resolve().parents[1]
-PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
 FROZEN = sorted((ROOT / "fixtures").glob("*/pack.yaml"))
 #: The third and fourth fixtures froze the curated pack as it was when each was added.
 FROZEN_VERSIONS = {
@@ -21,11 +19,6 @@ FROZEN_VERSIONS = {
     "4wCtn8BWR4o": "0.2.3",
     "4tTmY8Buask": "0.2.4",
 }
-
-
-@pytest.fixture(scope="module")
-def v2():
-    return load_pack(PACK_V2, learned=Learned())
 
 
 def annotate(pack, line):

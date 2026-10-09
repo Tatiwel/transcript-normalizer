@@ -3,7 +3,7 @@
 Domain-term normalization for ASR transcripts and auto-captions.
 
 - **Just want to use it:** download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it; your files go to `Documents/transcript-normalizer/`.
-- **Use Python:** `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"`.
+- **Use Python:** `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"`.
 - **Want to contribute:** `git clone https://github.com/Tatiwel/transcript-normalizer`, `uv sync --extra ingest`, then [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **New here?** Read the guide: [docs/GUIDE.md](docs/GUIDE.md) (English) or [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) (português). It covers installing, a first run, reading the outputs, reviewing what the tool was unsure about and writing a pack for your own field.
@@ -47,9 +47,9 @@ Normalizing reads `packs/financas-ptbr.yaml` in the current directory unless `--
 - `report.txt` — the same text the command prints.
 - `meta.yaml` — title, channel, url, publication date and when it was fetched, from `fetch`.
 - `needs-review/corrections.csv` — with `--corrections`, the applied annotations as the starting point for a new gold file.
-- `needs-review/pending.txt` — every medium-band variant still unanswered, tagged `[never asked]` or `[skipped]`.
+- `needs-review/pending.txt` — every medium-band variant, and every `ask`-band name found by sound (never applied, D-060), still unanswered, tagged `[never asked]` or `[skipped]`.
 
-`--confirm` asks about each medium-band variant in turn and records the answers in `packs/<pack-name>.learned.yaml`. `transcript-normalizer list` prints the id, date and title of every run. `--out DIR` writes a run somewhere else, `--learned PATH` points at a different learned layer. The pack file is never written to.
+`--confirm` asks about each medium-band and ask-band variant in turn and records the answers in `packs/<pack-name>.learned.yaml`. `transcript-normalizer list` prints the id, date and title of every run. `--out DIR` writes a run somewhere else, `--learned PATH` points at a different learned layer. The pack file is never written to.
 
 ## Where things are
 
@@ -73,13 +73,13 @@ The run id is the video id, read from the caption header when the input did not 
 
 Experimental, but the engine is a package with a regression test.
 
-- `fixtures/R2Qgz8tFWVI/`: one Brazilian Portuguese finance video (31 min). `legenda.txt` is the raw platform caption, `gold.csv` is a hand-checked gold list of 168 domain-term errors plus 2 lines that must not be touched, `pack.yaml` is the first domain pack.
-- `fixtures/wxgFO_fyfXg/`: a second video from the same channel (40 min, CEMIG vs CPFL), with a 228-row gold file whose statuses separate corrections the tool made (`certo`), legitimate other names of a term (`alias`), and errors a person had to add (`conferido`). The meanings are in `src/transcript_normalizer/evaluate.py`.
+- `fixtures/R2Qgz8tFWVI/`: one Brazilian Portuguese finance video (31 min). `legenda.txt` is the raw platform caption, `gold.csv` is a hand-checked gold list of 196 rows: 167 domain-term errors in scope, plus aliases, case-only rows and 2 lines that must not be touched, `pack.yaml` is the first domain pack.
+- `fixtures/wxgFO_fyfXg/`: a second video from the same channel (40 min, CEMIG vs CPFL), with a 225-row gold file whose statuses separate corrections the tool made (`certo`), legitimate other names of a term (`alias`), and errors a person had to add (`conferido`). The meanings are in `src/transcript_normalizer/evaluate.py`.
 
 `uv run python scripts/measure.py` prints every fixture's numbers side by side; the regression test holds each one to its own bounds.
 - `experiments/`: throwaway scripts that measured how far naive approaches go against that fixture. Results are in `docs/DECISIONS.md`.
 
-Measured on the fixture, with RapidFuzz plus a hand-curated variant list, a unit rule, and a disciplined threshold: 156 of 168 hits, 9 false positives in ~1000 caption lines, zero changes to the lines that had to stay untouched.
+Measured on the first fixture with its frozen pack (RapidFuzz plus a hand-curated variant list, unit rules and disciplined thresholds): 150 of 167 hits and 14 false positives in ~1000 caption lines; with the bundled pack 0.3.7, 142 hits and 15 false positives. `scripts/measure.py` is the source of these numbers: if they disagree with it, it is right.
 
 ## Contributing
 

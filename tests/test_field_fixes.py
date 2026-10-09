@@ -7,7 +7,7 @@ from transcript_normalizer import cli, interactive
 from transcript_normalizer.runs import CAPTION_FILE, NORMALIZED_FILE
 
 from . import fetch_fakes
-from .fetch_fakes import LINK, URL
+from .fetch_fakes import LINK
 from .test_interactive import DATA, menu
 
 SRT = """1

@@ -1,8 +1,8 @@
 """Matching a domain pack against a transcript (D-001, D-003, D-005, D-006, D-007).
 
-This is a port of `experiments/exp2_units_and_threshold.py`, which is the reference
-behaviour, with one deliberate difference: matching runs over the whole joined text
-instead of line by line (D-007).
+It started as a port of `experiments/exp2_units_and_threshold.py`, matching over
+the whole joined text instead of line by line (D-007); the decisions since then,
+not exp2, define its behaviour.
 
 Nothing here knows a language (D-033). Normalization, inflection, unit rules and
 sentence punctuation all come from the pack's language module.
@@ -113,11 +113,6 @@ PHONETIC_NGRAM_SIZES = (1, 2)
 #: A skeleton shorter than this matches too many words: at 4, `Cemig GT`
 #: (`smjt`) reached `como gestão` and `mesmo jeito` (D-050, amended).
 MIN_SKELETON_LEN = 5
-
-
-def contains_words(span: str, part: str) -> bool:
-    """Whether folded `part` occurs in folded `span` as whole words (D-027, D-030)."""
-    return f" {' '.join(part.split())} " in f" {' '.join(span.split())} "
 
 
 def fuzzy_allowed(candidate: Candidate, unit_terms: frozenset[str] = frozenset()) -> bool:

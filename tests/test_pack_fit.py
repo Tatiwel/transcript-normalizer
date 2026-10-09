@@ -18,7 +18,7 @@ from transcript_normalizer.runs import (
     installed_packs,
 )
 
-from .fetch_fakes import LINK, URL
+from .fetch_fakes import LINK
 from .test_interactive import DATA, menu
 
 ROOT = Path(__file__).resolve().parents[1]

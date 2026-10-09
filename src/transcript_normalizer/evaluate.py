@@ -51,16 +51,6 @@ def covers(wrong: str, annotation: Annotation, normalize=generic.normalize) -> b
     return a in b or b in a
 
 
-def is_correction(annotation: Annotation) -> bool:
-    """An annotation that substitutes its span in normalized.txt (D-020)."""
-    return annotation.is_correction
-
-
-def is_alias(annotation: Annotation) -> bool:
-    """An annotation that names the term without substituting its span (D-020)."""
-    return annotation.is_alias
-
-
 @dataclass(frozen=True)
 class Fixture:
     directory: Path
@@ -155,8 +145,8 @@ def evaluate(
     one changes nothing in the output and is neither a hit nor a false positive.
     """
     applied = [a for a in resolve_overlaps(annotations) if a.applied]
-    corrections = [a for a in applied if is_correction(a)]
-    aliases = [a for a in applied if is_alias(a)]
+    corrections = [a for a in applied if a.is_correction]
+    aliases = [a for a in applied if a.is_alias]
 
     on_line: dict[str, list[Annotation]] = defaultdict(list)
     home: dict[int, str] = {}
@@ -192,7 +182,7 @@ def evaluate(
             touched = [
                 (a.original, a.term)
                 for a in on_line.get(row["timestamp"], ())
-                if is_correction(a) and covers(row["wrong"], a, normalize)
+                if a.is_correction and covers(row["wrong"], a, normalize)
             ]
             result.touched_keep[f"{row['timestamp']} {row['wrong']}"] = touched
             continue
@@ -236,7 +226,8 @@ def evaluate(
     # False positives: corrections that credit no in-scope row, minus the ones
     # that merely nest inside (or around) one that did on a shared line, plus
     # every correction that substituted an alias. Alias annotations never change
-    # the text, so an unlisted one is reported but is not a false positive.
+    # the text, so an unlisted one is kept in `unlisted_aliases`, not counted as
+    # a false positive.
     used_ids = {id(a) for a in used}
     used_on_line: dict[str, list[Annotation]] = defaultdict(list)
     for a in used:

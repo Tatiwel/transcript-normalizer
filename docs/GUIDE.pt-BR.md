@@ -4,7 +4,7 @@ Este guia serve a três leitores ao mesmo tempo: quem só quer transcrições ma
 
 **Comece por aqui** (os detalhes estão na seção 2):
 - *Só quero usar:* baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) e dê dois cliques.
-- *Uso Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"`.
+- *Uso Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"`.
 - *Quero contribuir:* `git clone https://github.com/Tatiwel/transcript-normalizer` e depois [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 1. O que faz, e o que não faz
@@ -20,7 +20,7 @@ Ela nunca muda o que o falante disse; corrige o que o reconhecedor ouviu. Daí a
 **Uso Python.**
 
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"
 ```
 
 Sem extra, vem só o normalizador (poucos MB): para chamar do seu próprio programa, ou normalizar legendas que você já tem. `[captions]` acrescenta o `fetch` com legendas das plataformas (yt-dlp); `[ingest]` acrescenta também o reconhecimento de fala local (faster-whisper). Os arquivos ficam no diretório atual, a não ser que o Settings do menu tenha escolhido uma pasta. O pacote ainda não está no PyPI; o wheel também vai anexado a cada Release.
@@ -47,7 +47,7 @@ O build full do Windows também vem como zip portátil (`-portable.zip`). Descom
 **O menu.** Dê dois cliques no programa, ou digite `transcript-normalizer`, sem mais nada, num terminal. Com o extra `[menu]` (todo executável tem) você navega pelas setas. O menu está em inglês:
 
 ```
-transcript-normalizer 0.5.0
+transcript-normalizer 0.6.3
 full build: captions and local transcription
 Your files: /home/ana/Documentos/transcript-normalizer
 Typical flow: 1 fetch → 2 normalize → 3 review
@@ -87,10 +87,11 @@ transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 O `fetch` pega a legenda da plataforma (a faixa no idioma original, nunca uma tradução automática, D-045) e, se não houver, transcreve o áudio localmente (D-036). Também aceita um arquivo de áudio ou vídeo: `transcript-normalizer fetch aula.mp4`. O `.vtt` ou `.srt` baixado é apagado depois de convertido em `legenda.txt`; `--keep-raw` o mantém. O segundo comando normaliza, e aceita também um `.srt` ou `.vtt`, que antes converte em `runs/<nome-do-arquivo>/legenda.txt`; o terceiro faz o mesmo e depois pergunta o que ficou em dúvida. `fetch --list <url>` mostra as faixas de legenda de um vídeo, e `fetch --track <código>` escolhe uma exatamente (`pt-orig`, `pt`, `en`), no lugar da escolha do `--lang` (D-062). `transcript-normalizer list` mostra o que você já tem. Parte do que o segundo imprime para o vídeo acima:
 
 ```
-runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.4
+runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.7
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
+  dividendio (1 occurrence) -> dividend yield
   dívida alíquida (1 occurrence) -> dívida líquida
 
 recognized (not changed):
@@ -100,6 +101,7 @@ recognized (not changed):
 to confirm:
   Adaptavalda, a DAPTA Valdre, AdaptaValor, adaptavala (4 occurrences) -> Adapta Valuer
   dividido (2 occurrences) -> dividendo
+  preço alto (1 occurrence) -> preço alvo
 ```
 
 ## 4. Lendo as saídas
@@ -130,10 +132,10 @@ O `annotations.json` tem um registro por mudança, apontando posições de carac
 ```json
 {"start": 9141, "end": 9156, "original": "dívida alíquida", "replacement": "dívida líquida",
  "term": "dívida líquida", "rule": "term:variant", "kind": "correction", "band": "high",
- "score": 100, "applied": true, "pack_version": "0.3.4"}
+ "score": 100, "applied": true, "pack_version": "0.3.7"}
 ```
 
-`kind` é `correction` ou `alias`. `band` é o grau de certeza: **high** (uma forma já listada: aplicada), **medium** (um palpite próximo: aplicado e listado em `pending.txt` para você confirmar), **low** (uma semelhança fraca: só registrada, nunca aplicada) (D-011).
+`kind` é `correction` ou `alias`. `band` é o grau de certeza: **high** (uma forma já listada: aplicada), **medium** (um palpite próximo: aplicado e listado em `pending.txt` para você confirmar), **ask** (um nome que soa como um nome do pacote: nunca aplicado, só listado em `pending.txt` e perguntado, D-050, D-060), **low** (uma semelhança fraca: só registrada, nunca aplicada) (D-011).
 
 ## 5. Revisando o que ficou em dúvida
 
@@ -184,7 +186,7 @@ O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote
 
 ```
 name           version  language  terms  size (KB)  source   update
-financas-ptbr  0.3.6    pt-BR        70        7.9  bundled
+financas-ptbr  0.3.7    pt-BR        70        8.1  bundled
 medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
@@ -278,7 +280,7 @@ Which one?
    l. Decide later
 ```
 
-"Decide later" mantém a sua versão e anota o conflito em `packs/<nome>.merge-pending.yaml`. Antes de gravar, a mescla guarda a sua cópia como `<nome>.yaml.bak-<data>`, e no fim imprime o que foi acrescentado, mantido, combinado e removido. A sua camada aprendida nunca é alterada; o resumo diz onde ela agora repete ou contradiz o pacote. `pack merge <nome> --dry-run` mostra tudo isso sem gravar nada; `--yes-theirs` e `--yes-mine` respondem todos os conflitos de um lado só.
+"Decide later" mantém a sua versão e anota o conflito em `packs/<nome>.merge-pending.yaml`. Antes de gravar, a mescla guarda a sua cópia como `<nome>.yaml.bak-<data e hora>`, e no fim imprime o que foi acrescentado, mantido, combinado e removido. A sua camada aprendida nunca é alterada; o resumo diz onde ela agora repete ou contradiz o pacote. `pack merge <nome> --dry-run` mostra tudo isso sem gravar nada; `--yes-theirs` e `--yes-mine` respondem todos os conflitos de um lado só.
 
 **Um termo que você notou.** Depois de normalizar, e em "Show a run's outputs", o menu pergunta "Add a term you noticed?". Pede a forma errada que você viu, mostra até cinco linhas da run com ela, para você conferir que é essa, e depois o que ela deveria ser. Se esse termo está no pacote, pergunta se o reconhecedor ouviu errado (uma variante, corrigida dali em diante) ou se a pessoa falou assim mesmo (um alias, mantido como foi dito); se não está, pede uma classe e acrescenta o termo com a forma como variante. Depois oferece normalizar a run de novo com ele (D-066):
 
@@ -302,7 +304,7 @@ transcript-normalizer pack propose --pack financas-ptbr
 ```
 
 ```
-What would be contributed to financas-ptbr 0.3.4 (3), from packs/financas-ptbr.learned.yaml:
+What would be contributed to financas-ptbr 0.3.7 (3), from packs/financas-ptbr.learned.yaml:
   + variant   esse mig -> CEMIG
   + alias     Klabinha -> Klabin
   - rejected  saber se  (not Sabesp)
@@ -320,12 +322,12 @@ O pacote declara o idioma (`language: pt-BR`), e um módulo de idioma fornece o 
 
 ## 8. Quão bom é
 
-Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são medidos de novo a cada mudança (`uv run python scripts/measure.py`). Com o pacote que vem junto (0.3.4):
+Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são medidos de novo a cada mudança. Os números abaixo vêm de `uv run python scripts/measure.py`, que é a fonte: se discordarem, ele está certo. Com o pacote que vem junto (0.3.7):
 
 | vídeo | linhas a acertar | acertos | faltas | mudanças erradas |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 142 | 25 | 16 |
-| wxgFO_fyfXg | 222 | 211 | 11 | 10 |
+| R2Qgz8tFWVI | 167 | 142 | 25 | 15 |
+| wxgFO_fyfXg | 222 | 211 | 11 | 9 |
 | 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
 | 4tTmY8Buask | 119 | 108 | 11 | 4 |
 
@@ -347,7 +349,7 @@ Os limites, sem rodeio:
 - **encaixe do pacote** (pack fit): se o pacote é da transcrição: pelo menos três termos achados com confiança, ou nada é aplicado.
 - **variante** (variant): uma forma que o reconhecedor produziu no lugar do termo; é corrigida.
 - **alias**: outro nome correto do termo (ticker, marca, plural); reconhecido, nunca alterado.
-- **faixa** (band): o grau de certeza de um casamento: alta (aplicada), média (aplicada e perguntada), baixa (só registrada).
+- **faixa** (band): o grau de certeza de um casamento: alta (aplicada), média (aplicada e perguntada), ask (um nome pelo som: perguntado, nunca aplicado), baixa (só registrada).
 - **run**: o diretório `runs/<id-do-vídeo>/`, com a transcrição de um vídeo e tudo o que saiu dela.
 - **fixture**: um vídeo guardado no repositório com a transcrição, um pacote congelado e um gabarito, para medir.
 - **gold** (gabarito): a resposta conferida à mão de uma fixture: cada lugar que deve mudar e cada lugar que não pode.

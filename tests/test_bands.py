@@ -3,7 +3,7 @@
 import pytest
 import yaml
 
-from transcript_normalizer import find_annotations, load_pack, parse_caption
+from transcript_normalizer import load_pack
 from transcript_normalizer.core.matcher import (
     APPLY_THRESHOLD,
     MARK_THRESHOLD,
@@ -11,7 +11,7 @@ from transcript_normalizer.core.matcher import (
 )
 from transcript_normalizer.core.pack import Learned
 
-from .conftest import PACK
+from .conftest import PACK, annotate
 
 
 @pytest.fixture
@@ -24,10 +24,6 @@ def pack_without_semiga(tmp_path):
     path = tmp_path / "pack.yaml"
     path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), "utf-8")
     return load_pack(path)
-
-
-def annotate(pack, line):
-    return find_annotations(parse_caption(f"0:01 {line}"), pack)
 
 
 def test_thresholds_are_d011s_apply_and_d029s_mark():

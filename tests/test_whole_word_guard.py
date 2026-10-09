@@ -1,18 +1,6 @@
 """D-030: "the term is already spelled out here" means as whole words."""
 
-import pytest
-
-from transcript_normalizer import find_annotations, load_pack, parse_caption, resolve_overlaps
-from transcript_normalizer.core.matcher import contains_words
-from transcript_normalizer.core.pack import Learned
-from transcript_normalizer.runs import BUNDLED_PACKS
-
-PACK_V2 = BUNDLED_PACKS / "financas-ptbr.yaml"
-
-
-@pytest.fixture(scope="module")
-def v2():
-    return load_pack(PACK_V2, learned=Learned())
+from transcript_normalizer import find_annotations, parse_caption, resolve_overlaps
 
 
 def applied(pack, line):
@@ -41,21 +29,6 @@ def test_the_term_spelled_out_is_still_left_alone(v2):
         ("DEC", "DEC", "term:exact"),
         ("Enterprise Value", "Enterprise Value", "term:exact"),
     ]
-
-
-@pytest.mark.parametrize(
-    "span, part, expected",
-    [
-        ("dec", "dec", True),
-        ("o dec subiu", "dec", True),
-        ("deck", "dec", False),
-        ("enterprise valuey", "enterprise value", False),
-        ("o enterprise value dela", "enterprise value", True),
-        ("preco  entao", "preco entao", True),  # fold can leave a double space
-    ],
-)
-def test_containment_is_by_whole_words(span, part, expected):
-    assert contains_words(span, part) is expected
 
 
 def test_a_plural_of_the_term_is_not_corrected_to_it(v2):

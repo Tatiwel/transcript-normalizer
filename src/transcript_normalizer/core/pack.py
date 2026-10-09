@@ -24,7 +24,9 @@ SOURCE_PACK = "pack"
 SOURCE_LEARNED = "learned"
 
 #: D-021: the eight classes of the first pack. A label for consumers; matching
-#: never reads it (D-028 and D-050 read `unidade`, `companhia` and `pessoa`).
+#: never reads it (D-028 reads `unidade`; the phonetic source reads the
+#: pack's `phonetic_classes`, D-068, which for a pack like this defaults to
+#: D-050's `companhia` and `pessoa`).
 #: D-064: a pack now declares its own `classes:`; a pack written before that,
 #: with no `classes:` line, keeps these eight.
 CLASSES = (

@@ -10,7 +10,7 @@ from transcript_normalizer.cli import main
 from transcript_normalizer.core.pack import Learned, save_learned
 from transcript_normalizer.runs import BUNDLED_PACKS
 
-from .fetch_fakes import LINK, URL
+from .fetch_fakes import LINK
 from .test_interactive import menu
 
 BUNDLED = BUNDLED_PACKS / "financas-ptbr.yaml"

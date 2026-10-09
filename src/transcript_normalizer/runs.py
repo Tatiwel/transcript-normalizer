@@ -1,8 +1,9 @@
 """Where things live on disk (D-015, D-016, D-017, D-022, D-023).
 
-Everything the CLI produces lands under `runs/` in the current directory, one
-directory per input. Domain packs and the learned layer that belongs to them
-live under `packs/`, the user's own knowledge directory. Nothing is ever
+Everything the CLI produces lands under `runs/`, one directory per input, and
+domain packs and the learned layer that belongs to them live under `packs/`,
+the user's own knowledge directory. Both sit in `base_dir()`: the current
+directory, or the folder D-061 and D-070 choose (see there). Nothing is ever
 written beside an input or into `fixtures/`.
 """
 
@@ -197,7 +198,7 @@ BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
 def default_pack() -> Path:
     """The pack `--pack` falls back to (D-017).
 
-    `packs/<default>` in the current directory when there is one, so a pack the
+    `packs/<default>` under `base_dir()` when there is one, so a pack the
     user edits wins; otherwise the copy that ships in the package, so the
     default still resolves after `pip install`, from any directory.
     """

@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Test builds: the release workflow can be started by hand (Actions → release → Run workflow) on any commit. It builds and tests the same executables, named after the commit, and keeps them as workflow artifacts `<sha>-<os>-<flavor>`; no tag check, no Release. Tag pushes release as before.
+- `--gold-draft`, the old name of `--corrections`, is removed (D-023, amended); it was kept far longer than its one release.
+- Docs: the `pip install` lines point at v0.6.3 instead of v0.4.2, whose `ingest` extra lacked D-058's faster-whisper/av bounds. GUIDE §8 and the README's Status give the current measured numbers and name `scripts/measure.py` as their source. The `ask` band (D-060) is documented. Smaller fixes to sample output, the merge backup name, the phonetic classes in CONTRIBUTING and the release page's Windows full row.
+- Residue removed after the 2026-10 inspection (docs/INSPECTION-2026-10.md): the unused `contains_words` and its test, `META_FIELDS`, evaluate's two one-line wrappers; `fits()` is now what normalize and measure.py call. Tests share one bundled-pack fixture and cache the fixture's medium band, which they used to recompute per call.
 
 ## 0.6.3
 

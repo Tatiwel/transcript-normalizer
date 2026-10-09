@@ -70,10 +70,13 @@ def test_no_draft_is_written_without_the_flag(tmp_path, monkeypatch):
     assert not list(tmp_path.rglob("*.csv"))
 
 
-def test_the_old_flag_still_works_for_one_release(tmp_path, monkeypatch, capsys):
-    _, out = run(tmp_path, monkeypatch, "--gold-draft")
-    assert (out / CORRECTIONS_FILE).exists()
-    assert "--gold-draft is now --corrections" in capsys.readouterr().err
+def test_the_old_flag_is_gone(capsys):
+    """D-023, amended: `--gold-draft` lasted its release and was removed."""
+    import pytest
+
+    with pytest.raises(SystemExit):
+        main(["normalize", "x.txt", "--gold-draft"])
+    assert "unrecognized arguments: --gold-draft" in capsys.readouterr().err
 
 
 def test_the_old_flag_is_not_advertised(capsys):

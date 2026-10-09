@@ -25,8 +25,9 @@ from .runs import BUNDLED_PACKS, installed_packs, learned_file, packs_root
 #: The field templates (D-065): a pack with no terms, per field.
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 
-#: D-064: `pack list --installed` waits this long for the index, then shows
-#: the table without the update column.
+#: D-065: `pack list --installed` waits this long for the index, then shows
+#: the table without repository updates (the column stays when there is a
+#: copy to mark, D-069).
 INDEX_WAIT_SECONDS = 3
 
 #: A language code as packs write it: pt-BR, en, es-419.
@@ -199,10 +200,10 @@ def run_installed(args) -> int:
             update = r.source != MINE and entry is not None and newer(entry.version, r.version)
             line.append(f"↑ update ({entry.version})" if update else "")
             marked |= update
-    widths = [max(len(cell) for cell in column) for column in zip(header, *lines)]
+    widths = [max(len(cell) for cell in column) for column in zip(header, *lines, strict=True)]
     for line in (header, *lines):
         print("  ".join(cell.rjust(w) if i in (3, 4) else cell.ljust(w)
-                        for i, (cell, w) in enumerate(zip(line, widths))).rstrip())
+                        for i, (cell, w) in enumerate(zip(line, widths, strict=True))).rstrip())
     print()
     if index is None:
         print("(the packs repository was not reached, so its updates are not shown)")

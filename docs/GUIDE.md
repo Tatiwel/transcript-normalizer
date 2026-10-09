@@ -4,7 +4,7 @@ For three readers at once: you want cleaner transcripts and nothing else; you st
 
 **Start here** (section 2 has the details):
 - *I just want to use it:* download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it.
-- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"`.
+- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"`.
 - *I want to contribute:* `git clone https://github.com/Tatiwel/transcript-normalizer`, then [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 1. What it does, and what it does not
@@ -20,7 +20,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 **I use Python.**
 
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.4.2"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"
 ```
 
 Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory, unless the menu's Settings chose a folder. The package is not on PyPI yet; the wheel is also attached to each Release.
@@ -47,7 +47,7 @@ The Windows full build also comes as a portable zip (`-portable.zip`). Unzip it 
 **The menu.** Double-click the program, or type `transcript-normalizer` with nothing after it in a terminal. With the `[menu]` extra (every executable has it) you move with the arrow keys:
 
 ```
-transcript-normalizer 0.5.0
+transcript-normalizer 0.6.3
 full build: captions and local transcription
 Your files: /home/ana/Documents/transcript-normalizer
 Typical flow: 1 fetch → 2 normalize → 3 review
@@ -87,10 +87,11 @@ transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 `fetch` takes the platform's caption (the original-language track, never an automatic translation, D-045) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The downloaded `.vtt` or `.srt` is deleted once converted into `legenda.txt`; `--keep-raw` keeps it. The second command normalizes, and takes a `.srt` or `.vtt` as well, which it converts into `runs/<file-name>/legenda.txt` first; the third does the same and then asks you about what it was unsure of. `fetch --list <url>` shows a video's caption tracks, and `fetch --track <code>` takes one exactly (`pt-orig`, `pt`, `en`) instead of the choice `--lang` makes (D-062). `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
 
 ```
-runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.4
+runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.7
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
+  dividendio (1 occurrence) -> dividend yield
   dívida alíquida (1 occurrence) -> dívida líquida
 
 recognized (not changed):
@@ -100,6 +101,7 @@ recognized (not changed):
 to confirm:
   Adaptavalda, a DAPTA Valdre, AdaptaValor, adaptavala (4 occurrences) -> Adapta Valuer
   dividido (2 occurrences) -> dividendo
+  preço alto (1 occurrence) -> preço alvo
 ```
 
 ## 4. Reading the outputs
@@ -130,10 +132,10 @@ Everything goes under `runs/<video-id>/` in the current directory; nothing is wr
 ```json
 {"start": 9141, "end": 9156, "original": "dívida alíquida", "replacement": "dívida líquida",
  "term": "dívida líquida", "rule": "term:variant", "kind": "correction", "band": "high",
- "score": 100, "applied": true, "pack_version": "0.3.4"}
+ "score": 100, "applied": true, "pack_version": "0.3.7"}
 ```
 
-`kind` is `correction` or `alias`. `band` is how sure the tool is: **high** (a listed form: applied), **medium** (a close guess: applied, and listed in `pending.txt` for you to confirm), **low** (a faint resemblance: only recorded, never applied) (D-011).
+`kind` is `correction` or `alias`. `band` is how sure the tool is: **high** (a listed form: applied), **medium** (a close guess: applied, and listed in `pending.txt` for you to confirm), **ask** (a name that sounds like a pack name: never applied, only listed in `pending.txt` and asked about, D-050, D-060), **low** (a faint resemblance: only recorded, never applied) (D-011).
 
 ## 5. Reviewing what the tool was unsure about
 
@@ -184,7 +186,7 @@ pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing
 
 ```
 name           version  language  terms  size (KB)  source   update
-financas-ptbr  0.3.6    pt-BR        70        7.9  bundled
+financas-ptbr  0.3.7    pt-BR        70        8.1  bundled
 medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
@@ -278,7 +280,7 @@ Which one?
    l. Decide later
 ```
 
-"Decide later" keeps yours and notes the conflict in `packs/<name>.merge-pending.yaml`. Before writing, the merge saves your copy as `<name>.yaml.bak-<date>`, and at the end it prints what was added, kept, combined and removed. Your learned layer is never changed; the summary says where it now repeats or contradicts the pack. `pack merge <name> --dry-run` shows all this without writing anything; `--yes-theirs` and `--yes-mine` answer every conflict one way.
+"Decide later" keeps yours and notes the conflict in `packs/<name>.merge-pending.yaml`. Before writing, the merge saves your copy as `<name>.yaml.bak-<timestamp>`, and at the end it prints what was added, kept, combined and removed. Your learned layer is never changed; the summary says where it now repeats or contradicts the pack. `pack merge <name> --dry-run` shows all this without writing anything; `--yes-theirs` and `--yes-mine` answer every conflict one way.
 
 **A term you noticed.** After normalizing, and in "Show a run's outputs", the menu asks "Add a term you noticed?". It asks for the wrong form you saw, shows up to five of the run's lines with it so you can check it is the one, then what it should be. If that term is in the pack, it asks whether the recognizer misheard it (a variant, corrected from now on) or the speaker said it that way (an alias, kept as said); if not, it asks for a class and adds the term with the form as a variant. Then it offers to normalize the run again with it (D-066):
 
@@ -302,7 +304,7 @@ transcript-normalizer pack propose --pack financas-ptbr
 ```
 
 ```
-What would be contributed to financas-ptbr 0.3.4 (3), from packs/financas-ptbr.learned.yaml:
+What would be contributed to financas-ptbr 0.3.7 (3), from packs/financas-ptbr.learned.yaml:
   + variant   esse mig -> CEMIG
   + alias     Klabinha -> Klabin
   - rejected  saber se  (not Sabesp)
@@ -320,12 +322,12 @@ A pack declares its language (`language: pt-BR`), and a language module supplies
 
 ## 8. How good is it
 
-Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change (`uv run python scripts/measure.py`). With the pack that ships (0.3.4):
+Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change. The numbers below come from `uv run python scripts/measure.py`, which is the source: if they disagree, it is right. With the pack that ships (0.3.7):
 
 | video | rows to get right | right | missed | wrong changes |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 142 | 25 | 16 |
-| wxgFO_fyfXg | 222 | 211 | 11 | 10 |
+| R2Qgz8tFWVI | 167 | 142 | 25 | 15 |
+| wxgFO_fyfXg | 222 | 211 | 11 | 9 |
 | 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
 | 4tTmY8Buask | 119 | 108 | 11 | 4 |
 
@@ -347,7 +349,7 @@ The limits, honestly:
 - **pack fit**: whether a pack belongs to a transcript: at least three of its terms found with confidence, or nothing is applied.
 - **variant**: a form the recognizer produced instead of the term; it is corrected.
 - **alias**: another correct name of the term (ticker, brand, plural); recognized, never changed.
-- **band**: how sure a match is: high (applied), medium (applied and asked about), low (recorded only).
+- **band**: how sure a match is: high (applied), medium (applied and asked about), ask (a name by sound: asked about, never applied), low (recorded only).
 - **run**: the directory `runs/<video-id>/` holding one video's transcript and everything made from it.
 - **fixture**: a video kept in the repository with its transcript, a frozen pack and a gold file, for measuring.
 - **gold**: the hand-checked answer key of a fixture: every place that should change, and every place that must not.

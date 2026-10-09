@@ -152,6 +152,8 @@ Files that need the user live in runs/<id>/needs-review/: corrections.csv (was r
 
 This supersedes the `review/` directory of D-016. `--gold-draft` is renamed `--corrections`; the old flag still works for one release, hidden from `--help`, and says so on stderr. corrections.csv keeps its alias rows, with `correct` equal to `wrong`, because a gold file needs them. pending.txt is written with every variant `[never asked]` when the report is produced, then rewritten after a `--confirm` loop from its answers: a variant that got `y`, `n` or `l` leaves it, one that got `s` (or that the input ran out before) stays as `[skipped]`, and the file is removed when nothing is left, so a stale list never outlives its answers.
 
+Amended: `--gold-draft` is removed (2026-10, after 0.6.3). It was kept for one release and stayed for many; `--corrections` is the only name, and the old flag is now an unknown argument.
+
 ## D-024 Word n-grams stop at strong punctuation
 
 Word n-grams do not cross strong punctuation (. ? ! ;). Measured: `Warn Buffet. Tem` was proposed as one variant of Warren Buffett in wxgFO_fyfXg.
