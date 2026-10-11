@@ -79,7 +79,7 @@ def test_e_caption_only_with_no_caption_is_a_clear_error(tmp_path, monkeypatch, 
     code, run, fake, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(has_caption=False), "--caption-only")
     assert code == 1
     err = capsys.readouterr().err
-    assert err.strip() == "This video has no caption."  # plain words, no flags
+    assert err.strip() == "YouTube doesn't provide captions for this video."  # plain words, no flags
     assert not (run / CAPTION_FILE).exists()
     assert "audio" not in fake.calls
 

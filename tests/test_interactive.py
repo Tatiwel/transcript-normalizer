@@ -73,7 +73,7 @@ def test_first_screen(tmp_path, monkeypatch, capsys):
     assert "What would you like to do?" in out
     assert "   1. Fetch a video or file   download a caption, or transcribe audio locally" in out
     assert "   8. Help                    what each action does and its command" in out
-    assert "   7. Settings                where to save your files, YouTube sign-in" in out
+    assert "   7. Settings                where to save your files, sign-in, keep the audio" in out
     assert "   q. Quit" in out
     assert "Back" not in out  # the menu has Quit instead
     assert not ANSI.search(out)  # no colour without a terminal
@@ -239,11 +239,9 @@ def test_the_lite_build_says_so_instead_of_offering_speech_recognition(tmp_path,
     monkeypatch.setenv("TRANSCRIPT_NORMALIZER_HOME", str(tmp_path / "home"))
     monkeypatch.setattr(fetch, "is_lite_build", lambda: True)
     _, out, fake = menu(tmp_path, monkeypatch, capsys, ["1", "1", URL, "q"], FakeYtDlp(has_caption=False))
-    # D-057, D-062: the reason first, then the lite notice, because step 2 was needed.
-    reason = fetch.NO_CAPTION
-    assert reason in out and fetch.LITE_BUILD in out
-    assert out.index(reason) < out.index(fetch.LITE_BUILD)
-    assert "Transcribe the audio" not in out
+    # D-078: the site and what the full build would do, in one line.
+    assert "YouTube doesn't provide captions for this video. " + fetch.FULL_CAN_TRANSCRIBE in out
+    assert "Transcribe the audio" not in out and "fetch did not finish" not in out
     assert "audio" not in fake.calls
 
 
@@ -270,7 +268,9 @@ def test_the_lite_build_message_on_the_command_line(tmp_path, monkeypatch, capsy
     monkeypatch.setattr(fetch, "missing_extra", lambda *modules: ["faster-whisper"] if "faster_whisper" in modules else [])
     monkeypatch.setattr(fetch, "is_lite_build", lambda: True)
     assert cli.main(["fetch", URL]) == 1
-    assert fetch.LITE_BUILD in capsys.readouterr().err
+    err = capsys.readouterr().err
+    # D-078: what would help, and no generic failure list.
+    assert err.strip() == "YouTube doesn't provide captions for this video. " + fetch.FULL_CAN_TRANSCRIBE
 
 
 # ------------------------------------------------------------------ command line

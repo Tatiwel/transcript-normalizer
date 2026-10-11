@@ -38,7 +38,7 @@ class FakeYtDlp:
     """
 
     def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",), audio=None,
-                 metadata=("ok",), unreadable_browser=False):
+                 metadata=("ok",), unreadable_browser=False, url=URL, site="", formats=None, video_id=VIDEO_ID):
         self.caption = list(caption)
         self.has_caption = has_caption
         # Each audio download, in order: "ok", "416" (leaves a .part behind,
@@ -54,6 +54,8 @@ class FakeYtDlp:
         # from its cookies file, as yt-dlp's cookie jar would.
         self.metadata = list(metadata)
         self.unreadable_browser = unreadable_browser
+        # D-078: another site: its link, yt-dlp's extractor_key, its formats.
+        self.url, self.site, self.formats, self.video_id = url, site, formats, video_id
         self.cookies: list[str] = []
 
     def open(self, params):
@@ -61,8 +63,12 @@ class FakeYtDlp:
         return FakeYoutubeDL(self, params)
 
     def info(self):
+        extra = {"extractor_key": self.site} if self.site else {}
+        if self.formats is not None:
+            extra["formats"] = self.formats
         return {
-            "id": VIDEO_ID,
+            **extra,
+            "id": self.video_id,
             "title": "Video sintetico de teste",
             "uploader": "Canal de Teste",
             "upload_date": "20260825",
@@ -96,12 +102,14 @@ class FakeYoutubeDL:
         return False
 
     def extract_info(self, url, download=True):
-        assert url == URL and download is False
+        assert url == self.platform.url and download is False
         platform = self.platform
         platform.calls.append("metadata")
         outcome = platform.metadata.pop(0) if len(platform.metadata) > 1 else platform.metadata[0]
         if outcome == "bot":
             raise DownloadError(BOT_CHECK)
+        if outcome != "ok":  # D-078: another extractor's message, as given
+            raise DownloadError(outcome)
         return platform.info()
 
     def download(self, urls):

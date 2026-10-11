@@ -60,7 +60,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
    Packs                   installed, get, create, edit, share
-   Settings                where to save your files, YouTube sign-in
+   Settings                where to save your files, sign-in, keep the audio
    Help                    what each action does and its command
    Quit
 ```
@@ -84,7 +84,7 @@ transcript-normalizer runs/4wCtn8BWR4o/legenda.txt
 transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 ```
 
-O `fetch` pega a legenda da plataforma (a faixa no idioma original, nunca uma tradução automática, D-045) e, se não houver, transcreve o áudio localmente (D-036). Também aceita um arquivo de áudio ou vídeo: `transcript-normalizer fetch aula.mp4`. O `.vtt` ou `.srt` baixado é apagado depois de convertido em `legenda.txt`; `--keep-raw` o mantém. O segundo comando normaliza, e aceita também um `.srt` ou `.vtt`, que antes converte em `runs/<nome-do-arquivo>/legenda.txt`; o terceiro faz o mesmo e depois pergunta o que ficou em dúvida. `fetch --list <url>` mostra as faixas de legenda de um vídeo, e `fetch --track <código>` escolhe uma exatamente (`pt-orig`, `pt`, `en`), no lugar da escolha do `--lang` (D-062). `transcript-normalizer list` mostra o que você já tem. Parte do que o segundo imprime para o vídeo acima:
+O `fetch` pega a legenda da plataforma (a faixa no idioma original, nunca uma tradução automática, D-045) e, se não houver, transcreve o áudio localmente (D-036). Também aceita um arquivo de áudio ou vídeo: `transcript-normalizer fetch aula.mp4`. O `.vtt` ou `.srt` baixado é apagado depois de convertido em `legenda.txt`; `--keep-raw` o mantém. O segundo comando normaliza, e aceita também um `.srt` ou `.vtt`, que antes converte em `runs/<nome-do-arquivo>/legenda.txt`; o terceiro faz o mesmo e depois pergunta o que ficou em dúvida. `fetch --list <url>` confere um link sem baixar nada: o site, título e duração, as faixas de legenda (ou nenhuma), se há áudio para transcrever e se o site pede login (D-078); e `fetch --track <código>` escolhe uma exatamente (`pt-orig`, `pt`, `en`), no lugar da escolha do `--lang` (D-062). `transcript-normalizer list` mostra o que você já tem. Parte do que o segundo imprime para o vídeo acima:
 
 ```
 runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.7
@@ -106,15 +106,25 @@ to confirm:
 
 ### O YouTube diz que sou um robô
 
-Às vezes ler um link do YouTube para com "YouTube asked to confirm you are not a bot. This depends on your connection, not on the video." O YouTube pede isso a conexões que acha suspeitas: uma VPN, a rede de uma universidade ou escritório, muitos pedidos de um mesmo endereço. O mesmo vídeo costuma funcionar de outra rede, ou mais tarde. O menu então oferece quatro saídas: usar o login do YouTube do seu navegador (cookies), tentar mais tarde, usar um arquivo deste computador, ou voltar.
+Às vezes ler um link do YouTube para com "YouTube asked to confirm you are not a bot. This depends on your connection, not on the video." O YouTube pede isso a conexões que acha suspeitas: uma VPN, a rede de uma universidade ou escritório, muitos pedidos de um mesmo endereço. O mesmo vídeo costuma funcionar de outra rede, ou mais tarde. O menu então oferece quatro saídas: entrar com o login do seu navegador, tentar mais tarde, usar um arquivo deste computador, ou voltar.
 
-**Entrar pelo navegador.** Esteja logado no YouTube no navegador e escolha-o em Settings → YouTube sign-in (ou quando o menu oferecer). A lista mostra só os navegadores encontrados neste computador, nas pastas que o programa de download lê (no Linux, o Firefox do snap ou do flatpak também): primeiro o Firefox, que funciona melhor; depois uma linha, "Chromium-based browser", com os instalados (Chrome, Edge, Brave, Opera, Vivaldi, Chromium), que abre uma lista curta quando há dois ou mais; o Safari no macOS; depois "A cookies.txt file…", "None" e "How does this work?", que explica isto em poucas linhas e mostra a lista de novo. No Windows, o Chrome, o Edge e os outros baseados em Chromium trancam o login para que só eles o usem (isso protege você de programas que roubam logins), então a lista diz que eles "usually cannot be read" ali; no Linux e no macOS em geral funcionam, e nenhum aviso aparece (D-077). Com um navegador que não pode ser lido, exporte um `cookies.txt`:
+**Entrar pelo navegador.** Esteja logado no YouTube no navegador e escolha-o em Settings → Sign-in (your browser's login) (ou quando o menu oferecer). A lista mostra só os navegadores encontrados neste computador, nas pastas que o programa de download lê (no Linux, o Firefox do snap ou do flatpak também): primeiro o Firefox, que funciona melhor; depois uma linha, "Chromium-based browser", com os instalados (Chrome, Edge, Brave, Opera, Vivaldi, Chromium), que abre uma lista curta quando há dois ou mais; o Safari no macOS; depois "A cookies.txt file…", "None" e "How does this work?", que explica isto em poucas linhas e mostra a lista de novo. No Windows, o Chrome, o Edge e os outros baseados em Chromium trancam o login para que só eles o usem (isso protege você de programas que roubam logins), então a lista diz que eles "usually cannot be read" ali; no Linux e no macOS em geral funcionam, e nenhum aviso aparece (D-077). Com um navegador que não pode ser lido, exporte um `cookies.txt`:
 
 1. Instale uma extensão que exporte cookies no formato Netscape, por exemplo "Get cookies.txt LOCALLY" (Chrome, Edge) ou "cookies.txt" (Firefox).
 2. Abra o youtube.com, logado, e exporte os cookies desse site para um arquivo.
-3. Escolha-o em Settings → YouTube sign-in → "A cookies.txt file…".
+3. Escolha-o em Settings → Sign-in (your browser's login) → "A cookies.txt file…".
 
 Num script: `fetch <url> --cookies-from-browser firefox` ou `fetch <url> --cookies cookies.txt`; a opção vence o Settings. No modo portátil, um `cookies.txt` posto na pasta `data` é usado sem perguntar. O config.toml guarda só o nome do navegador ou o caminho do arquivo, e o yt-dlp lê os cookies quando baixa; eles nunca são copiados para runs/, relatórios ou qualquer outra coisa que a ferramenta escreve. Um cookies.txt é o seu login do YouTube: guarde-o só para você, e exporte outro quando ele parar de funcionar (D-071).
+
+### Outros sites
+
+Links da maioria dos sites de vídeo também funcionam (Vimeo, TikTok, Instagram, Facebook, X, Twitch, Dailymotion e muitos outros): o programa de download os reconhece pelo endereço.
+
+- **Legendas: na prática, só o YouTube tem.** Para outro site o menu diz "Vimeo doesn't provide captions for this video." e vai direto para "Transcribe the audio on this computer instead?". O build lite não transcreve, então diz "… The full build can transcribe its audio on this computer." e para ali.
+- **O que em geral funciona sem login:** vídeos públicos no YouTube, Vimeo, TikTok, Dailymotion, Twitch e X.
+- **O que em geral precisa de login:** Instagram (muitas vezes depois de alguns vídeos: ele limita visitantes anônimos), quase todo o Facebook e, em qualquer site, vídeos privados, só para seguidores, só para membros ou com restrição de idade. O programa então diz "Instagram asked you to sign in for this video." e oferece as mesmas saídas da checagem de robô do YouTube. O login escolhido em Settings → Sign-in (your browser's login) vale para todo site. Se já houver um e o site ainda pedir, ele diz "The browser you chose (Firefox) may not be signed in to Instagram. Sign in there, or pick another browser in Settings.": abra o site naquele navegador, entre na conta e tente de novo.
+- **Confira um link antes:** `transcript-normalizer fetch --list <url>` não baixa nada e mostra o site, título, duração, faixas de legenda (ou nenhuma), se há áudio para transcrever e se o site pede login.
+- **O áudio:** depois de transcrever, o áudio baixado é apagado assim que o texto é gravado. Para mantê-lo, ligue Settings → "Keep the audio after transcribing", ou use `fetch --keep-audio`; ele fica na pasta da run como `<id do vídeo>.<ext>` (D-078).
 
 ## 4. Lendo as saídas
 

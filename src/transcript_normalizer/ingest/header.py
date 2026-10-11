@@ -24,6 +24,8 @@ class Metadata:
     manual_captions: tuple[str, ...] = field(default=())
     automatic_captions: tuple[str, ...] = field(default=())
     language: str = ""  # D-074: the spoken language, as yt-dlp's `language` reports it
+    site: str = ""  # D-078: "YouTube", "Instagram", from yt-dlp's extractor
+    audio: str = ""  # D-078: "audio only (m4a)", "with the video", or "" for none offered
 
 
 def _today() -> str:

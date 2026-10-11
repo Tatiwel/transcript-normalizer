@@ -28,6 +28,7 @@ import argparse
 import contextlib
 import importlib.util
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -78,8 +79,9 @@ class RateLimited(FetchError):
 
 
 class SignInRequired(FetchError):
-    """D-071: YouTube's bot check, age check or login wall. The message is
-    said plainly; yt-dlp's own, which names its flags, is kept in `raw`."""
+    """D-071: YouTube's bot check, age check or login wall; D-078: any site's
+    login wall. The message is said plainly; yt-dlp's own, which names its
+    flags, is kept in `raw`."""
 
     def __init__(self, plainly: str, raw: str = ""):
         super().__init__(plainly)
@@ -93,26 +95,80 @@ class CookiesUnreadable(FetchError):
 #: D-071: what YouTube's checks are, said to a person.
 BOT_CHECK = "YouTube asked to confirm you are not a bot. This depends on your connection, not on the video."
 SIGN_IN = "YouTube asks for a signed-in account to show this video (an age check, or members only)."
-#: What `fetch` exits with when YouTube asks for a sign-in, so the menu can offer it.
+#: What `fetch` exits with when a site asks for a sign-in, so the menu can offer it.
 EXIT_SIGN_IN = 3
 
 #: Lowercased pieces of yt-dlp's messages, by what they mean (D-071).
 BOT_MARKS = ("not a bot",)
 SIGN_IN_MARKS = (
+    # YouTube (D-071)
     "confirm your age", "age-restricted", "inappropriate for some users",
     "login details are needed", "only available for registered users",
-    "members-only", "join this channel", "--cookies-from-browser or --cookies",
+    "members-only", "join this channel",
+    # D-078: yt-dlp's own hint, which raise_login_required adds in every
+    # extractor, in its three wordings ("Use --cookies-from-browser or
+    # --cookies", "Use --cookies, --cookies-from-browser, ...", "Use --cookies
+    # for the authentication")
+    "use --cookies",
+    # D-078: other extractors' words (yt_dlp/extractor: instagram, facebook,
+    # tiktok, twitter, vimeo; there is no Kwai extractor)
+    "login required", "rate-limit reached", "requires authentication", "authentication may be needed",
+    "need to log in", "log into an account", "who follow this account", "accessing posts anonymously",
+    "without being logged-in", "account is private", "videos are private", "protected tweet",
+    "not authorized to view", "do not have permission to view", "only works when logged-in",
+    "fresh cookies", "private video", "granted access to this video",
 )
 
+#: D-078: how a site is called, by yt-dlp's extractor name (before any `:`).
+SITE_NAMES = {
+    "youtube": "YouTube", "instagram": "Instagram", "facebook": "Facebook", "tiktok": "TikTok",
+    "twitter": "X (Twitter)", "vimeo": "Vimeo", "kwai": "Kwai", "twitch": "Twitch",
+    "dailymotion": "Dailymotion", "threads": "Threads", "reddit": "Reddit", "soundcloud": "SoundCloud",
+    "linkedin": "LinkedIn", "kick": "Kick", "bilibili": "Bilibili",
+}
+#: ... and by the link's host, when the message names no extractor.
+SITE_HOSTS = {
+    "youtube.com": "youtube", "youtu.be": "youtube", "instagram.com": "instagram",
+    "facebook.com": "facebook", "fb.watch": "facebook", "tiktok.com": "tiktok", "x.com": "twitter",
+    "twitter.com": "twitter", "vimeo.com": "vimeo", "kwai.com": "kwai", "twitch.tv": "twitch",
+    "dailymotion.com": "dailymotion", "threads.net": "threads", "threads.com": "threads",
+    "reddit.com": "reddit", "soundcloud.com": "soundcloud", "linkedin.com": "linkedin", "kick.com": "kick",
+}
 
-def sign_in_needed(message: str) -> str:
-    """BOT_CHECK or SIGN_IN when yt-dlp's message is one of YouTube's checks; ""."""
+
+def site_name(message: str = "", url: str = "", extractor: str = "") -> str:
+    """D-078: "Instagram", from yt-dlp's extractor (`[Instagram] …` in its
+    message, or the info's `extractor_key`), else from the link's host."""
+    from urllib.parse import urlsplit
+
+    found = re.match(r"(?:ERROR: )?\[([^\]]+)\]", message.strip())
+    key = (extractor or (found.group(1) if found else "")).split(":")[0].lower()
+    if key and key != "generic":
+        return SITE_NAMES.get(key, key.capitalize())
+    host = urlsplit(url).hostname or ""
+    for prefix in ("www.", "m.", "mobile."):
+        host = host.removeprefix(prefix)
+    key = next((k for h, k in SITE_HOSTS.items() if host == h or host.endswith("." + h)), "")
+    return SITE_NAMES[key] if key else (host or "The site")
+
+
+def sign_in_needed(message: str, url: str = "", cookies: sign_in.Cookies | None = None) -> str:
+    """BOT_CHECK, or what a login wall means (D-078: any site), when yt-dlp's
+    message is one; "". With a sign-in already set, the wall means that login
+    may not be signed in to that site."""
     lowered = message.lower().replace("\u2019", "'")
     if any(mark in lowered for mark in BOT_MARKS):
         return BOT_CHECK
-    if any(mark in lowered for mark in SIGN_IN_MARKS):
-        return SIGN_IN
-    return ""
+    if not any(mark in lowered for mark in SIGN_IN_MARKS):
+        return ""
+    site = site_name(message, url)
+    if cookies is not None:
+        if cookies.browser:
+            return (f"The browser you chose ({sign_in.NAMES.get(cookies.browser, cookies.browser.capitalize())}) "
+                    f"may not be signed in to {site}. Sign in there, or pick another browser in Settings.")
+        return (f"The cookies.txt file you chose may not be signed in to {site}. Export it again while "
+                f"signed in there, or pick another in Settings.")
+    return SIGN_IN if site == "YouTube" else f"{site} asked you to sign in for this video."
 
 
 @dataclass(frozen=True)
@@ -272,13 +328,13 @@ def unreadable_cookies(error: Exception, cookies: sign_in.Cookies | None) -> Coo
     cause = str(loading.__context__ or error).strip().removeprefix("ERROR: ")
     if cookies.browser:
         return CookiesUnreadable(
-            f"Could not read the YouTube sign-in from {cookies.browser.capitalize()} ({cause}). "
+            f"Could not read the login from {cookies.browser.capitalize()} ({cause}). "
             + sign_in.browser_advice(cookies.browser)
         )
     return CookiesUnreadable(f"Could not read the cookies file {cookies.file} ({cause}).")
 
 
-def ytdlp(params: dict, call, what: str, out: Output, cookies: sign_in.Cookies | None = None):
+def ytdlp(params: dict, call, what: str, out: Output, cookies: sign_in.Cookies | None = None, url: str = ""):
     """Run `call(ydl)` on a YoutubeDL with `params`, retrying HTTP 429 with
     exponential backoff. Returns what `call` returned and how many retries it
     took; raises RateLimited, SignInRequired or CookiesUnreadable (D-071), or
@@ -297,7 +353,7 @@ def ytdlp(params: dict, call, what: str, out: Output, cookies: sign_in.Cookies |
             if unreadable is not None:
                 raise unreadable from error
             message = str(error).strip()
-            plainly = sign_in_needed(message)
+            plainly = sign_in_needed(message, url, cookies)
             if plainly:
                 raise SignInRequired(plainly, message) from error
             if not is_rate_limited(message):
@@ -329,6 +385,7 @@ def read_metadata(url: str, out: Output | None = None, cookies: sign_in.Cookies 
         "reading the video",
         out or Output(),
         cookies,
+        url,
     )
     return Metadata(
         id=data.get("id", ""),
@@ -339,7 +396,22 @@ def read_metadata(url: str, out: Output | None = None, cookies: sign_in.Cookies 
         manual_captions=tuple(sorted((data.get("subtitles") or {}).keys())),
         automatic_captions=tuple(sorted((data.get("automatic_captions") or {}).keys())),
         language=data.get("language") or "",
+        site=site_name(url=url, extractor=data.get("extractor_key") or data.get("extractor") or ""),
+        audio=audio_offered(data),
     )
+
+
+def audio_offered(data: dict) -> str:
+    """D-078: what `fetch --list` says about the audio: an audio-only format
+    (what step 2 downloads first), or audio inside a video format, or ""."""
+    formats = data.get("formats") or ([data] if data.get("url") else [])
+    has = lambda codec: codec not in (None, "none")  # noqa: E731
+    only = [f for f in formats if has(f.get("acodec")) and f.get("vcodec") == "none"]
+    if only:
+        return f"audio only ({', '.join(dict.fromkeys(f.get('ext') or '?' for f in only))})"
+    if any(f.get("acodec") != "none" for f in formats):
+        return "with the video"
+    return ""
 
 
 #: D-045: YouTube's suffix for the automatic caption in the spoken language.
@@ -531,7 +603,7 @@ def download_caption(
 ) -> tuple[Path, int]:
     """The subtitle file, and how many 429 retries it took."""
     _, retries = ytdlp(
-        caption_params(code, source, target), download(url), "the caption download", out or Output(), cookies
+        caption_params(code, source, target), download(url), "the caption download", out or Output(), cookies, url
     )
     found = next(
         (
@@ -587,13 +659,13 @@ def download_audio(
     if clear_partial_audio(target):
         out.info("removed an incomplete audio file from an earlier attempt")
     try:
-        ytdlp(params, download(url), "the audio download", out, cookies)
+        ytdlp(params, download(url), "the audio download", out, cookies, url)
     except FetchError as error:
         if not is_range_error(str(error)):
             raise
         clear_partial_audio(target)
         out.info("the audio download asked for a range the server does not have; starting over")
-        ytdlp(params, download(url), "the audio download", out, cookies)
+        ytdlp(params, download(url), "the audio download", out, cookies, url)
     found = sorted(target.glob("audio.*"))
     if not found:
         raise FetchError("the audio download finished without error but no audio appeared")
@@ -819,8 +891,33 @@ def step_speech(
         speech_header(meta, args.url, args.lang, args.model, step=step.header()) + body + "\n",
         encoding="utf-8",
     )
-    out.info("the audio can be deleted once you have checked the text; it is not knowledge")
+    keep_or_delete(audio, meta, target, keeps_audio(args), out)
     return step
+
+
+#: D-078: config.toml's key for Settings → "Keep the audio after transcribing".
+KEEP_AUDIO = "keep_audio"
+
+
+def keeps_audio(args: argparse.Namespace) -> bool:
+    """`--keep-audio`, else Settings; off by default."""
+    from ..runs import read_config
+
+    return bool(getattr(args, "keep_audio", False)) or read_config().get(KEEP_AUDIO) == "yes"
+
+
+def keep_or_delete(audio: Path, meta: Metadata, target: Path, keep: bool, out: Output) -> Path | None:
+    """D-078: once the text is written, the audio goes, unless it is kept;
+    then it is named after the video, `<id>.<ext>`."""
+    if not keep:
+        audio.unlink(missing_ok=True)
+        out.info("the audio was deleted; --keep-audio, or Settings, keeps it")
+        return None
+    kept = target / f"{meta.id or audio.stem}{audio.suffix}"
+    if kept != audio:
+        audio.replace(kept)
+    out.detail("audio kept", kept, "path")
+    return kept
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
@@ -868,25 +965,33 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         f"default: {DEFAULT_MODEL}. below medium it gets domain terms wrong often",
     )
     parser.add_argument(
-        "--list", action="store_true", help="only list the caption languages available"
+        "--list", action="store_true",
+        help="check a link without downloading: the site, title, duration, caption tracks (or none), "
+        "whether there is audio to transcribe, and whether the site asks for a login",
     )
     signed = parser.add_mutually_exclusive_group()
     signed.add_argument(
         "--cookies-from-browser",
         metavar="BROWSER",
         choices=sign_in.BROWSERS,
-        help="use this browser's YouTube sign-in, when YouTube asks to confirm you are not a bot "
+        help="use this browser's login, for a site that asks you to sign in or YouTube's bot check "
         f"({', '.join(sign_in.BROWSERS)}; Firefox works best). Instead of Settings",
     )
     signed.add_argument(
         "--cookies",
         metavar="FILE",
-        help="use the YouTube sign-in in this cookies.txt file (Netscape format). Instead of Settings",
+        help="use the login in this cookies.txt file (Netscape format). Instead of Settings",
     )
     # Hidden: for the menu, which runs fetch twice when it moves from step 1 to
     # step 2 (D-053), and for the release workflow's smoke test (D-058).
     parser.add_argument("--no-video-info", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--selftest-audio", metavar="FILE", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--keep-audio",
+        action="store_true",
+        help="after transcribing, keep the downloaded audio in the run folder as <id>.<ext>; "
+        "by default it is deleted. Instead of Settings",
+    )
     parser.add_argument(
         "--keep-raw",
         action="store_true",
@@ -926,7 +1031,15 @@ def tool_version(module: str) -> str | None:
 
 #: What step 1's failure means, said to a person (the menu's path, --caption-only).
 NO_CAPTION = "This video has no caption."
+#: D-078: most sites other than YouTube have no captions at all.
+FULL_CAN_TRANSCRIBE = "The full build can transcribe its audio on this computer."
+
+
 TOO_MANY_REQUESTS = "YouTube is limiting downloads right now (HTTP 429)."
+
+
+def no_captions(site: str) -> str:
+    return f"{site} doesn't provide captions for this video." if site else NO_CAPTION
 
 
 def undo_attempt(target: Path, before: set[Path], existed: bool) -> int:
@@ -957,11 +1070,33 @@ def report_sign_in(error: FetchError, args: argparse.Namespace) -> int:
         return 1
     if not args.no_video_info:
         print(
-            "Ways out: use your browser's YouTube sign-in (--cookies-from-browser firefox, or "
+            "Ways out: sign in with your browser's login (--cookies-from-browser firefox, or "
             "--cookies cookies.txt; or set it once in the menu's Settings), or try again later.",
             file=sys.stderr,
         )
     return EXIT_SIGN_IN
+
+
+def list_site(meta: Metadata, out: Output) -> int:
+    """D-078: `fetch --list`, a quick check of a link on any site, nothing
+    downloaded: the captions, whether there is audio to transcribe, and that
+    the site did not ask for a login (it would have stopped earlier)."""
+    if not meta.manual_captions and not meta.automatic_captions:
+        out.detail("captions", f"none ({no_captions(meta.site)})")
+    else:
+        # D-045: the source track first and in full; the translations may be summarised.
+        orig = [c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+        originals = [c for c in orig if not is_dubbed(meta, c)]
+        dubbed = [c for c in orig if is_dubbed(meta, c)]  # D-074
+        translated = tuple(c for c in meta.automatic_captions if not c.endswith(ORIGINAL_SUFFIX))
+        out.info(f"original: {', '.join(originals) or 'none'}")
+        if dubbed:
+            out.info(f"dubbed: {', '.join(dubbed)}")
+        out.info(f"manual captions: {summarise(meta.manual_captions)}")
+        out.info(f"automatic captions: {summarise(translated)}")
+    out.detail("audio", meta.audio or "none offered")
+    out.detail("login", "not asked")
+    return 0
 
 
 def run_check() -> int:
@@ -1004,28 +1139,24 @@ def run(args: argparse.Namespace) -> int:
     try:
         meta = read_metadata(args.url, out, cookies)
     except (SignInRequired, CookiesUnreadable) as error:
+        if args.list and isinstance(error, SignInRequired):  # D-078: part of the check
+            out.detail("site", site_name(error.raw, args.url))
+            out.detail("login", f"asked: {error}")
+            return EXIT_SIGN_IN
         return report_sign_in(error, args)
     except FetchError as error:
         print(f"could not read the video: {error}", file=sys.stderr)
         return 1
     if not args.no_video_info:  # the menu's second call has shown it already
+        if args.list:
+            out.detail("site", meta.site)
         out.detail("title", meta.title)
         out.detail("channel", meta.channel)
         out.detail("published", meta.published)
         out.detail("duration", f"{meta.duration // 60}min{meta.duration % 60:02d}s", "number")
 
     if args.list:
-        # D-045: the source track first and in full; the translations may be summarised.
-        orig = [c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
-        originals = [c for c in orig if not is_dubbed(meta, c)]
-        dubbed = [c for c in orig if is_dubbed(meta, c)]  # D-074
-        translated = tuple(c for c in meta.automatic_captions if not c.endswith(ORIGINAL_SUFFIX))
-        out.info(f"original: {', '.join(originals) or 'none'}")
-        if dubbed:
-            out.info(f"dubbed: {', '.join(dubbed)}")
-        out.info(f"manual captions: {summarise(meta.manual_captions)}")
-        out.info(f"automatic captions: {summarise(translated)}")
-        return 0
+        return list_site(meta, out)
 
     target = fetch_dir(meta.id, args.out)
     # D-059: what was here before this attempt, so a failure can take back
@@ -1054,9 +1185,14 @@ def run(args: argparse.Namespace) -> int:
             return report_sign_in(error, args)
         except NoCaption as error:
             failures.append(str(error))
-            reason, plainly = "sem legenda na plataforma", NO_CAPTION
+            reason, plainly = "sem legenda na plataforma", no_captions(meta.site)
             if args.track:  # other tracks exist: name the one that does not
                 plainly = str(error)
+            elif is_lite_build() and not args.caption_only:
+                # D-078: no step 2 here, and nothing failed: say what would help.
+                print(f"{plainly} {FULL_CAN_TRANSCRIBE}", file=sys.stderr)
+                give_back()
+                return 1
         except RateLimited as error:
             failures.append(str(error))
             reason = f"legenda falhou: HTTP 429 em {MAX_ATTEMPTS} tentativas"

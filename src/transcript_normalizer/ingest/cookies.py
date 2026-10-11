@@ -1,4 +1,5 @@
-"""D-071: the YouTube sign-in, as cookies yt-dlp reads for itself.
+"""D-071: the sign-in (your browser's login), as cookies yt-dlp reads for itself.
+D-078: for every site, not only YouTube.
 
 The tool never reads, copies or stores a cookie. It names where they are, a
 browser or a cookies.txt file, and yt-dlp reads them in this process for the
@@ -6,7 +7,8 @@ call (`cookiesfrombrowser`, `cookiefile`). config.toml keeps that name or path,
 never the contents, and nothing a run writes mentions either.
 
 Which one, in order: `fetch --cookies-from-browser` or `--cookies`; then
-`youtube_cookies` in config.toml (Settings → YouTube sign-in); then, in portable
+`sign_in` in config.toml (Settings → Sign-in; D-078, read under its old name
+`youtube_cookies` too); then, in portable
 mode, a `cookies.txt` in the data folder.
 """
 
@@ -17,7 +19,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 #: config.toml's key: a browser name, or the path of a cookies.txt file.
-CONFIG_KEY = "youtube_cookies"
+CONFIG_KEY = "sign_in"
+#: D-078: the key's name before the sign-in served every site; still read.
+OLD_CONFIG_KEY = "youtube_cookies"
 
 #: The browsers yt-dlp reads, Firefox first: it is the one that reliably works.
 BROWSERS = ("firefox", "chrome", "edge", "brave", "chromium", "opera", "vivaldi", "safari", "whale")
@@ -44,7 +48,7 @@ class Cookies:
 
     def label(self) -> str:
         if self.browser:
-            return f"{self.browser.capitalize()}'s YouTube sign-in"
+            return f"{self.browser.capitalize()}'s login"
         return f"the cookies file {self.file}"
 
 
@@ -62,7 +66,8 @@ def setting() -> str:
     """What config.toml says, or ""."""
     from ..runs import read_config
 
-    value = read_config().get(CONFIG_KEY)
+    settings = read_config()
+    value = settings.get(CONFIG_KEY, settings.get(OLD_CONFIG_KEY))
     return value if isinstance(value, str) else ""
 
 
@@ -186,7 +191,7 @@ def chromium_warning() -> str:
     return "on Windows usually cannot be read" if system() == "windows" else ""
 
 
-#: D-077: the "How does this work?" row of the YouTube sign-in list.
+#: D-077: the "How does this work?" row of the sign-in list.
 HOW_IT_WORKS = (
     "YouTube sometimes asks to confirm you're a person. It depends on your internet connection, "
     "not on the video.\n"

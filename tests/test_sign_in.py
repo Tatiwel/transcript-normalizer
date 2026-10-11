@@ -119,7 +119,7 @@ def test_an_unreadable_browser_is_named_with_what_to_try(tmp_path, monkeypatch, 
     code, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(unreadable_browser=True), "--cookies-from-browser", "chrome")
     err = capsys.readouterr().err
     assert code == 1
-    assert "Could not read the YouTube sign-in from Chrome (Failed to decrypt with DPAPI)." in err
+    assert "Could not read the login from Chrome (Failed to decrypt with DPAPI)." in err
     assert "Try Firefox, or a cookies.txt file." in err
     assert ("On Windows, Chrome's cookies usually cannot be read." in err) == windows_note
 
@@ -168,7 +168,7 @@ def test_the_menu_offers_the_ways_out_and_retries_signed_in(tmp_path, monkeypatc
     _, out, fake = menu(tmp_path, monkeypatch, capsys, ["1", "1", URL, "1", "1", "", "n", "q"],
                         ytdlp=FakeYtDlp(metadata=["bot", "ok"]))
     assert fetch.BOT_CHECK in out and "Sign in to confirm" not in out
-    for way in ("Use your browser's YouTube sign-in (cookies)", "Try again later",
+    for way in ("Sign in with your browser's login", "Try again later",
                 "Use a file from this computer", "<- Back"):
         assert way in out
     assert re.search(r"Firefox +works best", out)
@@ -200,7 +200,7 @@ def test_settings_takes_a_cookies_txt_and_keeps_only_its_path(tmp_path, monkeypa
     file_, none = "1", "2"
     _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", file_, str(jar), "q"])
     assert "no file dialog here; type the path instead" in out
-    assert f"Saved. YouTube sign-in: the cookies file {jar}" in out
+    assert f"Saved. Sign-in: the cookies file {jar}" in out
     assert runs.read_config() == {cookies.CONFIG_KEY: str(jar)}
     assert SECRET not in isolated_settings.read_text(encoding="utf-8")
     # And "None" removes it.
@@ -236,7 +236,7 @@ def sign_in_list(monkeypatch, capsys, answers):
 
 def rows(out):
     """The rows of the first list printed: (label, description)."""
-    first = out.split("YouTube sign-in")[1].split("enter alone")[0].split("\n> ")[0]
+    first = out.split("Sign-in (your browser's login)")[1].split("enter alone")[0].split("\n> ")[0]
     return [(m.group(1).strip(), (m.group(2) or "").strip()) for m in re.finditer(r"^ +\w\. (.+?)(?: {3}(.*))?$", first, re.M)]
 
 

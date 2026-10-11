@@ -51,9 +51,10 @@ ACTIONS = (
            "edit, remove and show terms); import, export or remove a pack file; contribute a "
            "whole pack; and the pack the menu offers first",
            f"{PROG} pack list --installed"),
-    Action("7", "Settings", "where to save your files, YouTube sign-in",
-           "a folder dialog for where runs/ and packs/ go; the YouTube sign-in (a browser, or a "
-           "cookies.txt file) for when YouTube asks to confirm you are not a bot. Kept in "
+    Action("7", "Settings", "where to save your files, sign-in, keep the audio",
+           "a folder dialog for where runs/ and packs/ go; the sign-in, your browser's login (a browser, or a "
+           "cookies.txt file) for sites that ask you to sign in and YouTube's bot check; whether to "
+           "keep the audio after transcribing. Kept in "
            "config.toml in your user settings. In a script, the variable and the flags win",
            f"TRANSCRIPT_NORMALIZER_HOME=<folder> {PROG}"),
     Action("8", "Help", "what each action does and its command",
@@ -71,7 +72,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             (f"{PROG} <legenda.txt>", "same as `normalize <legenda.txt>`"),
         ]),
         ("COMMANDS", [
-            ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `--list` shows the caption tracks and `--track <code>` takes one; `fetch --check` lists the fetch tools installed; --cookies-from-browser <browser> or --cookies <file> signs in to YouTube"),
+            ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `--list` checks a link without downloading (site, captions, audio, login) and `--track <code>` takes one caption track; `--keep-audio` keeps the audio after transcribing; `fetch --check` lists the fetch tools installed; --cookies-from-browser <browser> or --cookies <file> signs in, on any site"),
             ("normalize <legenda.txt>", "fix domain terms (a .srt or .vtt is converted first); --review (one stop per form, in the order of the video) or --confirm (form by form, by term) to answer what it was unsure about; --pack for your own pack; --force when the pack does not seem to fit"),
             ("list", "every run under runs/, with its date and title"),
             ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),
@@ -114,8 +115,9 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
         ]),
         ("YOUTUBE SAYS I'M A BOT", [
             ("why", "YouTube sometimes asks a connection to prove it is a person; it depends on your network (a VPN, a shared or busy one), not on the video"),
-            ("sign in", "Settings → YouTube sign-in lists the browsers found on this computer: Firefox (works everywhere), one row for the Chromium-based ones (Chrome, Edge, Brave, Opera, Vivaldi, Chromium; on Windows they usually cannot be read), Safari on macOS; or a cookies.txt exported with a browser extension. \"How does this work?\" explains. In a script: `fetch --cookies-from-browser firefox`, `fetch --cookies cookies.txt`"),
+            ("sign in", "Settings → Sign-in (your browser's login) lists the browsers found on this computer: Firefox (works everywhere), one row for the Chromium-based ones (Chrome, Edge, Brave, Opera, Vivaldi, Chromium; on Windows they usually cannot be read), Safari on macOS; or a cookies.txt exported with a browser extension. \"How does this work?\" explains. In a script: `fetch --cookies-from-browser firefox`, `fetch --cookies cookies.txt`"),
             ("or wait", "try again later, or use a file from this computer. The guide, section 3, has the details"),
+            ("other sites", "Instagram, most of Facebook, and private or followers-only videos anywhere ask you to sign in; the same sign-in is used for every site. Only YouTube has captions: on other sites the full build transcribes the audio. `fetch --list <url>` checks a link first"),
         ]),
         ("LEARN MORE", [
             ("docs/GUIDE.md", "the guide"),

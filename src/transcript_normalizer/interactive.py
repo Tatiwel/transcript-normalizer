@@ -7,7 +7,7 @@ does a subcommand's work in its own way. The questions go through `prompts`:
 arrow keys with questionary, numbered text without it.
 
 The one exception is what the menu remembers (D-061), in the user's
-config.toml: where runs/ and packs/ go and the YouTube sign-in (Settings, D-071),
+config.toml: where runs/ and packs/ go and the sign-in (Settings, D-071, D-078),
 and the pack offered first (Packs, D-065). A script reaches the same with
 TRANSCRIPT_NORMALIZER_HOME, --cookies-from-browser or --cookies, and --pack.
 """
@@ -193,7 +193,8 @@ def fetch_link() -> str | None:
     """Paste a link, read the video, choose caption or transcription."""
     from .ingest.console import Output
     from .ingest.fetch import (
-        NO_CAPTION, CookiesUnreadable, FetchError, SignInRequired, missing_extra, read_metadata, tracks,
+        FULL_CAN_TRANSCRIBE, CookiesUnreadable, FetchError, SignInRequired, is_lite_build, missing_extra,
+        no_captions, read_metadata, tracks,
     )
 
     source = prompts.text("The video's link", hint="YouTube, Vimeo, TikTok, Instagram and others")
@@ -222,7 +223,11 @@ def fetch_link() -> str | None:
         detail(label, value, kind)
     listed, translations = tracks(meta)
     if not listed and not translations:
-        say(mark(NO_CAPTION, "need"))
+        # D-078: most sites but YouTube have no captions: straight to transcribing.
+        if is_lite_build():
+            say(mark(f"{no_captions(meta.site)} {FULL_CAN_TRANSCRIBE}", "need"))
+            return None
+        say(mark(no_captions(meta.site), "need"))
         if transcription_unavailable():
             say(mark(f"  {transcription_unavailable()}", "hint"))
             return None
@@ -292,7 +297,7 @@ def sign_in_way_out(failure=None) -> str | None:
         say(mark(str(failure), "need" if isinstance(failure, SignInRequired) else "bad"))
     while True:
         way = prompts.select("What now?", [
-            Option("Use your browser's YouTube sign-in (cookies)",
+            Option("Sign in with your browser's login",
                    "yt-dlp reads it for the download; nothing is copied", value="sign-in"),
             Option("Try again later", "the check usually passes after a while", value="later"),
             Option("Use a file from this computer", "audio, video or a caption you already have", value="file"),
@@ -1142,6 +1147,8 @@ def pick_cookies_file(initial: Path):
     return chosen if chosen is NO_PICKER else (Path(chosen) if chosen else None)
 
 
+#: D-078: what Settings, the list and the help call it; any site, not only YouTube.
+SIGN_IN = "Sign-in (your browser's login)"
 #: D-077: the sign-in list's rows that are not a browser.
 CHROMIUM_ROW, HOW_ROW = "\0chromium", "\0how"
 
@@ -1179,7 +1186,7 @@ def choose_sign_in() -> str | None:
     chromium = [b for b in browsers if b in cookies.CHROMIUM]
     while True:
         picked = prompts.select(
-            "YouTube sign-in",
+            SIGN_IN,
             sign_in_options(browsers),
             hint="the browser you are signed in to YouTube with"
             + ("; none was found on this computer" if not browsers else ""),
@@ -1201,8 +1208,18 @@ def choose_sign_in() -> str | None:
             return one
 
 
+def save_sign_in(value: str | None) -> None:
+    """D-078: written under the new key; the old one goes, so it cannot win."""
+    from .ingest import cookies
+
+    settings = read_config()
+    settings[cookies.CONFIG_KEY] = value
+    settings[cookies.OLD_CONFIG_KEY] = None
+    write_config(settings)
+
+
 def choose_cookies() -> bool:
-    """D-071: the YouTube sign-in: a browser, a cookies.txt file, or none.
+    """D-071: the sign-in (D-078: for every site): a browser, a cookies.txt file, or none.
     config.toml keeps the browser's name or the file's path, never a cookie.
     True when a sign-in was saved."""
     from .ingest import cookies
@@ -1215,8 +1232,8 @@ def choose_cookies() -> bool:
     if picked is None:
         return False
     if picked == "none":
-        save_setting(cookies.CONFIG_KEY, None)
-        say(mark("Saved. ", "ok"), "Fetching without a YouTube sign-in")
+        save_sign_in(None)
+        say(mark("Saved. ", "ok"), "Fetching without signing in")
         return False
     if picked == "file":
         path = pick_cookies_file(Path.home())
@@ -1230,25 +1247,46 @@ def choose_cookies() -> bool:
             error(f"no file at {path}")
             return False
         picked = str(path.absolute())
-    save_setting(cookies.CONFIG_KEY, picked)
-    say(mark("Saved. ", "ok"), "YouTube sign-in: ", mark(cookies.from_setting(picked).label(), "path"))
+    save_sign_in(picked)
+    say(mark("Saved. ", "ok"), "Sign-in: ", mark(cookies.from_setting(picked).label(), "path"))
     say(mark("  read by yt-dlp when it fetches; the cookies themselves are never copied", "hint"))
     return True
 
 
 def settings() -> None:
-    """Where to save your files, and the YouTube sign-in (D-071); the pack
+    """Where to save your files, and the sign-in (D-071, D-078); the pack
     offered first moved to Packs (D-065)."""
     stage("Settings")
     say(mark("  saved in your user settings, for every run of the menu", "hint"))
+    from .ingest.fetch import KEEP_AUDIO
+
+    keeping = read_config().get(KEEP_AUDIO) == "yes"
     which = prompts.select("Which setting?", [
         Option("Where to save your files", "runs/ and packs/", value="folder"),
-        Option("YouTube sign-in", "when YouTube asks to confirm you are not a bot", value="cookies"),
+        Option(SIGN_IN, "for sites that ask you to sign in, or YouTube's bot check", value="cookies"),
+        Option("Keep the audio after transcribing", f"now: {'on' if keeping else 'off'}", value="audio"),
     ])
     if which == "folder":
         choose_folder()
     elif which == "cookies":
         choose_cookies()
+    elif which == "audio":
+        choose_keep_audio(keeping)
+
+
+def choose_keep_audio(keeping: bool) -> None:
+    """D-078: after transcribing, keep the downloaded audio as <id>.<ext>, or delete it."""
+    from .ingest.fetch import KEEP_AUDIO
+
+    keep = prompts.confirm(
+        "Keep the audio after transcribing?",
+        default=keeping,
+        hint="kept in the run's folder as <video id>.<ext>; otherwise deleted once the text is written",
+    )
+    if keep is None:
+        return
+    save_setting(KEEP_AUDIO, "yes" if keep else None)
+    say(mark("Saved. ", "ok"), "The audio is ", mark("kept" if keep else "deleted", "path"), " after transcribing")
 
 
 # ------------------------------------------------------------------ packs (D-065)

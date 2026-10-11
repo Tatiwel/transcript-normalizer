@@ -60,7 +60,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
    Packs                   installed, get, create, edit, share
-   Settings                where to save your files, YouTube sign-in
+   Settings                where to save your files, sign-in, keep the audio
    Help                    what each action does and its command
    Quit
 ```
@@ -84,7 +84,7 @@ transcript-normalizer runs/4wCtn8BWR4o/legenda.txt
 transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 ```
 
-`fetch` takes the platform's caption (the original-language track, never an automatic translation, D-045) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The downloaded `.vtt` or `.srt` is deleted once converted into `legenda.txt`; `--keep-raw` keeps it. The second command normalizes, and takes a `.srt` or `.vtt` as well, which it converts into `runs/<file-name>/legenda.txt` first; the third does the same and then asks you about what it was unsure of. `fetch --list <url>` shows a video's caption tracks, and `fetch --track <code>` takes one exactly (`pt-orig`, `pt`, `en`) instead of the choice `--lang` makes (D-062). `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
+`fetch` takes the platform's caption (the original-language track, never an automatic translation, D-045) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The downloaded `.vtt` or `.srt` is deleted once converted into `legenda.txt`; `--keep-raw` keeps it. The second command normalizes, and takes a `.srt` or `.vtt` as well, which it converts into `runs/<file-name>/legenda.txt` first; the third does the same and then asks you about what it was unsure of. `fetch --list <url>` checks a link without downloading anything: the site, title and duration, the caption tracks (or none), whether there is audio to transcribe, and whether the site asks for a login (D-078); and `fetch --track <code>` takes one exactly (`pt-orig`, `pt`, `en`) instead of the choice `--lang` makes (D-062). `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
 
 ```
 runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.7
@@ -106,15 +106,25 @@ to confirm:
 
 ### YouTube says I'm a bot
 
-Sometimes reading a YouTube link stops with "YouTube asked to confirm you are not a bot. This depends on your connection, not on the video." YouTube asks this of connections it finds suspicious: a VPN, a university or office network, many requests from one address. The same video usually works from another network, or later. The menu then offers four ways out: use your browser's YouTube sign-in (cookies), try again later, use a file from this computer, or go back.
+Sometimes reading a YouTube link stops with "YouTube asked to confirm you are not a bot. This depends on your connection, not on the video." YouTube asks this of connections it finds suspicious: a VPN, a university or office network, many requests from one address. The same video usually works from another network, or later. The menu then offers four ways out: sign in with your browser's login, try again later, use a file from this computer, or go back.
 
-**Sign in through your browser.** Be signed in to YouTube in the browser, then choose it in Settings → YouTube sign-in (or when the menu offers it). The list shows only the browsers found on this computer, in the folders the downloader reads (on Linux, Firefox from snap or flatpak too): Firefox first, which works best; then one row, "Chromium-based browser", naming the ones installed (Chrome, Edge, Brave, Opera, Vivaldi, Chromium), which opens a short list when there are two or more; Safari on macOS; then "A cookies.txt file…", "None", and "How does this work?", which explains this in a few lines and shows the list again. On Windows, Chrome, Edge and the other Chromium-based browsers lock their login so only they can use it (it protects you from programs that steal logins), so the list says they "usually cannot be read" there; on Linux and macOS they usually work, and no warning is shown (D-077). With a browser that cannot be read, export a `cookies.txt` instead:
+**Sign in through your browser.** Be signed in to YouTube in the browser, then choose it in Settings → Sign-in (your browser's login) (or when the menu offers it). The list shows only the browsers found on this computer, in the folders the downloader reads (on Linux, Firefox from snap or flatpak too): Firefox first, which works best; then one row, "Chromium-based browser", naming the ones installed (Chrome, Edge, Brave, Opera, Vivaldi, Chromium), which opens a short list when there are two or more; Safari on macOS; then "A cookies.txt file…", "None", and "How does this work?", which explains this in a few lines and shows the list again. On Windows, Chrome, Edge and the other Chromium-based browsers lock their login so only they can use it (it protects you from programs that steal logins), so the list says they "usually cannot be read" there; on Linux and macOS they usually work, and no warning is shown (D-077). With a browser that cannot be read, export a `cookies.txt` instead:
 
 1. Install a browser extension that exports cookies in the Netscape format, for instance "Get cookies.txt LOCALLY" (Chrome, Edge) or "cookies.txt" (Firefox).
 2. Open youtube.com, signed in, and export the cookies for that site to a file.
-3. Choose it in Settings → YouTube sign-in → "A cookies.txt file…".
+3. Choose it in Settings → Sign-in (your browser's login) → "A cookies.txt file…".
 
 In a script: `fetch <url> --cookies-from-browser firefox` or `fetch <url> --cookies cookies.txt`; the flag wins over Settings. In portable mode, a `cookies.txt` placed in the `data` folder is used without asking. config.toml keeps only the browser's name or the file's path, and yt-dlp reads the cookies when it fetches; they are never copied into runs/, reports or anything else the tool writes. A cookies.txt is your YouTube login: keep it private, and export a new one when it stops working (D-071).
+
+### Other sites
+
+Links from most video sites work too (Vimeo, TikTok, Instagram, Facebook, X, Twitch, Dailymotion and many more): the downloader recognizes them by their address.
+
+- **Captions: in practice only YouTube has them.** For another site the menu says "Vimeo doesn't provide captions for this video." and goes straight to "Transcribe the audio on this computer instead?". The lite build cannot transcribe, so it says "… The full build can transcribe its audio on this computer." and stops there.
+- **What usually works without signing in:** public videos on YouTube, Vimeo, TikTok, Dailymotion, Twitch and X.
+- **What usually needs a sign-in:** Instagram (often after a few videos: it limits anonymous visitors), most of Facebook, and on any site private, followers-only, members-only or age-restricted videos. The program then says "Instagram asked you to sign in for this video." and offers the same ways out as for YouTube's bot check. The sign-in you choose in Settings → Sign-in (your browser's login) is used for every site. If one is set and the site still asks, it says "The browser you chose (Firefox) may not be signed in to Instagram. Sign in there, or pick another browser in Settings.": open the site in that browser, sign in, and try again.
+- **Check a link first:** `transcript-normalizer fetch --list <url>` downloads nothing and prints the site, title, duration, caption tracks (or none), whether there is audio to transcribe, and whether the site asks for a login.
+- **The audio:** after transcribing, the downloaded audio is deleted once the text is written. To keep it, turn on Settings → "Keep the audio after transcribing", or use `fetch --keep-audio`; it stays in the run's folder as `<video id>.<ext>` (D-078).
 
 ## 4. Reading the outputs
 
