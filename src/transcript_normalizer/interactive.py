@@ -516,13 +516,16 @@ def normalize() -> None:
 
 
 def normalize_run(
-    run: Path, caption: Path | None = None, chained: bool = False, pack: Path | None = None
+    run: Path, caption: Path | None = None, chained: bool = False, pack: Path | None = None,
+    followups: bool = True,
 ) -> str | None:
     """Normalize, offer the review, then a term you noticed (D-066), then the folder.
 
     `chained` when another step led here, which then labels this one. BACK
     when the pack question was answered with Back, before anything was written.
     `pack` skips the pack question: the run is normalized again with it.
+    `followups=False` (normalizing again after a term was added) leaves out
+    "Add a term you noticed?" and "Open the folder?": they were asked (D-077).
     """
     from .cli import is_subtitle, is_unfit
 
@@ -554,11 +557,11 @@ def normalize_run(
     else:
         say(mark("The result is usable as it is; reviewing only makes the next run better.", "hint"))
         if prompts.confirm(f"Next: review the {count} uncertain one(s) now?", default=True):
-            review_run(run, caption, pack, chained=True)
+            review_run(run, caption, pack, chained=True, followups=followups)
             return None
-    if offer_noticed(run, pack):
-        return None  # normalized again, which offered the folder
-    offer_folder(run)
+    if followups:
+        offer_noticed(run, pack)
+        offer_folder(run)
     return None
 
 
@@ -587,28 +590,40 @@ def review() -> None:
 
 
 def review_run(
-    run: Path, caption: Path | None = None, pack: Path | None = None, chained: bool = False
+    run: Path, caption: Path | None = None, pack: Path | None = None, chained: bool = False,
+    followups: bool = True,
 ) -> None:
-    """The review; `chained` when normalize has just printed the counters."""
+    """The review; `chained` when normalize has just printed the counters.
+
+    D-077: after the summary, in this order and once each: contribute (only
+    when this review changed the learned layer), a term you noticed, the folder.
+    """
+    from .core.pack import load_learned
+    from .runs import learned_file
+
     caption = caption or caption_of(run)
     if not caption:
         return
     if chained:
         stage("Review", run.name)
     say(mark(f"Reviewing {run.name}", "title"))
+    layer = learned_file(pack or default_pack(), None)
+    before = load_learned(layer)
     argv = ["normalize", str(caption), "--review", "--menu", "--quiet" if chained else "--summary"]
     code = run_command(argv + (["--pack", str(pack), *generic(pack)] if pack else []))
     if code not in (0, 130):  # 130: interrupted at the summary, nothing kept (D-072)
         error("review did not finish")
         return
-    offer_contribution(pack)
-    if offer_noticed(run, pack or default_pack()):
-        return
-    offer_folder(run)
+    if load_learned(layer) != before:
+        offer_contribution(pack)
+    if followups:
+        offer_noticed(run, pack or default_pack())
+        offer_folder(run)
 
 
 def offer_contribution(pack: Path | None) -> None:
-    """D-056: after a review, if the learned layer has something the pack does not."""
+    """D-056: after a review that changed the learned layer (D-077), if the
+    layer has something the pack does not."""
     from .contribute import items
 
     pack = pack or default_pack()
@@ -735,8 +750,8 @@ def choose_class(path: Path) -> str | None:
 
 
 def offer_noticed(run: Path, pack: Path | None) -> bool:
-    """After normalizing, or showing a run: offer to add a term. True when the
-    run was normalized again."""
+    """After normalizing, a review, or showing a run: offer to add a term.
+    True when the run was normalized again (without asking this again, D-077)."""
     if not prompts.confirm("Add a term you noticed?", default=False):
         return False
     return add_noticed(run, pack)
@@ -796,7 +811,8 @@ def add_noticed(run: Path, pack: Path | None) -> bool:
     if run_command(argv) != 0:
         return False
     if prompts.confirm(f"Normalize {run.name} again with it?", default=True):
-        normalize_run(run, pack=installed_packs()[name], chained=True)
+        # D-077: the folder is offered once, by whoever asked to add the term.
+        normalize_run(run, pack=installed_packs()[name], chained=True, followups=False)
         return True
     return False
 
@@ -1126,6 +1142,65 @@ def pick_cookies_file(initial: Path):
     return chosen if chosen is NO_PICKER else (Path(chosen) if chosen else None)
 
 
+#: D-077: the sign-in list's rows that are not a browser.
+CHROMIUM_ROW, HOW_ROW = "\0chromium", "\0how"
+
+
+def sign_in_options(browsers: list[str]) -> list[Option]:
+    """D-077: Firefox; one row for the Chromium-based browsers here; Safari
+    (macOS); a cookies.txt file; none; how it works. Only what is installed."""
+    from .ingest import cookies
+
+    chromium = [b for b in browsers if b in cookies.CHROMIUM]
+    warning = cookies.chromium_warning()
+    options = []
+    if "firefox" in browsers:
+        options.append(Option("Firefox", "works best", value="firefox"))
+    if chromium:
+        found = ", ".join(cookies.NAMES[b] for b in chromium)
+        options.append(Option("Chromium-based browser", f"{found}{f' · {warning}' if warning else ''}",
+                              value=CHROMIUM_ROW))
+    if "safari" in browsers:
+        options.append(Option("Safari", value="safari"))
+    options += [
+        Option("A cookies.txt file…", "exported from your browser; see Help", value="file"),
+        Option("None", "fetch without signing in", value="none"),
+        Option("How does this work?", value=HOW_ROW),
+    ]
+    return options
+
+
+def choose_sign_in() -> str | None:
+    """D-077: a browser's name, "file", "none", or None for Back. The list is
+    the same in Settings and when fetch meets YouTube's check."""
+    from .ingest import cookies
+
+    browsers = cookies.installed_browsers()
+    chromium = [b for b in browsers if b in cookies.CHROMIUM]
+    while True:
+        picked = prompts.select(
+            "YouTube sign-in",
+            sign_in_options(browsers),
+            hint="the browser you are signed in to YouTube with"
+            + ("; none was found on this computer" if not browsers else ""),
+        )
+        if picked == HOW_ROW:
+            for paragraph in cookies.HOW_IT_WORKS.split("\n"):
+                say(mark(f"  {paragraph}", "hint"))
+            continue
+        if picked != CHROMIUM_ROW:
+            return picked
+        if len(chromium) == 1:
+            return chromium[0]
+        warning = cookies.chromium_warning()
+        one = prompts.select(
+            "Which Chromium-based browser?",
+            [Option(cookies.NAMES[b], warning, value=b) for b in chromium],
+        )
+        if one is not None:
+            return one
+
+
 def choose_cookies() -> bool:
     """D-071: the YouTube sign-in: a browser, a cookies.txt file, or none.
     config.toml keeps the browser's name or the file's path, never a cookie.
@@ -1136,22 +1211,7 @@ def choose_cookies() -> bool:
     detail("now", current.label() if current else "none")
     if current is not None and not cookies.setting():
         say(mark("  the cookies.txt in the portable folder, used without asking", "hint"))
-    browsers = ["firefox", "chrome", "edge", "brave"] + (["safari"] if sys.platform == "darwin" else [])
-    options = [
-        Option(name.capitalize(), "works best" if name == "firefox" else
-               "on Windows usually cannot be read" if name in cookies.UNREADABLE_ON_WINDOWS else "",
-               value=name)
-        for name in browsers
-    ]
-    options += [
-        Option("A cookies.txt file…", "exported from your browser; see Help", value="file"),
-        Option("None", "fetch without signing in", value="none"),
-    ]
-    picked = prompts.select(
-        "YouTube sign-in",
-        options,
-        hint="the browser you are signed in to YouTube with; Chrome and Edge on Windows usually cannot be read",
-    )
+    picked = choose_sign_in()
     if picked is None:
         return False
     if picked == "none":

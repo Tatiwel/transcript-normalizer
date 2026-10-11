@@ -190,7 +190,9 @@ def test_only_in_this_video_applies_on_renormalize_and_is_never_learned(tmp_path
     assert "Klabine" in (run_of(tmp_path, "other") / "needs-review" / "pending.txt").read_text(encoding="utf-8")
     others = json.loads((run_of(tmp_path, "other") / ANNOTATIONS_FILE).read_text(encoding="utf-8"))
     assert not any(a["rule"] == review.RULE_LOCAL for a in others)
-    # Nothing to contribute: the learned layer is empty, and a proposal reads only it.
+    # Nothing to contribute: no learned layer was written, and a proposal reads only it.
+    assert not (tmp_path / "packs" / "financas-ptbr.learned.yaml").exists()
+    (tmp_path / "packs").mkdir(exist_ok=True)
     shutil.copy(PACK, tmp_path / "packs" / "financas-ptbr.yaml")
     assert contribute.items(tmp_path / "packs" / "financas-ptbr.yaml") == []
     assert not any("Klabine" in p.read_text(encoding="utf-8") for p in (tmp_path / "packs").rglob("*.yaml")
@@ -311,3 +313,41 @@ def test_no_decision_number_in_any_message_string():
                     and re.search(r"D-0\d\d", node.value) and not node.value.endswith(".\n")):
                 found.append(f"{path.name}:{node.lineno}")
     assert found == []
+
+
+# ------------------------------------------------------------------ after the summary (D-077)
+
+
+def test_only_local_answers_neither_announce_the_layer_nor_offer_to_contribute(tmp_path, monkeypatch, capsys):
+    # fetch, normalize, review now: only in this video, later, later; save;
+    # no term noticed; no folder.
+    lines = [*LINK, "", "1", "", LOCAL, "", "", "", "", "", "q"]
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="review.vtt")
+    assert "only in this video: Klabine → Klabin" in out
+    assert "learned layer written" not in out
+    assert "Contribute what you taught the tool?" not in out
+    after = out.split("Save these answers?")[1]
+    assert after.count("Add a term you noticed?") == 1 and after.count("Open the folder?") == 1
+    assert after.index("Add a term you noticed?") < after.index("Open the folder?")
+
+
+def test_one_confirmed_form_announces_the_layer_and_offers_to_contribute(tmp_path, monkeypatch, capsys):
+    # ... yes, later, later; save; no contribution; no term; no folder.
+    lines = [*LINK, "", "1", "", YES, "", "", "", "", "", "", "q"]
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="review.vtt")
+    after = out.split("Save these answers?")[1]
+    asked_in_order = [after.index(q) for q in (
+        "learned layer written to", "Contribute what you taught the tool?",
+        "Add a term you noticed?", "Open the folder?")]
+    assert asked_in_order == sorted(asked_in_order)
+    assert all(after.count(q) == 1 for q in ("Contribute what you taught the tool?",
+                                             "Add a term you noticed?", "Open the folder?"))
+
+
+def test_an_earlier_review_s_entries_do_not_make_this_one_offer_to_contribute(tmp_path, monkeypatch, capsys):
+    menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "", YES, "", "", "", "", "", "", "q"], vtt="review.vtt")
+    # The same run reviewed again from the menu (one pack: not asked), only
+    # later answers this time; no term, no folder.
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["3", "1", "", "", "", "", "q"], vtt="review.vtt")
+    assert "left for later: 2" in out
+    assert "Contribute what you taught the tool?" not in out and "learned layer written" not in out

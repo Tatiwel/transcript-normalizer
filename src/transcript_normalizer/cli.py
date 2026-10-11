@@ -409,7 +409,7 @@ def review_forms(
         return session
     session.learned, session.local = review.apply(answers, learned)
     session.kept = len(decided)
-    if save is not None:
+    if save is not None and session.learned != learned:  # D-077: only-here and later change nothing there
         save(session.learned)
     return session
 
@@ -592,7 +592,7 @@ def run_normalize(args: argparse.Namespace) -> int:
             return 0
         if local is not None:
             print(f"\nonly in this video: kept in {local}; applied when this run is normalized")
-        if session.kept and not session.learned.is_empty():
+        if session.learned != pack.learned:  # D-077: only when this session changed it
             print(f"\nlearned layer written to {save_learned(session.learned, learned_at)}")
         if count:
             print(f"{count} variant(s) still pending in {pending}")

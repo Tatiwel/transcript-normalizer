@@ -33,6 +33,15 @@ def isolated_settings(tmp_path_factory, monkeypatch):
     # reaches the real packs repository unless it says where (registry.INDEX_ENV).
     monkeypatch.setenv("TRANSCRIPT_NORMALIZER_PACKS_INDEX", (tmp_path_factory.mktemp("offline") / "index.json").as_uri())
     monkeypatch.setitem(sys.modules, "tkinter", None)
+    # D-077: the YouTube sign-in list shows the browsers found on this
+    # computer; no test sees the developer's. A Linux with an empty home,
+    # unless a test says otherwise (tests/test_sign_in.py: `browsers`).
+    from transcript_normalizer.ingest import cookies
+
+    monkeypatch.setattr(cookies, "system", lambda: "linux")
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setattr(cookies, "home", lambda: home)
+    monkeypatch.setattr(cookies, "environ", lambda: {})
     return config
 
 

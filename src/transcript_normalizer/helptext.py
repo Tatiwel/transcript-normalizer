@@ -114,7 +114,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
         ]),
         ("YOUTUBE SAYS I'M A BOT", [
             ("why", "YouTube sometimes asks a connection to prove it is a person; it depends on your network (a VPN, a shared or busy one), not on the video"),
-            ("sign in", "Settings → YouTube sign-in: Firefox (Chrome and Edge on Windows usually cannot be read), or a cookies.txt exported with a browser extension; or `fetch --cookies-from-browser firefox`, `fetch --cookies cookies.txt`"),
+            ("sign in", "Settings → YouTube sign-in lists the browsers found on this computer: Firefox (works everywhere), one row for the Chromium-based ones (Chrome, Edge, Brave, Opera, Vivaldi, Chromium; on Windows they usually cannot be read), Safari on macOS; or a cookies.txt exported with a browser extension. \"How does this work?\" explains. In a script: `fetch --cookies-from-browser firefox`, `fetch --cookies cookies.txt`"),
             ("or wait", "try again later, or use a file from this computer. The guide, section 3, has the details"),
         ]),
         ("LEARN MORE", [

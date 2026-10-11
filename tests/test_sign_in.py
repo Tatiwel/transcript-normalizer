@@ -1,7 +1,10 @@
 """D-071: YouTube's bot check said plainly, and the sign-in it asks for, as
 cookies yt-dlp reads for itself and nothing the tool writes ever holds."""
 
+import io
+import re
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -112,7 +115,7 @@ def test_a_missing_cookies_file_is_named(tmp_path, monkeypatch, capsys):
 
 @pytest.mark.parametrize("platform, windows_note", [("win32", True), ("linux", False)])
 def test_an_unreadable_browser_is_named_with_what_to_try(tmp_path, monkeypatch, capsys, platform, windows_note):
-    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(cookies, "system", lambda: "windows" if platform == "win32" else "linux")
     code, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(unreadable_browser=True), "--cookies-from-browser", "chrome")
     err = capsys.readouterr().err
     assert code == 1
@@ -161,13 +164,14 @@ def test_no_cookie_value_is_in_any_file_a_run_writes(tmp_path, monkeypatch, jar,
 def test_the_menu_offers_the_ways_out_and_retries_signed_in(tmp_path, monkeypatch, capsys):
     # Fetch, a link, the url; YouTube's check; "Use your browser's sign-in",
     # Firefox; read again; the caption; no normalizing; quit.
+    browsers(monkeypatch, tmp_path, "linux", "firefox")
     _, out, fake = menu(tmp_path, monkeypatch, capsys, ["1", "1", URL, "1", "1", "", "n", "q"],
                         ytdlp=FakeYtDlp(metadata=["bot", "ok"]))
     assert fetch.BOT_CHECK in out and "Sign in to confirm" not in out
     for way in ("Use your browser's YouTube sign-in (cookies)", "Try again later",
                 "Use a file from this computer", "<- Back"):
         assert way in out
-    assert "Chrome and Edge on Windows usually cannot be read" in out
+    assert re.search(r"Firefox +works best", out)
     assert runs.read_config() == {cookies.CONFIG_KEY: "firefox"}
     assert "cookiesfrombrowser" not in fake.params[0]
     assert all(p["cookiesfrombrowser"][0] == "firefox" for p in fake.params[1:])
@@ -182,6 +186,7 @@ def test_try_again_later_goes_back_to_the_menu(tmp_path, monkeypatch, capsys):
 
 def test_a_check_at_the_caption_offers_the_same_ways_out(tmp_path, monkeypatch, capsys):
     # The check comes at the caption download this time; sign in, and it is fetched again.
+    browsers(monkeypatch, tmp_path, "linux", "firefox")
     _, out, fake = menu(tmp_path, monkeypatch, capsys, ["1", "1", URL, "", "1", "1", "n", "q"],
                         ytdlp=FakeYtDlp(caption=["Sign in to confirm you're not a bot", "ok"]))
     assert fetch.BOT_CHECK in out and "Use a file from this computer" in out
@@ -190,9 +195,9 @@ def test_a_check_at_the_caption_offers_the_same_ways_out(tmp_path, monkeypatch, 
 
 
 def test_settings_takes_a_cookies_txt_and_keeps_only_its_path(tmp_path, monkeypatch, capsys, jar, isolated_settings):
-    # Settings, YouTube sign-in, "A cookies.txt file…" (no dialog here: typed);
-    # Safari is listed on macOS only, so the file and None move down one there.
-    file_, none = ("6", "7") if sys.platform == "darwin" else ("5", "6")
+    # Settings, YouTube sign-in, "A cookies.txt file…" (no dialog here: typed).
+    # No browser on this (test) computer: the file, None, and the help row.
+    file_, none = "1", "2"
     _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", file_, str(jar), "q"])
     assert "no file dialog here; type the path instead" in out
     assert f"Saved. YouTube sign-in: the cookies file {jar}" in out
@@ -201,3 +206,113 @@ def test_settings_takes_a_cookies_txt_and_keeps_only_its_path(tmp_path, monkeypa
     # And "None" removes it.
     menu(tmp_path, monkeypatch, capsys, ["7", "2", none, "q"])
     assert runs.read_config() == {}
+
+
+# ------------------------------------------------------------------ which browsers are offered (D-077)
+
+
+def browsers(monkeypatch, tmp_path, where, *names, snap=False):
+    """A computer running `where` with these browsers' profile folders, where
+    yt-dlp looks for them. `snap`: Firefox from the snap store (Linux)."""
+    home = tmp_path / "home"
+    env = {"APPDATA": str(home / "AppData" / "Roaming"), "LOCALAPPDATA": str(home / "AppData" / "Local")} \
+        if where == "windows" else {}
+    monkeypatch.setattr(cookies, "system", lambda: where)
+    monkeypatch.setattr(cookies, "home", lambda: home)
+    monkeypatch.setattr(cookies, "environ", lambda: env)
+    for name in names:
+        folder = cookies.firefox_dirs(where)[-1 if snap else 0] if name == "firefox" else cookies.chromium_dir(name, where)
+        folder.mkdir(parents=True)
+
+
+def sign_in_list(monkeypatch, capsys, answers):
+    """The list as Settings and fetch show it, answered with `answers`."""
+    from transcript_normalizer import interactive
+
+    monkeypatch.setattr("sys.stdin", io.StringIO("".join(f"{a}\n" for a in answers)))
+    picked = interactive.choose_sign_in()
+    return picked, capsys.readouterr().out
+
+
+def rows(out):
+    """The rows of the first list printed: (label, description)."""
+    first = out.split("YouTube sign-in")[1].split("enter alone")[0].split("\n> ")[0]
+    return [(m.group(1).strip(), (m.group(2) or "").strip()) for m in re.finditer(r"^ +\w\. (.+?)(?: {3}(.*))?$", first, re.M)]
+
+
+def test_windows_one_chromium_row_with_the_warning(tmp_path, monkeypatch, capsys):
+    browsers(monkeypatch, tmp_path, "windows", "firefox", "chrome", "edge")
+    picked, out = sign_in_list(monkeypatch, capsys, ["2", "2"])  # Chromium-based, then Edge
+    assert rows(out) == [
+        ("Firefox", "works best"),
+        ("Chromium-based browser", "Chrome, Edge · on Windows usually cannot be read"),
+        ("A cookies.txt file…", "exported from your browser; see Help"),
+        ("None", "fetch without signing in"),
+        ("How does this work?", ""),
+        ("<- Back", ""),
+    ]
+    assert "Which Chromium-based browser?" in out and picked == "edge"
+
+
+def test_linux_with_snap_firefox_and_chrome_has_no_warning_and_no_sub_list(tmp_path, monkeypatch, capsys):
+    browsers(monkeypatch, tmp_path, "linux", "firefox", "chrome", snap=True)
+    assert cookies.installed_browsers() == ["firefox", "chrome"]  # snap Firefox found
+    picked, out = sign_in_list(monkeypatch, capsys, ["2"])
+    assert rows(out)[:2] == [("Firefox", "works best"), ("Chromium-based browser", "Chrome")]
+    assert "usually cannot be read" not in out
+    assert picked == "chrome" and "Which Chromium-based browser?" not in out  # only one: straight to it
+
+
+@pytest.mark.parametrize("snap", [False, True])
+def test_firefox_is_found_in_the_folders_yt_dlp_reads(tmp_path, monkeypatch, snap):
+    browsers(monkeypatch, tmp_path, "linux", "firefox", snap=snap)
+    assert cookies.installed_browsers() == ["firefox"]
+
+
+def test_macos_offers_safari_and_no_warning(tmp_path, monkeypatch, capsys):
+    browsers(monkeypatch, tmp_path, "macos", "chrome", "brave")
+    assert cookies.installed_browsers() == ["chrome", "brave", "safari"]
+    _, out = sign_in_list(monkeypatch, capsys, ["b"])
+    assert [r[0] for r in rows(out)][:2] == ["Chromium-based browser", "Safari"]
+    assert "usually cannot be read" not in out
+
+
+def test_the_sub_list_only_with_two_or_more(tmp_path, monkeypatch, capsys):
+    browsers(monkeypatch, tmp_path, "linux", "brave", "vivaldi", "chromium")
+    picked, out = sign_in_list(monkeypatch, capsys, ["1", "3"])
+    assert rows(out)[0] == ("Chromium-based browser", "Brave, Vivaldi, Chromium")
+    assert "Which Chromium-based browser?" in out and picked == "chromium"
+
+
+def test_no_browser_found_leaves_the_file_none_and_help(tmp_path, monkeypatch, capsys):
+    browsers(monkeypatch, tmp_path, "windows")
+    _, out = sign_in_list(monkeypatch, capsys, ["b"])
+    assert [r[0] for r in rows(out)] == ["A cookies.txt file…", "None", "How does this work?", "<- Back"]
+    assert "none was found on this computer" in out
+
+
+def test_how_does_this_work_explains_then_lists_again(tmp_path, monkeypatch, capsys):
+    browsers(monkeypatch, tmp_path, "linux", "firefox")
+    picked, out = sign_in_list(monkeypatch, capsys, ["4", "1"])  # How does this work?, then Firefox
+    for paragraph in cookies.HOW_IT_WORKS.split("\n"):
+        assert f"  {paragraph}" in out
+    assert "YouTube sometimes asks to confirm you're a person." in out
+    assert out.count("How does this work?") == 2 and picked == "firefox"
+
+
+def test_the_folders_are_the_ones_yt_dlp_reads(monkeypatch):
+    """On the system the tests run on, with its real home and environment."""
+    import os
+
+    from yt_dlp import cookies as ytdlp_cookies
+
+    real = "windows" if sys.platform in ("win32", "cygwin") else "macos" if sys.platform == "darwin" else "linux"
+    monkeypatch.setattr(cookies, "system", lambda: real)
+    monkeypatch.setattr(cookies, "home", Path.home)
+    monkeypatch.setattr(cookies, "environ", lambda: os.environ)
+    assert [str(d) for d in cookies.firefox_dirs(real)] == [
+        os.path.normpath(d) for d in ytdlp_cookies._firefox_browser_dirs()
+    ]
+    for browser in cookies.CHROMIUM:
+        theirs = ytdlp_cookies._get_chromium_based_browser_settings(browser)["browser_dir"]
+        assert str(cookies.chromium_dir(browser, real)) == os.path.normpath(theirs)

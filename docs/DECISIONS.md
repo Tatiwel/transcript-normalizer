@@ -776,6 +776,18 @@ Decision numbers are for whoever reads the code and the docs; in a message or a 
 
 The Linux full executable was one file (D-063 kept it so, since it is started from a terminal). As one file it unpacks its whole speech stack to a temporary folder on every start, which is what made the Windows one slow. It is now built `--onedir`, like Windows and macOS full, and shipped as `transcript-normalizer-<version>-linux-full.tar.gz` holding the folder `transcript-normalizer-<version>-linux-full/` with `transcript-normalizer` inside. The release runner's smoke tests run the program inside the folder; the release page says to extract it and run it from inside. Linux lite stays one file in a tar.gz.
 
+## D-077 After a review, only the questions that make sense; the sign-in list shows what is installed
+
+Two findings from a user test of the menu.
+
+**After the review's summary.** "learned layer written to …" was printed whenever a learned layer existed, even when every answer was "only in this video" (D-073) or "decide later"; the file was rewritten too. "Contribute what you taught the tool?" was asked whenever the layer held anything the pack lacked, from any earlier review. Now the CLI writes and announces the learned layer only when this session changed it (`--confirm` too), and the menu snapshots the layer before the review and offers to contribute only when it is different afterwards. Then "Add a term you noticed?" and "Open the folder?", once each, in that order. When adding a term leads to normalizing the run again, that second pass does not ask them again (`normalize_run(..., followups=False)`, and its review likewise).
+
+**The YouTube sign-in list** (Settings, and the ways out when fetch meets YouTube's check: the same list) is built from what is on this computer. The system comes from `sys.platform`, never a question. A browser is listed when its profile folder exists where yt-dlp reads it (yt_dlp/cookies.py: `_firefox_browser_dirs`, `_get_chromium_based_browser_settings`): on Linux that includes Firefox under `$XDG_CONFIG_HOME/mozilla/firefox`, `~/.mozilla/firefox`, flatpak (`~/.var/app/org.mozilla.firefox/…`) and snap (`~/snap/firefox/common/.mozilla/firefox`). A test compares the folders with yt-dlp's own on the system the tests run on. Safari is offered on macOS only (part of the system). Whale, which yt-dlp also reads, is left out.
+
+The rows: Firefox ("works best"); one row "Chromium-based browser" whose description names the ones found (Chrome, Edge, Brave, Opera, Vivaldi, Chromium), which opens a sub-list when there are two or more and goes straight to the browser when there is one; Safari; "A cookies.txt file…"; "None"; "How does this work?", which prints a four-line explanation (why YouTube asks, what signing in borrows, why Chromium-based browsers on Windows lock their login, that the login never leaves the computer or the program's files) and shows the list again; Back. "on Windows usually cannot be read" is shown beside the Chromium-based browsers only on Windows; D-071 showed it on every system, where on Linux and macOS they usually work. With no browser found, the list is the cookies.txt row, None and the help row. `fetch --cookies-from-browser` still takes any browser yt-dlp knows.
+
+Tests fake the system, the environment and the home folder (`cookies.system`, `environ`, `home`); by default every test sees a Linux with an empty home, so the developer's browsers never shape a test.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
