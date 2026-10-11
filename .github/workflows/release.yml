@@ -305,7 +305,8 @@ jobs:
             echo "track list: ok"
           elif grep -Eq 'HTTP Error 429|Too Many Requests' list.txt; then
             echo "::warning::YouTube answered HTTP 429; yt-dlp ran, which is what this checks"
-          elif grep -q 'Sign in to confirm' list.txt; then
+          elif [ "$status" = 3 ] && grep -Eq 'YouTube asked to confirm you are not a bot|YouTube asks for a signed-in account' list.txt; then
+            # D-071: fetch says YouTube's check plainly and exits 3.
             echo "::warning::YouTube asked this runner to sign in; yt-dlp ran, which is what this checks"
           else
             echo "::error::unexpected answer from fetch --list (exit $status)"; exit 1

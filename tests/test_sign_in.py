@@ -152,7 +152,7 @@ def test_no_cookie_value_is_in_any_file_a_run_writes(tmp_path, monkeypatch, jar,
     for path in [*written, isolated_settings]:
         assert SECRET.encode() not in path.read_bytes(), path
     # config.toml names the file, and holds nothing of what is in it.
-    assert isolated_settings.read_text(encoding="utf-8") == f'{cookies.CONFIG_KEY} = "{jar}"\n'
+    assert runs.read_config() == {cookies.CONFIG_KEY: str(jar)}
 
 
 # ------------------------------------------------------------------ the menu
@@ -190,12 +190,14 @@ def test_a_check_at_the_caption_offers_the_same_ways_out(tmp_path, monkeypatch, 
 
 
 def test_settings_takes_a_cookies_txt_and_keeps_only_its_path(tmp_path, monkeypatch, capsys, jar, isolated_settings):
-    # Settings, YouTube sign-in, "A cookies.txt file…" (no dialog here: typed).
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", "5", str(jar), "q"])
+    # Settings, YouTube sign-in, "A cookies.txt file…" (no dialog here: typed);
+    # Safari is listed on macOS only, so the file and None move down one there.
+    file_, none = ("6", "7") if sys.platform == "darwin" else ("5", "6")
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", file_, str(jar), "q"])
     assert "no file dialog here; type the path instead" in out
     assert f"Saved. YouTube sign-in: the cookies file {jar}" in out
     assert runs.read_config() == {cookies.CONFIG_KEY: str(jar)}
     assert SECRET not in isolated_settings.read_text(encoding="utf-8")
     # And "None" removes it.
-    menu(tmp_path, monkeypatch, capsys, ["7", "2", "6", "q"])
+    menu(tmp_path, monkeypatch, capsys, ["7", "2", none, "q"])
     assert runs.read_config() == {}

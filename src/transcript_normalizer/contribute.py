@@ -280,7 +280,7 @@ def run_propose_whole(name: str) -> int:
         return 0
     target = base_dir() / CONTRIBUTIONS_DIR / f"{name}-{version}.yaml"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(text, encoding="utf-8")
+    target.write_bytes(path.read_bytes())  # the file as it is, line endings included
     print(f"written to {target}")
     open_issue(whole_issue_url(title, target, text, summary))
     return 0

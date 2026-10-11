@@ -1,5 +1,7 @@
 """D-070: with portable.txt beside the program, every byte stays in its folder."""
 
+import sys
+
 import platformdirs
 import pytest
 
@@ -42,6 +44,8 @@ def portable(tmp_path, monkeypatch):
     return app, home, elsewhere
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="platformdirs asks Windows itself, not the environment; "
+                    "the release runner checks the real portable build there (D-070)")
 def test_the_user_folders_are_the_temporary_home(portable):
     _, home, _ = portable
     for folder in (platformdirs.user_config_dir(), platformdirs.user_documents_dir(), platformdirs.user_cache_dir()):
