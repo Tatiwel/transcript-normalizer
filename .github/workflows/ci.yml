@@ -1,6 +1,7 @@
 # Continuous integration: run the test suite on every push to a branch and on
 # every pull request, on the three operating systems the executables are built
-# for (D-052). Not on tags: a tag push starts release.yml, which is enough.
+# for (D-052). Not on tags: a tag push starts release.yml, which runs this same
+# workflow as its first job (`workflow_call`) and builds nothing unless it passes.
 #
 # A workflow is a list of jobs; a job is a list of steps that run, in order, on
 # a fresh virtual machine ("runner") that GitHub provides and throws away after.
@@ -13,6 +14,9 @@ on:
     # `branches` alone makes GitHub skip tag pushes for this workflow.
     branches: ["**"]
   pull_request:
+  # release.yml calls it, so a release is gated on the full matrix for the
+  # tagged commit itself.
+  workflow_call:
 
 jobs:
   test:

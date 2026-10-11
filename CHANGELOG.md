@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Releases are gated on the tests: the release workflow runs the whole CI matrix (Linux, Windows, macOS; Python 3.11 and 3.12) on the tagged commit first, and builds and publishes nothing unless all six runs pass. Windows CI had been failing since 0.6.1 without stopping a release.
+
 ## 0.6.4
 
 YouTube's bot check said plainly, and a YouTube sign-in for it (D-071); normalizing about three times faster with identical results; the menu no longer waits for the network at startup.

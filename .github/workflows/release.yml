@@ -10,7 +10,10 @@
 #   - a sha256 checksum of every file, and the CHANGELOG section as the text.
 #
 # Jobs run in parallel unless one `needs` another. The order here is:
-#   check -> (package, executable x 6) -> release
+#   ci -> check -> (package, executable x 6) -> release
+# `ci` is ci.yml itself, the test suite on Linux, Windows and macOS with both
+# Python versions, run on the commit being released: nothing is built or
+# published unless every one of its six runs passes.
 #
 # A test build: Actions -> release -> "Run workflow" on any branch builds and
 # tests the same files from that commit, without a tag. The tag check is
@@ -37,8 +40,16 @@ defaults:
     shell: bash
 
 jobs:
+  # ---------------------------------------------------------------- 0. ci
+  ci:
+    # The whole test matrix, from ci.yml, for this commit. It only reads.
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   # ---------------------------------------------------------------- 0. check
   check:
+    needs: ci
     # Stop early if the tag and the code disagree: tag v0.4.0 must be version
     # 0.4.0 in pyproject.toml, and CHANGELOG.md must have a `## 0.4.0` section.
     # Two outputs: `version`, what the program calls itself (the installer's
