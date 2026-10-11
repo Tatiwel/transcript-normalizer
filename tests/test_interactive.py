@@ -23,7 +23,7 @@ from . import fetch_fakes
 from .fetch_fakes import LINK, URL, VIDEO_ID, FakeYtDlp
 
 DATA = Path(__file__).resolve().parent / "data"
-SECTIONS = ("USAGE", "COMMANDS", "MENU", "WHAT HAPPENS", "THE REVIEW LOOP", "EXAMPLES", "LEARN MORE")
+SECTIONS = ("USAGE", "COMMANDS", "MENU", "WHAT HAPPENS", "THE REVIEW LOOP", "EXAMPLES", "YOUTUBE SAYS I'M A BOT", "LEARN MORE")
 ANSI = re.compile(r"\x1b\[")
 
 
@@ -73,7 +73,7 @@ def test_first_screen(tmp_path, monkeypatch, capsys):
     assert "What would you like to do?" in out
     assert "   1. Fetch a video or file   download a caption, or transcribe audio locally" in out
     assert "   8. Help                    what each action does and its command" in out
-    assert "   7. Settings                where to save your files" in out
+    assert "   7. Settings                where to save your files, YouTube sign-in" in out
     assert "   q. Quit" in out
     assert "Back" not in out  # the menu has Quit instead
     assert not ANSI.search(out)  # no colour without a terminal
@@ -478,7 +478,7 @@ def test_stages_and_text_fields_are_marked(tmp_path, monkeypatch, capsys):
 def test_settings_writes_the_folder_and_the_menu_uses_it(tmp_path, monkeypatch, capsys, isolated_settings):
     chosen = tmp_path / "my files"
     # Settings -> Where to save -> Choose another folder (no dialog here: typed).
-    code, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", str(chosen), "q"])
+    code, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", str(chosen), "q"])
     assert code == 0
     assert "no folder dialog here; type the path instead" in out
     assert "-- type a path --" in out
@@ -494,7 +494,7 @@ def test_settings_writes_the_folder_and_the_menu_uses_it(tmp_path, monkeypatch, 
 
 def test_settings_can_go_back_to_the_default(tmp_path, monkeypatch, capsys):
     runs.write_config({"data_dir": str(tmp_path / "elsewhere"), "pack": "financas-ptbr"})
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "2", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "2", "q"])
     assert "chosen in Settings" in out
     assert runs.read_config() == {"pack": "financas-ptbr"}
     assert runs.base_dir() == tmp_path
@@ -551,7 +551,7 @@ def fake_tkinter(monkeypatch, chosen):
 def test_the_folder_dialog_is_used_and_its_answer_stored(tmp_path, monkeypatch, capsys):
     chosen = tmp_path / "picked"
     tk = fake_tkinter(monkeypatch, str(chosen))
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", "q"])
     (_, asked), = [c for c in tk.calls if isinstance(c, tuple)]
     assert asked["initialdir"] == str(tmp_path) and asked["title"] == "Where to save your files"
     assert tk.calls[-1] == "destroy"
@@ -561,7 +561,7 @@ def test_the_folder_dialog_is_used_and_its_answer_stored(tmp_path, monkeypatch, 
 
 def test_cancelling_the_folder_dialog_changes_nothing(tmp_path, monkeypatch, capsys):
     fake_tkinter(monkeypatch, "")
-    menu(tmp_path, monkeypatch, capsys, ["7", "1", "q"])
+    menu(tmp_path, monkeypatch, capsys, ["7", "1", "1", "q"])
     assert runs.read_config() == {}
 
 
@@ -718,7 +718,7 @@ def test_track_on_the_command_line_takes_that_exact_track(tmp_path, monkeypatch,
 
 
 def test_settings_hint_is_printed_once(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "", "q"])
     assert out.count("saved in your user settings, for every run of the menu") == 1
     assert "The pack offered first" not in out.split("* Settings")[1]  # in Packs now (D-065)
 

@@ -60,7 +60,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Show a run's outputs    where the files are, first lines of the result
    List runs               everything under runs/
    Packs                   installed, get, create, edit, share
-   Settings                where to save your files
+   Settings                where to save your files, YouTube sign-in
    Help                    what each action does and its command
    Quit
 ```
@@ -103,6 +103,18 @@ to confirm:
   dividido (2 occurrences) -> dividendo
   preço alto (1 occurrence) -> preço alvo
 ```
+
+### O YouTube diz que sou um robô
+
+Às vezes ler um link do YouTube para com "YouTube asked to confirm you are not a bot. This depends on your connection, not on the video." O YouTube pede isso a conexões que acha suspeitas: uma VPN, a rede de uma universidade ou escritório, muitos pedidos de um mesmo endereço. O mesmo vídeo costuma funcionar de outra rede, ou mais tarde. O menu então oferece quatro saídas: usar o login do YouTube do seu navegador (cookies), tentar mais tarde, usar um arquivo deste computador, ou voltar.
+
+**Entrar pelo navegador.** Esteja logado no YouTube no navegador e escolha-o em Settings → YouTube sign-in (ou quando o menu oferecer). O Firefox funciona melhor. Chrome e Edge no Windows em geral não podem ser lidos: eles criptografam os cookies para que só o próprio navegador os abra. Com eles, exporte um `cookies.txt`:
+
+1. Instale uma extensão que exporte cookies no formato Netscape, por exemplo "Get cookies.txt LOCALLY" (Chrome, Edge) ou "cookies.txt" (Firefox).
+2. Abra o youtube.com, logado, e exporte os cookies desse site para um arquivo.
+3. Escolha-o em Settings → YouTube sign-in → "A cookies.txt file…".
+
+Num script: `fetch <url> --cookies-from-browser firefox` ou `fetch <url> --cookies cookies.txt`; a opção vence o Settings. No modo portátil, um `cookies.txt` posto na pasta `data` é usado sem perguntar. O config.toml guarda só o nome do navegador ou o caminho do arquivo, e o yt-dlp lê os cookies quando baixa; eles nunca são copiados para runs/, relatórios ou qualquer outra coisa que a ferramenta escreve. Um cookies.txt é o seu login do YouTube: guarde-o só para você, e exporte outro quando ele parar de funcionar (D-071).
 
 ## 4. Lendo as saídas
 

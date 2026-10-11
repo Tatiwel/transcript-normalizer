@@ -35,6 +35,7 @@ from pathlib import Path
 
 from ..catalog import write_meta
 from ..runs import is_frozen, runs_root
+from . import cookies as sign_in
 from .console import Output
 from .header import Metadata, caption_header, speech_header
 from .subtitles import subtitle_to_lines
@@ -74,6 +75,44 @@ class NoCaption(FetchError):
 
 class RateLimited(FetchError):
     """HTTP 429 on every attempt."""
+
+
+class SignInRequired(FetchError):
+    """D-071: YouTube's bot check, age check or login wall. The message is
+    said plainly; yt-dlp's own, which names its flags, is kept in `raw`."""
+
+    def __init__(self, plainly: str, raw: str = ""):
+        super().__init__(plainly)
+        self.raw = raw
+
+
+class CookiesUnreadable(FetchError):
+    """D-071: the browser or cookies.txt named for the sign-in could not be read."""
+
+
+#: D-071: what YouTube's checks are, said to a person.
+BOT_CHECK = "YouTube asked to confirm you are not a bot. This depends on your connection, not on the video."
+SIGN_IN = "YouTube asks for a signed-in account to show this video (an age check, or members only)."
+#: What `fetch` exits with when YouTube asks for a sign-in, so the menu can offer it.
+EXIT_SIGN_IN = 3
+
+#: Lowercased pieces of yt-dlp's messages, by what they mean (D-071).
+BOT_MARKS = ("not a bot",)
+SIGN_IN_MARKS = (
+    "confirm your age", "age-restricted", "inappropriate for some users",
+    "login details are needed", "only available for registered users",
+    "members-only", "join this channel", "--cookies-from-browser or --cookies",
+)
+
+
+def sign_in_needed(message: str) -> str:
+    """BOT_CHECK or SIGN_IN when yt-dlp's message is one of YouTube's checks; ""."""
+    lowered = message.lower().replace("\u2019", "'")
+    if any(mark in lowered for mark in BOT_MARKS):
+        return BOT_CHECK
+    if any(mark in lowered for mark in SIGN_IN_MARKS):
+        return SIGN_IN
+    return ""
 
 
 @dataclass(frozen=True)
@@ -211,18 +250,56 @@ def is_rate_limited(message: str) -> bool:
     return "HTTP Error 429" in message or "Too Many Requests" in message
 
 
-def ytdlp(params: dict, call, what: str, out: Output):
+def cookie_params(cookies: sign_in.Cookies | None) -> dict:
+    """D-071: the sign-in for yt-dlp; a cookies.txt that is not there is said
+    here, before yt-dlp quietly carries on without it."""
+    if cookies is None:
+        return {}
+    if cookies.file is not None and not cookies.file.is_file():
+        raise CookiesUnreadable(f"There is no cookies file at {cookies.file}.")
+    return cookies.params()
+
+
+def unreadable_cookies(error: Exception, cookies: sign_in.Cookies | None) -> CookiesUnreadable | None:
+    """D-071: yt-dlp's CookieLoadError, said with the browser or file and what to try.
+    yt-dlp reports it and raises a DownloadError while handling it, so it is
+    looked for in the chain; its own context is the cause."""
+    loading = error
+    while loading is not None and type(loading).__name__ != "CookieLoadError":
+        loading = loading.__cause__ or loading.__context__
+    if cookies is None or loading is None:
+        return None
+    cause = str(loading.__context__ or error).strip().removeprefix("ERROR: ")
+    if cookies.browser:
+        return CookiesUnreadable(
+            f"Could not read the YouTube sign-in from {cookies.browser.capitalize()} ({cause}). "
+            + sign_in.browser_advice(cookies.browser)
+        )
+    return CookiesUnreadable(f"Could not read the cookies file {cookies.file} ({cause}).")
+
+
+def ytdlp(params: dict, call, what: str, out: Output, cookies: sign_in.Cookies | None = None):
     """Run `call(ydl)` on a YoutubeDL with `params`, retrying HTTP 429 with
     exponential backoff. Returns what `call` returned and how many retries it
-    took; raises RateLimited, or FetchError with yt-dlp's own message."""
+    took; raises RateLimited, SignInRequired or CookiesUnreadable (D-071), or
+    FetchError with yt-dlp's own message.
+
+    `cookies`, when None, is what Settings chose (D-071)."""
+    cookies = cookies or sign_in.configured()
     params = {"quiet": True, "no_warnings": True, "noprogress": True, "logger": _Quiet(),
-              **impersonation_params(), **portable_params(), **params}
+              **impersonation_params(), **portable_params(), **cookie_params(cookies), **params}
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             with in_portable_cache(), youtube_dl(params) as ydl:
                 return call(ydl), attempt - 1
         except Exception as error:  # yt-dlp's DownloadError, or anything under it
+            unreadable = unreadable_cookies(error, cookies)
+            if unreadable is not None:
+                raise unreadable from error
             message = str(error).strip()
+            plainly = sign_in_needed(message)
+            if plainly:
+                raise SignInRequired(plainly, message) from error
             if not is_rate_limited(message):
                 raise FetchError(f"{what} failed: {message[-600:]}") from error
         if attempt == MAX_ATTEMPTS:
@@ -244,13 +321,14 @@ def download(url: str):
     return call
 
 
-def read_metadata(url: str, out: Output | None = None) -> Metadata:
+def read_metadata(url: str, out: Output | None = None, cookies: sign_in.Cookies | None = None) -> Metadata:
     """What the platform says about the video. Both steps need it."""
     data, _ = ytdlp(
         {"skip_download": True},
         lambda ydl: ydl.extract_info(url, download=False),
         "reading the video",
         out or Output(),
+        cookies,
     )
     return Metadata(
         id=data.get("id", ""),
@@ -395,10 +473,13 @@ def caption_params(code: str, source: str, target: Path) -> dict:
 
 
 def download_caption(
-    url: str, code: str, source: str, target: Path, out: Output | None = None
+    url: str, code: str, source: str, target: Path, out: Output | None = None,
+    cookies: sign_in.Cookies | None = None,
 ) -> tuple[Path, int]:
     """The subtitle file, and how many 429 retries it took."""
-    _, retries = ytdlp(caption_params(code, source, target), download(url), "the caption download", out or Output())
+    _, retries = ytdlp(
+        caption_params(code, source, target), download(url), "the caption download", out or Output(), cookies
+    )
     found = next(
         (
             path
@@ -434,7 +515,9 @@ def is_range_error(message: str) -> bool:
     return "HTTP Error 416" in message or "Requested range not satisfiable" in message
 
 
-def download_audio(url: str, target: Path, out: Output | None = None) -> Path:
+def download_audio(
+    url: str, target: Path, out: Output | None = None, cookies: sign_in.Cookies | None = None
+) -> Path:
     """Download the audio track without converting, which needs no ffmpeg.
 
     D-059: always from zero. A file left by an earlier attempt is deleted first,
@@ -451,13 +534,13 @@ def download_audio(url: str, target: Path, out: Output | None = None) -> Path:
     if clear_partial_audio(target):
         out.info("removed an incomplete audio file from an earlier attempt")
     try:
-        ytdlp(params, download(url), "the audio download", out)
+        ytdlp(params, download(url), "the audio download", out, cookies)
     except FetchError as error:
         if not is_range_error(str(error)):
             raise
         clear_partial_audio(target)
         out.info("the audio download asked for a range the server does not have; starting over")
-        ytdlp(params, download(url), "the audio download", out)
+        ytdlp(params, download(url), "the audio download", out, cookies)
     found = sorted(target.glob("audio.*"))
     if not found:
         raise FetchError("the audio download finished without error but no audio appeared")
@@ -626,7 +709,9 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     return 0
 
 
-def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Output) -> Step:
+def step_caption(
+    args: argparse.Namespace, meta: Metadata, target: Path, out: Output, cookies: sign_in.Cookies | None = None
+) -> Step:
     """Step 1: the platform's caption. Raises NoCaption, RateLimited or FetchError."""
     if getattr(args, "track", None):  # D-062: this exact track, or nothing
         track = track_named(meta, args.track)
@@ -646,7 +731,7 @@ def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Ou
             f"automatic: {summarise(meta.automatic_captions)})"
         )
     out.info(f"caption chosen: {code} ({source})")
-    subtitle, retries = download_caption(args.url, code, source, target, out)
+    subtitle, retries = download_caption(args.url, code, source, target, out, cookies)
     step = Step(STEP_CAPTION, retries=retries, track=code, track_source=source)
     body = subtitle_to_lines(subtitle.read_text(encoding="utf-8"), subtitle.suffix)
     caption = target / CAPTION_FILE
@@ -664,7 +749,8 @@ def step_caption(args: argparse.Namespace, meta: Metadata, target: Path, out: Ou
 
 
 def step_speech(
-    args: argparse.Namespace, meta: Metadata, target: Path, reason: str, out: Output
+    args: argparse.Namespace, meta: Metadata, target: Path, reason: str, out: Output,
+    cookies: sign_in.Cookies | None = None,
 ) -> Step:
     """Step 2: local speech recognition. Raises FetchError."""
     if is_lite_build():  # D-057: only here, where step 2 is really needed
@@ -672,7 +758,7 @@ def step_speech(
     missing = missing_extra("faster_whisper")
     if missing:
         raise FetchError(f"local speech recognition needs {', '.join(missing)} (the ingest extra)")
-    audio = download_audio(args.url, target, out)
+    audio = download_audio(args.url, target, out, cookies)
     out.detail("audio", audio, "path")
     body = transcribe(audio, args.lang, args.model, out)
     step = Step(STEP_SPEECH, reason=reason)
@@ -730,6 +816,19 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--list", action="store_true", help="only list the caption languages available"
+    )
+    signed = parser.add_mutually_exclusive_group()
+    signed.add_argument(
+        "--cookies-from-browser",
+        metavar="BROWSER",
+        choices=sign_in.BROWSERS,
+        help="use this browser's YouTube sign-in, when YouTube asks to confirm you are not a bot "
+        f"({', '.join(sign_in.BROWSERS)}; Firefox works best). Instead of Settings (D-071)",
+    )
+    signed.add_argument(
+        "--cookies",
+        metavar="FILE",
+        help="use the YouTube sign-in in this cookies.txt file (Netscape format). Instead of Settings (D-071)",
     )
     # Hidden: for the menu, which runs fetch twice when it moves from step 1 to
     # step 2 (D-053), and for the release workflow's smoke test (D-058).
@@ -796,6 +895,22 @@ def undo_attempt(target: Path, before: set[Path], existed: bool) -> int:
     return removed
 
 
+def report_sign_in(error: FetchError, args: argparse.Namespace) -> int:
+    """D-071: YouTube's check, or a sign-in that could not be read, in plain
+    words. The ways out name the flags, except for the menu (--no-video-info),
+    which offers them as choices. Exits EXIT_SIGN_IN for YouTube's check."""
+    print(error, file=sys.stderr)
+    if not isinstance(error, SignInRequired):
+        return 1
+    if not args.no_video_info:
+        print(
+            "Ways out: use your browser's YouTube sign-in (--cookies-from-browser firefox, or "
+            "--cookies cookies.txt; or set it once in the menu's Settings), or try again later.",
+            file=sys.stderr,
+        )
+    return EXIT_SIGN_IN
+
+
 def run_check() -> int:
     """`fetch --check`: one line per tool, installed or not. Always exits 0."""
     width = max(len(name) for _, name, _ in CHECKED)
@@ -832,8 +947,11 @@ def run(args: argparse.Namespace) -> int:
     if missing:
         return report_missing(missing)
 
+    cookies = sign_in.chosen(args.cookies_from_browser, args.cookies)
     try:
-        meta = read_metadata(args.url, out)
+        meta = read_metadata(args.url, out, cookies)
+    except (SignInRequired, CookiesUnreadable) as error:
+        return report_sign_in(error, args)
     except FetchError as error:
         print(f"could not read the video: {error}", file=sys.stderr)
         return 1
@@ -872,7 +990,11 @@ def run(args: argparse.Namespace) -> int:
     else:
         out.stage(f"step 1: {STEP_NAMES[STEP_CAPTION]}")
         try:
-            step = step_caption(args, meta, target, out)
+            step = step_caption(args, meta, target, out, cookies)
+        except (SignInRequired, CookiesUnreadable) as error:
+            # The audio would meet the same check: no use falling through.
+            give_back()
+            return report_sign_in(error, args)
         except NoCaption as error:
             failures.append(str(error))
             reason, plainly = "sem legenda na plataforma", NO_CAPTION
@@ -897,7 +1019,10 @@ def run(args: argparse.Namespace) -> int:
     if step is None:
         out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
         try:
-            step = step_speech(args, meta, target, reason, out)
+            step = step_speech(args, meta, target, reason, out, cookies)
+        except (SignInRequired, CookiesUnreadable) as error:
+            give_back()
+            return report_sign_in(error, args)
         except Exception as error:  # FetchError, or a decoder or model failure
             failures.append(str(error) if isinstance(error, FetchError) else f"{type(error).__name__}: {error}")
             print("could not get a text for this video:", file=sys.stderr)

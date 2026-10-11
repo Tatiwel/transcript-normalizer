@@ -7,9 +7,9 @@ does a subcommand's work in its own way. The questions go through `prompts`:
 arrow keys with questionary, numbered text without it.
 
 The one exception is what the menu remembers (D-061), in the user's
-config.toml: where runs/ and packs/ go (Settings) and the pack offered first
-(Packs, D-065). A script reaches the same with TRANSCRIPT_NORMALIZER_HOME and
---pack.
+config.toml: where runs/ and packs/ go and the YouTube sign-in (Settings, D-071),
+and the pack offered first (Packs, D-065). A script reaches the same with
+TRANSCRIPT_NORMALIZER_HOME, --cookies-from-browser or --cookies, and --pack.
 """
 
 from __future__ import annotations
@@ -192,7 +192,9 @@ def fetch() -> None:
 def fetch_link() -> str | None:
     """Paste a link, read the video, choose caption or transcription."""
     from .ingest.console import Output
-    from .ingest.fetch import NO_CAPTION, FetchError, missing_extra, read_metadata, tracks
+    from .ingest.fetch import (
+        NO_CAPTION, CookiesUnreadable, FetchError, SignInRequired, missing_extra, read_metadata, tracks,
+    )
 
     source = prompts.text("The video's link", hint="YouTube, Vimeo, TikTok, Instagram and others")
     if not source:
@@ -201,11 +203,17 @@ def fetch_link() -> str | None:
         # Not a link (a path typed here still works), or nothing to read links
         # with: fetch says which, in its own words.
         return after_fetch(run_command(["fetch", source]))
-    try:
-        meta = read_metadata(source, Output())
-    except FetchError as failure:
-        error(f"could not read the video: {failure}")
-        return None
+    while True:
+        try:
+            meta = read_metadata(source, Output())
+            break
+        except (SignInRequired, CookiesUnreadable) as failure:
+            way = sign_in_way_out(failure)
+            if way != SIGNED_IN:
+                return way
+        except FetchError as failure:
+            error(f"could not read the video: {failure}")
+            return None
     for label, value, kind in (
         ("title", meta.title, "value"), ("channel", meta.channel, "value"),
         ("published", meta.published, "value"),
@@ -242,7 +250,7 @@ def fetch_link() -> str | None:
         track = choose_track(meta, listed, translations)
         if track is None:
             continue
-        code = run_command(["fetch", source, "--track", track, "--caption-only", "--no-video-info"])
+        code = signed_in_fetch(["fetch", source, "--track", track, "--caption-only", "--no-video-info"])
         if code == 1 and not transcription_unavailable() and prompts.confirm(
             "Transcribe the audio on this computer instead?",
             default=True,
@@ -265,9 +273,52 @@ def transcription_unavailable(short: bool = False) -> str:
     return ""
 
 
-def transcribe_link(source: str) -> int:
+def transcribe_link(source: str) -> int | str | None:
     # The title, channel and duration are on screen already.
-    return run_command(["fetch", source, "--whisper", "--no-video-info"])
+    return signed_in_fetch(["fetch", source, "--whisper", "--no-video-info"])
+
+
+#: What sign_in_way_out returns when a sign-in was chosen: try again.
+SIGNED_IN = "signed in"
+
+
+def sign_in_way_out(failure=None) -> str | None:
+    """D-071: YouTube's check (or a sign-in that could not be read) in plain
+    words, and the ways out. SIGNED_IN when a sign-in was saved, to try again;
+    otherwise what fetch_link returns: None (later), BACK, or a file's fetch."""
+    from .ingest.fetch import SignInRequired
+
+    if failure is not None:  # fetch, run as a command, has said it already
+        say(mark(str(failure), "need" if isinstance(failure, SignInRequired) else "bad"))
+    while True:
+        way = prompts.select("What now?", [
+            Option("Use your browser's YouTube sign-in (cookies)",
+                   "yt-dlp reads it for the download; nothing is copied", value="sign-in"),
+            Option("Try again later", "the check usually passes after a while", value="later"),
+            Option("Use a file from this computer", "audio, video or a caption you already have", value="file"),
+        ])
+        if way is None:
+            return BACK
+        if way == "later":
+            return None
+        if way == "file":
+            return fetch_file()
+        if choose_cookies():
+            return SIGNED_IN
+
+
+def signed_in_fetch(argv: list[str]) -> int | str | None:
+    """`fetch` with argv; when YouTube asks for a sign-in, the ways out, and
+    the same command again once one is chosen (D-071)."""
+    from .ingest.fetch import EXIT_SIGN_IN
+
+    code = run_command(argv)
+    while code == EXIT_SIGN_IN:
+        way = sign_in_way_out()
+        if way != SIGNED_IN:
+            return way
+        code = run_command(argv)
+    return code
 
 
 #: The track-list option that opens the automatic translations.
@@ -340,8 +391,11 @@ def fetch_file() -> str | None:
     return after_fetch(run_command(["fetch", str(path)]))
 
 
-def after_fetch(code: int) -> None:
-    """The step after a fetch: normalize, if the user wants."""
+def after_fetch(code: int | str | None) -> str | None:
+    """The step after a fetch: normalize, if the user wants. A code that is
+    not a number is where the sign-in's ways out led (D-071): passed on."""
+    if not isinstance(code, int):
+        return code
     if code != 0:
         error("fetch did not finish")
         return
@@ -1063,11 +1117,78 @@ def choose_first_pack() -> None:
     say(mark("Saved. ", "ok"), "Offered first: ", mark(picked, "path"))
 
 
+def pick_cookies_file(initial: Path):
+    """D-071: the system's file dialog for a cookies.txt: a Path, None, or NO_PICKER."""
+    chosen = system_dialog(lambda dialog, root: dialog.askopenfilename(
+        parent=root, initialdir=str(initial), title="Your exported cookies.txt",
+        filetypes=[("cookies.txt", "*.txt"), ("All files", "*")],
+    ))
+    return chosen if chosen is NO_PICKER else (Path(chosen) if chosen else None)
+
+
+def choose_cookies() -> bool:
+    """D-071: the YouTube sign-in: a browser, a cookies.txt file, or none.
+    config.toml keeps the browser's name or the file's path, never a cookie.
+    True when a sign-in was saved."""
+    from .ingest import cookies
+
+    current = cookies.configured()
+    detail("now", current.label() if current else "none")
+    if current is not None and not cookies.setting():
+        say(mark("  the cookies.txt in the portable folder, used without asking", "hint"))
+    browsers = ["firefox", "chrome", "edge", "brave"] + (["safari"] if sys.platform == "darwin" else [])
+    options = [
+        Option(name.capitalize(), "works best" if name == "firefox" else
+               "on Windows usually cannot be read" if name in cookies.UNREADABLE_ON_WINDOWS else "",
+               value=name)
+        for name in browsers
+    ]
+    options += [
+        Option("A cookies.txt file…", "exported from your browser; see Help", value="file"),
+        Option("None", "fetch without signing in", value="none"),
+    ]
+    picked = prompts.select(
+        "YouTube sign-in",
+        options,
+        hint="the browser you are signed in to YouTube with; Chrome and Edge on Windows usually cannot be read",
+    )
+    if picked is None:
+        return False
+    if picked == "none":
+        save_setting(cookies.CONFIG_KEY, None)
+        say(mark("Saved. ", "ok"), "Fetching without a YouTube sign-in")
+        return False
+    if picked == "file":
+        path = pick_cookies_file(Path.home())
+        if path is NO_PICKER:
+            say(mark("  no file dialog here; type the path instead", "hint"))
+            answer = prompts.text("Path to cookies.txt", hint="the file your browser extension exported", kind="path")
+            path = Path(answer.strip().strip("'\"")).expanduser() if answer else None
+        if path is None:
+            return False
+        if not path.is_file():
+            error(f"no file at {path}")
+            return False
+        picked = str(path.absolute())
+    save_setting(cookies.CONFIG_KEY, picked)
+    say(mark("Saved. ", "ok"), "YouTube sign-in: ", mark(cookies.from_setting(picked).label(), "path"))
+    say(mark("  read by yt-dlp when it fetches; the cookies themselves are never copied", "hint"))
+    return True
+
+
 def settings() -> None:
-    """Where to save your files; the pack offered first moved to Packs (D-065)."""
+    """Where to save your files, and the YouTube sign-in (D-071); the pack
+    offered first moved to Packs (D-065)."""
     stage("Settings")
     say(mark("  saved in your user settings, for every run of the menu", "hint"))
-    choose_folder()
+    which = prompts.select("Which setting?", [
+        Option("Where to save your files", "runs/ and packs/", value="folder"),
+        Option("YouTube sign-in", "when YouTube asks to confirm you are not a bot", value="cookies"),
+    ])
+    if which == "folder":
+        choose_folder()
+    elif which == "cookies":
+        choose_cookies()
 
 
 # ------------------------------------------------------------------ packs (D-065)

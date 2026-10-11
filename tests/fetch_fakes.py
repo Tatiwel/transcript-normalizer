@@ -9,10 +9,20 @@ VIDEO_ID = "abcdefghijk"
 URL = f"https://www.youtube.com/watch?v={VIDEO_ID}"
 RATE_LIMITED = "ERROR: Unable to download video subtitles for 'pt': HTTP Error 429: Too Many Requests"
 RANGE_ERROR = "ERROR: unable to download video data: HTTP Error 416: Requested range not satisfiable"
+#: D-071: what yt-dlp raised on a real Windows user, curly apostrophe and all.
+BOT_CHECK = (
+    "ERROR: [youtube] abcdefghijk: Sign in to confirm you\u2019re not a bot. Use --cookies-from-browser "
+    "or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ  for how to "
+    "manually pass cookies"
+)
 
 
 class DownloadError(Exception):
     """What yt-dlp raises; fetch only reads its message."""
+
+
+class CookieLoadError(Exception):
+    """What yt-dlp raises when the cookies cannot be read; the cause is its context."""
 
 
 class FakeYtDlp:
@@ -27,7 +37,8 @@ class FakeYtDlp:
     `writesubtitles` or `writeautomaticsub`. `params` keeps every option set.
     """
 
-    def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",), audio=None):
+    def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",), audio=None,
+                 metadata=("ok",), unreadable_browser=False):
         self.caption = list(caption)
         self.has_caption = has_caption
         # Each audio download, in order: "ok", "416" (leaves a .part behind,
@@ -38,6 +49,12 @@ class FakeYtDlp:
         self.calls: list[str] = []
         self.downloads: list[tuple[str, str]] = []
         self.params: list[dict] = []
+        # D-071: each metadata read, in order: "ok", or "bot" for YouTube's
+        # check. The last entry repeats. `cookies` keeps what each call read
+        # from its cookies file, as yt-dlp's cookie jar would.
+        self.metadata = list(metadata)
+        self.unreadable_browser = unreadable_browser
+        self.cookies: list[str] = []
 
     def open(self, params):
         self.params.append(params)
@@ -62,6 +79,17 @@ class FakeYoutubeDL:
         self.platform, self.params = platform, params
 
     def __enter__(self):
+        if self.params.get("cookiesfrombrowser") and self.platform.unreadable_browser:
+            # As yt-dlp does: the cause, its CookieLoadError, then report_error's DownloadError.
+            try:
+                try:
+                    raise PermissionError("Failed to decrypt with DPAPI")
+                except PermissionError:
+                    raise CookieLoadError("failed to load cookies")
+            except CookieLoadError:
+                raise DownloadError("ERROR: Failed to decrypt with DPAPI")
+        if self.params.get("cookiefile"):
+            self.platform.cookies.append(Path(self.params["cookiefile"]).read_text(encoding="utf-8"))
         return self
 
     def __exit__(self, *exc):
@@ -69,8 +97,12 @@ class FakeYoutubeDL:
 
     def extract_info(self, url, download=True):
         assert url == URL and download is False
-        self.platform.calls.append("metadata")
-        return self.platform.info()
+        platform = self.platform
+        platform.calls.append("metadata")
+        outcome = platform.metadata.pop(0) if len(platform.metadata) > 1 else platform.metadata[0]
+        if outcome == "bot":
+            raise DownloadError(BOT_CHECK)
+        return platform.info()
 
     def download(self, urls):
         platform, params = self.platform, self.params

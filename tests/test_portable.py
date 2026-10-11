@@ -95,7 +95,7 @@ def test_the_variable_still_wins(portable, tmp_path, monkeypatch):
 
 def test_settings_says_portable_and_offers_no_picker(portable, monkeypatch, capsys):
     app, _, elsewhere = portable
-    _, out, _ = menu(elsewhere, monkeypatch, capsys, ["7", "q"])
+    _, out, _ = menu(elsewhere, monkeypatch, capsys, ["7", "1", "q"])
     data = app / runs.PORTABLE_DATA
     assert f"portable mode: everything stays in {data}" in out
     assert "Choose another folder" not in out and f"Your files: {data}" in out
