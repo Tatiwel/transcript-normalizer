@@ -123,7 +123,7 @@ def variant_problem(form: str, language) -> str:
     if len(letters) < MIN_VARIANT_LETTERS:
         return (
             f"variant {form!r} refused: under {MIN_VARIANT_LETTERS} letters, it would match "
-            "too many words even by exact equality (D-005)"
+            "too many words even by exact equality"
         )
     return ""
 
@@ -135,7 +135,7 @@ def variant_warning(form: str, language) -> str:
     if words and all(w in common for w in words):
         return (
             f"warning: {form!r} is made of ordinary words; as a variant it is corrected wherever "
-            "it appears, also where it means something else (D-032)"
+            "it appears, also where it means something else"
         )
     return ""
 
@@ -243,7 +243,7 @@ def check_class(data: dict, klass: str | None) -> None:
         return
     allowed = pack_classes(data, Path("pack"))
     if klass not in allowed:
-        raise EditError(f"class {klass!r} is not one of this pack's classes ({', '.join(allowed)}) (D-064)")
+        raise EditError(f"class {klass!r} is not one of this pack's classes ({', '.join(allowed)})")
 
 
 # ------------------------------------------------------------------ commands
@@ -267,7 +267,7 @@ def run_copy(args) -> int:
     keep_base(args.name, version, text)  # D-069: the base a later merge needs
     registry.write_atomic(target, with_provenance(text, args.name, version).encode("utf-8"))
     if source == packfiles.BUNDLED:
-        print(f"copied the bundled {args.name} to {target}; that copy is used from now on (D-017)")
+        print(f"copied the bundled {args.name} to {target}; that copy is used from now on")
     else:  # from the repository: stop tracking it, so pack update leaves it alone
         record = registry.installed()
         record.pop(args.name, None)
@@ -406,7 +406,7 @@ def run_export(args) -> int:
 
 
 def add_arguments(commands) -> None:
-    copying = commands.add_parser("copy", help="make a bundled or repository pack your own, to edit (D-066)")
+    copying = commands.add_parser("copy", help="make a bundled or repository pack your own, to edit")
     copying.add_argument("name")
     copying.set_defaults(run=run_copy)
 

@@ -134,7 +134,7 @@ def pack_summary(name: str, data: dict) -> list[str]:
     lines = [
         f"  pack      {name} {data.get('version') or '?'} ({data.get('language') or '?'})",
         f"  field     {data.get('field') or '(not recorded)'}" + (f": {description}" if description else ""),
-        f"  classes   {', '.join(data.get('classes') or ['(the eight of D-021)'])}",
+        f"  classes   {', '.join(data.get('classes') or ['(the eight finance classes)'])}",
         f"  terms     {len(terms)}",
     ]
     lines += [f"    {term_line(t)}" for t in terms[:EXAMPLES]]
@@ -328,12 +328,18 @@ def run_propose(args) -> int:
 def add_arguments(commands) -> None:
     proposing = commands.add_parser(
         "propose",
-        help="contribute what your reviews taught the tool to the packs repository (D-056)",
-        description=__doc__.split("\n\n")[1],
+        help="contribute what your reviews taught the tool to the packs repository",
+        description=(
+            "The learned layer is personal and never merged into a pack by the tool. This reads it, "
+            "keeps what the pack does not already have, shows it (term, form and decision; never the "
+            "transcript), and on a yes writes it to `contributions/<pack>-<date>.yaml` and opens a "
+            "prefilled issue on the packs repository, where the pack's maintainers decide. Nothing is "
+            "sent by the tool itself: the issue is the user's to submit."
+        ),
     )
     proposing.add_argument("--pack", metavar="NAME", help="the pack. default: the default pack")
     proposing.add_argument(
         "--whole", metavar="NAME",
-        help="propose the whole pack instead, as a new pack or an update (D-067)",
+        help="propose the whole pack instead, as a new pack or an update",
     )
     proposing.set_defaults(run=run_propose)

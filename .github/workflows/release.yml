@@ -5,7 +5,7 @@
 #   - a standalone executable per system, in two builds:
 #       lite: fetch with platform captions only, small; one file;
 #       full: local speech recognition included, large; on macOS a folder
-#             in a zip (D-063), on Linux one file, on Windows an installer
+#             in a zip (D-063), on Linux a folder in a tar.gz (D-076), on Windows an installer
 #             and a portable zip (D-070);
 #   - a sha256 checksum of every file, and the CHANGELOG section as the text.
 #
@@ -143,8 +143,9 @@ jobs:
       # shipped as a zip of the folder $NAME with transcript-normalizer.exe
       # (or transcript-normalizer) inside. A onefile full build unpacks about
       # 100 MB to a temporary folder on every start, which made it slow to
-      # open on Windows. lite is small and stays one file; so does Linux full,
-      # which is started from a terminal.
+      # open on Windows. lite is small and stays one file. D-076: Linux full is
+      # a folder too, shipped as a tar.gz of the folder $NAME: as one file it
+      # unpacked its whole speech stack to a temporary folder on every start.
       - name: Names
         run: |
           case "$RUNNER_OS" in
@@ -153,8 +154,9 @@ jobs:
             macOS)   os=macos;   ext=zip; suffix= ;;
           esac
           name="transcript-normalizer-$LABEL-$os-$FLAVOR"
-          if [ "$FLAVOR" = full ] && [ "$RUNNER_OS" != Linux ]; then
-            mode=onedir; ext=zip; exe="dist/$name/transcript-normalizer$suffix"
+          if [ "$FLAVOR" = full ]; then
+            mode=onedir; exe="dist/$name/transcript-normalizer$suffix"
+            [ "$RUNNER_OS" = Linux ] || ext=zip
           else
             mode=onefile; exe="dist/$name$suffix"
           fi
@@ -211,7 +213,7 @@ jobs:
 
       # Build the executable. What each flag is for:
       #   --onefile              one file to download and double-click
-      #   --onedir               (full on Windows and macOS, D-063) a folder:
+      #   --onedir               (full, D-063, D-076) a folder:
       #                          built as dist/transcript-normalizer/, so the
       #                          program inside has that name, then renamed
       #                          to dist/$NAME/

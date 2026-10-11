@@ -837,7 +837,7 @@ def print_summary(s: Summary, dry_run: bool) -> None:
 
 
 def add_arguments(commands) -> None:
-    merging = commands.add_parser("merge", help="merge a newer upstream version into your copy of a pack (D-069)")
+    merging = commands.add_parser("merge", help="merge a newer upstream version into your copy of a pack")
     merging.add_argument("name")
     merging.add_argument("--dry-run", action="store_true", help="print what would happen; write nothing")
     sides = merging.add_mutually_exclusive_group()

@@ -53,7 +53,7 @@ def for_code(code: str | None, allow_generic: bool = False) -> ModuleType:
     if not code:
         raise LanguageNotFound(
             "the pack declares no language; add a `language:` line, e.g. "
-            "`language: pt-BR` (D-002, D-033)"
+            "`language: pt-BR`"
         )
     name = module_name(code)
     if name in _REGISTRY:

@@ -68,14 +68,14 @@ def test_a_variant_under_three_letters_is_refused_with_the_reason(med, capsys):
     before = med.read_bytes()
     assert main(["pack", "add-term", "med", "metformina", "--class", "farmaco", "--variant", "mt"]) == 1
     err = capsys.readouterr().err
-    assert err.startswith("nothing saved: variant 'mt' refused: under 3 letters") and "(D-005)" in err
+    assert err.startswith("nothing saved: variant 'mt' refused: under 3 letters") and "D-0" not in err
     assert med.read_bytes() == before
 
 
 def test_a_variant_of_ordinary_words_is_saved_with_a_warning(med, capsys):
     assert main(["pack", "add-term", "med", "dipirona", "--class", "farmaco", "--variant", "esse amigo"]) == 0
     out = capsys.readouterr().out
-    assert "warning: 'esse amigo' is made of ordinary words" in out and "(D-032)" in out
+    assert "warning: 'esse amigo' is made of ordinary words" in out and "D-0" not in out
     assert terms(med)["dipirona"]["variants"] == ["esse amigo"]
 
 

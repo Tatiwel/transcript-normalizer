@@ -111,7 +111,7 @@ def test_a_long_contribution_asks_for_the_file_instead(tmp_path):
 def test_the_menu_offers_to_contribute_after_a_review(tmp_path, monkeypatch, capsys):
     urls = []
     monkeypatch.setattr(contribute.webbrowser, "open", lambda url: urls.append(url) or True)
-    lines = [*LINK, "", "1", "", "a", "-", "y", "y", "", "q"]
+    lines = [*LINK, "", "1", "", "1", "", "y", "y", "", "q"]  # review: yes, save
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     assert "Contribute what you taught the tool? [y/N]" in out
     assert "  + variant   Klabine -> Klabin" in out

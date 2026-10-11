@@ -326,7 +326,7 @@ def pack_phonetic_classes(data: dict, path: Path, classes: tuple[str, ...]) -> t
     if unknown:
         raise ValueError(
             f"{path}: `phonetic_classes:` names {', '.join(unknown)}, not among this pack's classes "
-            f"({', '.join(classes)}) (D-068)"
+            f"({', '.join(classes)})"
         )
     return found
 
@@ -378,7 +378,7 @@ def load_pack(
         if klass is not None and klass not in classes:
             raise ValueError(
                 f"{path}: term {name!r} has class {klass!r}, which is not one of "
-                f"this pack's classes ({', '.join(classes)}); add it to `classes:` (D-064)"
+                f"this pack's classes ({', '.join(classes)}); add it to `classes:`"
             )
         term = Term(
             term=name,

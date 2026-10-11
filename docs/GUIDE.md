@@ -15,7 +15,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 
 ## 2. Install
 
-**I just want to use it.** Download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). `lite` (about 40 MB) gets the platform's captions; `full` (several hundred MB) can also transcribe audio on your computer; the first time it does, it downloads a 1.5 GB speech model. The Release page has a table of which file is which. `lite` is one file. `full` on Windows comes as an installer (`-setup.exe`: it asks where to install, for you only or for all users, and adds a Start menu shortcut; uninstall it from "Add or remove programs", which removes the program and keeps your files) or as a portable zip (below). On macOS, `full` is a zip with a folder inside: unzip it, then open `transcript-normalizer` inside the folder, and keep the folder together, since the program loads its parts from it (D-063, D-070). Windows: double-click the `.exe`; the file is not signed, so if Windows says it protected your PC, choose *More info*, then *Run anyway*. macOS (Apple silicon): unzip, then right-click and *Open* the first time. Linux: extract it and run it from a terminal. It opens the menu (section 3). Your files go to `Documents/transcript-normalizer/` (`runs/` and `packs/`), and the menu's first screen says where (D-052). To keep them somewhere else, choose Settings in the menu, then "Where to save your files": a folder dialog opens (or, where there is none, you type the path), and the choice is kept in `config.toml` in your user settings folder (D-061).
+**I just want to use it.** Download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases). `lite` (about 40 MB) gets the platform's captions; `full` (several hundred MB) can also transcribe audio on your computer; the first time it does, it downloads a 1.5 GB speech model. The Release page has a table of which file is which. `lite` is one file. `full` on Windows comes as an installer (`-setup.exe`: it asks where to install, for you only or for all users, and adds a Start menu shortcut; uninstall it from "Add or remove programs", which removes the program and keeps your files) or as a portable zip (below). On macOS, `full` is a zip with a folder inside: unzip it, then open `transcript-normalizer` inside the folder, and keep the folder together, since the program loads its parts from it (D-063, D-070). Windows: double-click the `.exe`; the file is not signed, so if Windows says it protected your PC, choose *More info*, then *Run anyway*. macOS (Apple silicon): unzip, then right-click and *Open* the first time. Linux: extract it and run it from a terminal; `full` is a folder, so run `transcript-normalizer` inside it, and keep the folder together (D-076). It opens the menu (section 3). Your files go to `Documents/transcript-normalizer/` (`runs/` and `packs/`), and the menu's first screen says where (D-052). To keep them somewhere else, choose Settings in the menu, then "Where to save your files": a folder dialog opens (or, where there is none, you type the path), and the choice is kept in `config.toml` in your user settings folder (D-061).
 
 **I use Python.**
 
@@ -65,7 +65,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
    Quit
 ```
 
-"Fetch a video or file" first asks "Where is it?": a link, or a file on this computer. A file opens your system's file dialog (or, where there is none, you type the path); a caption file (`.srt`, `.vtt`, `legenda.txt`) goes straight to normalizing, and an audio or video file is transcribed on your computer. For a link, the menu reads the video, shows its title, channel and duration, and asks "Use the platform's caption, or transcribe the audio on this computer?" (in the lite build the second option is shown as "full build only"). The caption is then picked by name: "Portuguese, original audio (automatic)" first, which Enter takes, then the channel's own ("Portuguese (written by the channel)"), then "Other languages (automatic translations)…", marked "(translations are rate-limited more often)", since YouTube refuses them with HTTP 429 more often. With no caption at all, the full build offers to transcribe and the lite build says why it cannot (D-062). Each step offers the next one: after a fetch, "Next: normalize this run now?"; then "What is this video about?", a list of your packs and "none / another area" (section 6); after normalizing, three counters and "Next: review the 6 uncertain one(s) now?". The result is usable without the review; reviewing makes the next video better. After a review the menu offers to contribute what you taught the tool (section 6), and at the end "Open the folder?" opens the run's folder in your file manager. "Normalize a run" also takes a file you already have: choose "A file…" and type its path, a `legenda.txt` or a `.srt` or `.vtt` subtitle. Every list ends with "← Back", which returns to the previous screen (Esc does the same, and so does empty input in a text field), and `?` explains its options. Under the version, the first screen says what this installation can do: "full build: captions and local transcription" or "lite build: platform captions only (no local transcription)" for the program, "captions + local transcription" or "captions only" for a pip install. Each block starts with a rule and its stage (◆ Fetch, ◆ Normalize, ◆ Review, ◆ Settings), and a line such as "── paste below ──" marks where you type. Without the extra, or without a terminal, the same questions come as numbered lines, with ASCII marks (`* Fetch`, `b. <- Back`). Every menu item runs one of the commands below, so anything you do in the menu works in a script (D-051, D-053). What normalizing shows in the menu, for the video below:
+"Fetch a video or file" first asks "Where is it?": a link, or a file on this computer. A file opens your system's file dialog (or, where there is none, you type the path); a caption file (`.srt`, `.vtt`, `legenda.txt`) goes straight to normalizing, and an audio or video file is transcribed on your computer. For a link, the menu reads the video, shows its title, channel and duration, and asks "Use the platform's caption, or transcribe the audio on this computer?" (in the lite build the second option is shown as "full build only"). The caption is then picked by name: "Portuguese, original audio (automatic)" first, which Enter takes, then the channel's own ("Portuguese (written by the channel)"), then "Other languages (automatic translations)…", marked "(translations are rate-limited more often)", since YouTube refuses them with HTTP 429 more often. YouTube now dubs some videos into other languages automatically, and each dubbed audio brings its own automatic caption; the video's own language (as YouTube reports it) is the original, listed first and taken by Enter, and the others are named "English (en-US), dubbed audio (automatic)" and listed after it: the original language first, then English, then the rest (D-074). `fetch --list` shows them on a line of their own, `dubbed:`. With no caption at all, the full build offers to transcribe and the lite build says why it cannot (D-062). Each step offers the next one: after a fetch, "Next: normalize this run now?"; then "What is this video about?", a list of your packs and "none / another area" (section 6); after normalizing, three counters and "Next: review the 6 uncertain one(s) now?". The result is usable without the review; reviewing makes the next video better. After a review the menu offers to contribute what you taught the tool (section 6), and at the end "Open the folder?" opens the run's folder in your file manager. "Normalize a run" also takes a file you already have: choose "A file…" and type its path, a `legenda.txt` or a `.srt` or `.vtt` subtitle. Every list ends with "← Back", which returns to the previous screen (Esc does the same, and so does empty input in a text field), and `?` explains its options. Under the version, the first screen says what this installation can do: "full build: captions and local transcription" or "lite build: platform captions only (no local transcription)" for the program, "captions + local transcription" or "captions only" for a pip install. Each block starts with a rule and its stage (◆ Fetch, ◆ Normalize, ◆ Review, ◆ Settings), and a line such as "── paste below ──" marks where you type. Without the extra, or without a terminal, the same questions come as numbered lines, with ASCII marks (`* Fetch`, `b. <- Back`). Every menu item runs one of the commands below, so anything you do in the menu works in a script (D-051, D-053). What normalizing shows in the menu, for the video below:
 
 ```
 corrected 24  (semiga → CEMIG, Semig → CEMIG)
@@ -151,25 +151,52 @@ Everything goes under `runs/<video-id>/` in the current directory; nothing is wr
 
 ## 5. Reviewing what the tool was unsure about
 
-Menu item 3, or `--review`, shows one screen per term: the forms the tool guessed are that term, each with how often it occurs and one line where it does. Select the ones that really are the recognizer mishearing the term (space bar, then Enter); the ones you leave are rejected and never proposed again. Here the form `a DAPTA Valdre` is the channel's tool, `Adapta Valuer`:
+Menu item 3, or `--review`, stops once at each form the tool was unsure about, in the order of the video: the first place the form occurs, with the caption line before it, the line with the form in «guillemets», the line after, the other times where the same form occurs, and, for a YouTube video, a link that opens it at that moment (another platform: its address and the time; a local file: the time only). Each form is asked once; its later occurrences take the same answer.
 
 ```
-Which of these are the recognizer mishearing "Adapta Valuer"?
-  pick the ones that should read Adapta Valuer; the others are rejected
-  a. [ ] AdaptaValor      1 occurrence · 18:16  …uma nova aba também aqui da «AdaptaValor», análise
-  b. [ ] Adaptavalda      1 occurrence · 1:04  …aba mais recente aqui da «Adaptavalda», entramos aqui
-  c. [ ] a DAPTA Valdre   1 occurrence · 5:03  …É o que eu sempre te falo, «a DAPTA Valdre»
-  d. [ ] adaptavala       1 occurrence · 18:42  de R, tudo isso na «adaptavala».
+* 2 of 3  Klabim → Klabin
+  1 occurrence in this video
+    0:04  hoje a Klabine caiu bastante
+  » 0:07  e a «Klabim» subiu depois
+    0:10  a Clabine pagou dividendos
+  watch: https://youtu.be/4tTmY8Buask?t=7
+Is «Klabim» Klabin?
+  Enter decides later; b ends the review here
+   1. Yes: this is Klabin (fix it from now on)
+   2. Yes, but only in this video
+   3. This is Klabin, said that way (recognise it, keep the text)
+   4. No: this is not Klabin
+   5. Decide later                                                  nothing is saved for it
+   b. <- Back
+  enter alone: Decide later
 ```
 
-If you selected any, a second screen asks which of those the speaker really said that way (a ticker, a plural, a nickname): those are kept as said and only recognized (D-020). **If you have to think more than two seconds about a term, press Esc:** it stays pending and comes back next time; a wrong answer is remembered. The answers are saved after each term (D-037), to `packs/<pack-name>.learned.yaml`, your personal layer, never into the pack (D-013).
+The choices:
 
-`--confirm` asks the same thing one form at a time, answered with `y` (it is the term), `n` (it is not), `l` (it is, said that way), `s` (skip), `a` or `r` (yes or no to the rest of this term's forms):
+- **Yes: this is Klabin (fix it from now on).** The recognizer misheard the term; it is corrected in every video from now on.
+- **Yes, but only in this video.** Corrected here, and nowhere else: kept in `runs/<id>/local-decisions.yaml`, applied whenever this run is normalized, never added to your learned layer and never part of a contribution (D-073).
+- **This is Klabin, said that way (recognise it, keep the text).** A ticker, a plural, a nickname: the speaker's own words, recognized and left as said (D-020).
+- **No: this is not Klabin.** Rejected, and never proposed again. This is the only way anything is rejected.
+- **Decide later.** The default: Enter takes it. Nothing is saved for that form, and it comes back next time. If you have to think more than two seconds, take it; a wrong answer is remembered.
+
+`b` (or Esc) ends the review there; what is left stays for later. Nothing is written while you answer. At the end a summary says what would be kept, and only a yes saves it (D-072); "n" discards every answer of that review:
+
+```
+* Summary
+will remember: Klabine → Klabin
+rejected: Clabine is not Klabin
+left for later: 1
+Save these answers? [Y/n]
+```
+
+Saved answers go to `packs/<pack-name>.learned.yaml`, your personal layer, never into the pack (D-013), and take effect the next time a video is normalized.
+
+`--confirm` asks one form at a time, grouped by term, and saves after each answer (D-037): `y` (it is the term), `o` (it is, but only in this video), `n` (it is not), `l` (it is, said that way), `s` (skip), `a` or `r` (yes or no to the rest of this term's forms):
 
 ```
   Osvaldo Cruz  (1 occurrence)
     0:20  a metformina ainda é a primeira escolha, segundo o Osvaldo Cruz
-    Osvaldo Cruz -> Oswaldo Cruz? [y]es / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no:
+    Osvaldo Cruz -> Oswaldo Cruz? [y]es / [o]nly in this video / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no:
 ```
 
 ## 6. Packs

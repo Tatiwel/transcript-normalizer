@@ -132,8 +132,8 @@ def test_fetch_then_normalize_then_review_chained(tmp_path, monkeypatch, capsys)
         "",  # Next: normalize this run now? [Y/n] -> yes
         "1",  # What is this video about? -> financas-ptbr
         "",  # Next: review the 1 uncertain one(s) now? [Y/n] -> yes
-        "a",  # Klabine is the recognizer mishearing Klabin
-        "-",  # ... and not the speaker's own word
+        "1",  # Yes: Klabine is Klabin (fix it from now on)
+        "",  # Save these answers? [Y/n] -> yes
         "",  # Contribute what you taught the tool? [y/N] -> no
         "",  # Open the folder? [y/N] -> no
         "q",
@@ -149,7 +149,7 @@ def test_fetch_then_normalize_then_review_chained(tmp_path, monkeypatch, capsys)
     assert f"result: {run / NORMALIZED_FILE}" in out
     assert "terms:" not in out
     assert "The result is usable as it is" in out
-    assert 'Which of these are the recognizer mishearing "Klabin"?' in out
+    assert "Is «Klabine» Klabin?" in out and "will remember: Klabine → Klabin" in out
     assert [c.variant for c in learned(tmp_path).confirmed["Klabin"]] == ["Klabine"]
     assert "nothing left pending." in out
 
@@ -182,25 +182,25 @@ def test_review_writes_confirmed_rejected_and_aliases(tmp_path, monkeypatch, cap
     lines = [
         *LINK, "", "1",  # fetch, then normalize with financas-ptbr
         "",  # review now
-        "a b",  # two of the three forms are the term ...
-        "b",  # ... and the second of those is the speaker's own word
+        "1",  # Klabine: yes, fix it from now on
+        "3",  # Klabim: said that way
+        "4",  # Clabine: no
+        "",  # Save these answers? [Y/n] -> yes
         "",  # Contribute what you taught the tool? [y/N] -> no
         "",  # Open the folder? [y/N] -> no
         "q",
     ]
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="review.vtt")
-    rows = dict(re.findall(r"^  ([abc])\. \[ \] (\S+)", out, re.M))
-    assert set(rows) == {"a", "b", "c"}
     layer = learned(tmp_path)
-    assert [c.variant for c in layer.confirmed["Klabin"]] == [rows["a"]]
-    assert [a.alias for a in layer.aliases["Klabin"]] == [rows["b"]]
-    assert [(r.text, r.term) for r in layer.rejected] == [(rows["c"], "Klabin")]
-    # One example line per form, the form marked.
-    assert re.search(rf"  a\. \[ \] {rows['a']} .*1 occurrence · \d:\d\d  .*«{rows['a']}»", out)
+    assert [c.variant for c in layer.confirmed["Klabin"]] == ["Klabine"]
+    assert [a.alias for a in layer.aliases["Klabin"]] == ["Klabim"]
+    assert [(r.text, r.term) for r in layer.rejected] == [("Clabine", "Klabin")]
+    # The form marked in its line, between the lines around it.
+    assert re.search(r"  » \d:\d\d  e a «Klabim» subiu depois", out)
 
 
 def test_esc_or_empty_on_a_term_leaves_it_pending(tmp_path, monkeypatch, capsys):
-    lines = [*LINK, "", "1", "", "", "", "q"]  # fetch, normalize, review, empty on the term, no folder
+    lines = [*LINK, "", "1", "", "", "", "", "", "q"]  # fetch, normalize, review: Enter on each stop, no folder
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="review.vtt")
     assert learned(tmp_path).is_empty()
     assert "3 variant(s) still pending" in out

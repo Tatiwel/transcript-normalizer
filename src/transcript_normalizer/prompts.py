@@ -421,6 +421,20 @@ def _echo_labels(question):
     return question
 
 
+def _point_at(question, index):
+    """Start the pointer on `index`, the default, without questionary's
+    `default=`: that also paints the row as chosen, and it stays painted after
+    the pointer moves, so two rows looked selected. Now only the pointer's row
+    is highlighted, and it starts on the default (D-074)."""
+    app = getattr(question, "application", None)
+    if app is None or index is None:
+        return question
+    for control in app.layout.find_all_controls():
+        if hasattr(control, "pointed_at") and getattr(control, "choices", None):
+            control.pointed_at = index
+    return question
+
+
 class _Questionary:
     @staticmethod
     def _choices(options, preselected=()):
@@ -446,10 +460,10 @@ class _Questionary:
         while True:
             if hint:
                 say(mark(f"  {hint}", "hint"))
-            answer = _bind(_echo_labels(questionary.select(
+            answer = _bind(_point_at(_echo_labels(questionary.select(
                 title, choices=_Questionary._choices(options), instruction=legend("select"),
-                pointer=UNICODE["pointer"], default=default, **_style(),
-            ))).unsafe_ask()
+                pointer=UNICODE["pointer"], **_style(),
+            )), default)).unsafe_ask()
             if answer is _EXPLAIN:
                 explain(options)
                 continue

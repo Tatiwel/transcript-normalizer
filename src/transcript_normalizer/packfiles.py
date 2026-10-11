@@ -316,7 +316,7 @@ def note_language(code: str) -> None:
     except languages.LanguageNotFound:
         print(
             f"  no language module for {code}: it is matched with the generic one, no "
-            "inflections and no unit rules (the menu does this; a command needs --allow-generic, D-033)"
+            "inflections and no unit rules (the menu does this; a command needs --allow-generic)"
         )
 
 
@@ -345,7 +345,7 @@ def run_import(args) -> int:
     registry.write_atomic(target, source.read_bytes())
     print(f"imported {name} into {target}: {len(pack.terms)} terms, language {pack.language_code}")
     if bundled_path(name).exists():
-        print(f"  it is used instead of the bundled {name} (D-017); `pack remove {name}` undoes that")
+        print(f"  it is used instead of the bundled {name}; `pack remove {name}` undoes that")
     note_language(pack.language_code)
     return 0
 
@@ -381,7 +381,7 @@ def run_remove(args) -> int:
 def add_arguments(commands) -> None:
     """`pack create | import | remove` beside registry's list, install, update."""
     creating = commands.add_parser(
-        "create", help="a new pack in packs/, with no terms, from a field template (D-065)"
+        "create", help="a new pack in packs/, with no terms, from a field template"
     )
     creating.add_argument("--template", required=True, metavar="FIELD", help=f"one of: {', '.join(templates())}")
     creating.add_argument("--name", required=True, help="the pack's name, e.g. medicina-ptbr")

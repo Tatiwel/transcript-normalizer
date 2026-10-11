@@ -598,7 +598,7 @@ def review_run(
     say(mark(f"Reviewing {run.name}", "title"))
     argv = ["normalize", str(caption), "--review", "--menu", "--quiet" if chained else "--summary"]
     code = run_command(argv + (["--pack", str(pack), *generic(pack)] if pack else []))
-    if code not in (0, 130):  # 130: interrupted, the answers so far are kept (D-037)
+    if code not in (0, 130):  # 130: interrupted at the summary, nothing kept (D-072)
         error("review did not finish")
         return
     offer_contribution(pack)

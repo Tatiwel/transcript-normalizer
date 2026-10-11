@@ -338,6 +338,7 @@ def read_metadata(url: str, out: Output | None = None, cookies: sign_in.Cookies 
         duration=data.get("duration", 0) or 0,
         manual_captions=tuple(sorted((data.get("subtitles") or {}).keys())),
         automatic_captions=tuple(sorted((data.get("automatic_captions") or {}).keys())),
+        language=data.get("language") or "",
     )
 
 
@@ -346,6 +347,32 @@ ORIGINAL_SUFFIX = "-orig"
 MANUAL = "manual"
 AUTOMATIC = "automatica"
 AUTOMATIC_ORIGINAL = "automatica original"
+#: D-074: YouTube's automatic dubbing adds an `-orig` track per dubbed audio;
+#: only the one in the video's own language is the original.
+AUTOMATIC_DUBBED = "automatica dublada"
+
+
+def original_language(meta: Metadata) -> str:
+    """D-074: the base of the `-orig` track in the video's own language (yt-dlp's
+    `language`), or "" when that is unknown or matches no `-orig` track; then
+    every `-orig` track counts as original, as before."""
+    spoken = meta.language.lower()
+    if not spoken:
+        return ""
+    bases = [c[: -len(ORIGINAL_SUFFIX)] for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+    for base in bases:
+        if base.lower() == spoken:
+            return base
+    for base in bases:
+        if base.split("-")[0].lower() == spoken.split("-")[0]:
+            return base
+    return ""
+
+
+def is_dubbed(meta: Metadata, code: str) -> bool:
+    """D-074: an `-orig` track of a dubbed audio, not of the video's own."""
+    original = original_language(meta)
+    return bool(original) and code.endswith(ORIGINAL_SUFFIX) and code[: -len(ORIGINAL_SUFFIX)] != original
 
 
 def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> tuple[str, str]:
@@ -353,7 +380,9 @@ def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> t
 
     1. the automatic caption of the spoken language, `<lang>-orig`;
     2. a manual `<lang>`;
-    3. an automatic `<lang>`, which is a machine translation whenever a
+    3. D-074: the automatic caption of a dubbed audio, `<lang>-orig` when
+       `<lang>` is not the video's own language;
+    4. an automatic `<lang>`, which is a machine translation whenever a
        `-orig` track of another language exists.
 
     Within each, exact match first. When only a regional variant exists, say so
@@ -361,13 +390,14 @@ def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> t
     no obvious answer, and picking alphabetically in silence decides by accident.
     """
     out = out or Output()
-    original = tuple(
-        c[: -len(ORIGINAL_SUFFIX)] for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)
-    )
+    orig = [c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+    original = tuple(c[: -len(ORIGINAL_SUFFIX)] for c in orig if not is_dubbed(meta, c))
+    dubbed = tuple(c[: -len(ORIGINAL_SUFFIX)] for c in orig if is_dubbed(meta, c))
     translated = tuple(c for c in meta.automatic_captions if not c.endswith(ORIGINAL_SUFFIX))
     for available, source, suffix in (
         (original, AUTOMATIC_ORIGINAL, ORIGINAL_SUFFIX),
         (meta.manual_captions, MANUAL, ""),
+        (dubbed, AUTOMATIC_DUBBED, ORIGINAL_SUFFIX),
         (translated, AUTOMATIC, ""),
     ):
         if wanted in available:
@@ -405,13 +435,20 @@ class Track:
     """One caption track, as `--track` names it and as a person reads it."""
 
     code: str  # yt-dlp's: `pt-orig`, `pt`, `en`
-    source: str  # MANUAL, AUTOMATIC or AUTOMATIC_ORIGINAL (D-045)
+    source: str  # MANUAL, AUTOMATIC, AUTOMATIC_ORIGINAL (D-045) or AUTOMATIC_DUBBED (D-074)
     translated: bool = False  # automatic, beside an original-audio track
+
+    @property
+    def base(self) -> str:
+        """The language part, without `-orig`: `pt`, `en-US`."""
+        return self.code[: -len(ORIGINAL_SUFFIX)] if self.code.endswith(ORIGINAL_SUFFIX) else self.code
 
     @property
     def name(self) -> str:
         if self.source == AUTOMATIC_ORIGINAL:
-            return f"{language_name(self.code[: -len(ORIGINAL_SUFFIX)])}, original audio (automatic)"
+            return f"{language_name(self.base)}, original audio (automatic)"
+        if self.source == AUTOMATIC_DUBBED:
+            return f"{language_name(self.base)}, dubbed audio (automatic)"
         if self.source == MANUAL:
             return f"{language_name(self.code)} (written by the channel)"
         return f"{language_name(self.code)} (automatic{' translation' if self.translated else ''})"
@@ -420,27 +457,43 @@ class Track:
 def tracks(meta: Metadata) -> tuple[list[Track], list[Track]]:
     """D-062: (the tracks to list, the automatic translations), in D-045's order.
 
-    Listed: the original-audio tracks, the manual ones, and the plain automatic
-    ones when the video has no original-audio track (then they are not
-    translations). A code with a manual track is listed once, as manual,
-    which is what `--track` takes for it.
+    Listed: the original-audio tracks, the dubbed-audio ones (D-074), the
+    manual ones, and the plain automatic ones when the video has no `-orig`
+    track (then they are not translations). A code with a manual track is
+    listed once, as manual, which is what `--track` takes for it.
+
+    D-074: when yt-dlp names the video's language, the list goes by language:
+    that language first (its original-audio track, then its manual one), then
+    English, then the rest, each in the order above.
     """
-    originals = [Track(c, AUTOMATIC_ORIGINAL) for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+    orig = [c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+    originals = [Track(c, AUTOMATIC_ORIGINAL) for c in orig if not is_dubbed(meta, c)]
+    dubbed = [Track(c, AUTOMATIC_DUBBED) for c in orig if is_dubbed(meta, c)]
     manual = [Track(c, MANUAL) for c in meta.manual_captions]
     automatic = [
-        Track(c, AUTOMATIC, translated=bool(originals))
+        Track(c, AUTOMATIC, translated=bool(orig))
         for c in meta.automatic_captions
         if not c.endswith(ORIGINAL_SUFFIX) and c not in meta.manual_captions
     ]
-    if originals:
-        return originals + manual, automatic
-    return manual + automatic, []
+    if not orig:
+        return manual + automatic, []
+    listed = originals + dubbed + manual
+    spoken = original_language(meta).split("-")[0].lower()
+    if spoken:
+        def group(track: Track) -> int:
+            base = track.base.split("-")[0].lower()
+            return 0 if base == spoken else 1 if base == "en" else 2
+
+        listed.sort(key=group)  # stable: the order above, within each language
+    return listed, automatic
 
 
 def track_named(meta: Metadata, code: str) -> Track | None:
     """`--track`: the track with exactly this code, manual first, or None."""
     if code.endswith(ORIGINAL_SUFFIX):
-        return Track(code, AUTOMATIC_ORIGINAL) if code in meta.automatic_captions else None
+        if code not in meta.automatic_captions:
+            return None
+        return Track(code, AUTOMATIC_DUBBED if is_dubbed(meta, code) else AUTOMATIC_ORIGINAL)
     if code in meta.manual_captions:
         return Track(code, MANUAL)
     return Track(code, AUTOMATIC) if code in meta.automatic_captions else None
@@ -806,7 +859,7 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         "--track",
         metavar="CODE",
         help="take exactly this caption track, as `--list` names it (`pt-orig`, `pt`, `en`); "
-        "a code with a manual track takes that one. Instead of --lang's choice (D-062)",
+        "a code with a manual track takes that one. Instead of --lang's choice",
     )
     parser.add_argument(
         "--model",
@@ -823,12 +876,12 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         metavar="BROWSER",
         choices=sign_in.BROWSERS,
         help="use this browser's YouTube sign-in, when YouTube asks to confirm you are not a bot "
-        f"({', '.join(sign_in.BROWSERS)}; Firefox works best). Instead of Settings (D-071)",
+        f"({', '.join(sign_in.BROWSERS)}; Firefox works best). Instead of Settings",
     )
     signed.add_argument(
         "--cookies",
         metavar="FILE",
-        help="use the YouTube sign-in in this cookies.txt file (Netscape format). Instead of Settings (D-071)",
+        help="use the YouTube sign-in in this cookies.txt file (Netscape format). Instead of Settings",
     )
     # Hidden: for the menu, which runs fetch twice when it moves from step 1 to
     # step 2 (D-053), and for the release workflow's smoke test (D-058).
@@ -963,9 +1016,13 @@ def run(args: argparse.Namespace) -> int:
 
     if args.list:
         # D-045: the source track first and in full; the translations may be summarised.
-        originals = tuple(c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX))
+        orig = [c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+        originals = [c for c in orig if not is_dubbed(meta, c)]
+        dubbed = [c for c in orig if is_dubbed(meta, c)]  # D-074
         translated = tuple(c for c in meta.automatic_captions if not c.endswith(ORIGINAL_SUFFIX))
         out.info(f"original: {', '.join(originals) or 'none'}")
+        if dubbed:
+            out.info(f"dubbed: {', '.join(dubbed)}")
         out.info(f"manual captions: {summarise(meta.manual_captions)}")
         out.info(f"automatic captions: {summarise(translated)}")
         return 0

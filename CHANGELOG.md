@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The review no longer rejects by Enter (D-072). A real review of 4tTmY8Buask rejected two terms when the user pressed Enter to skip a screen. The menu's review and `normalize --review` now stop once at each uncertain form, in the order of the video, with one question whose default is "Decide later": "Yes: this is <term> (fix it from now on)", "Yes, but only in this video", "This is <term>, said that way (recognise it, keep the text)", "No: this is not <term>", "Decide later". Only "No" rejects. Each stop shows the line before, the line with the form highlighted and the line after, the other times the form occurs, and a link that opens a YouTube video at that moment. Nothing is written until the end: a summary ("will remember … rejected … only in this video … left for later") and "Save these answers?"; no discards them all.
+- "Only in this video" (D-073): kept in `runs/<id>/local-decisions.yaml` and applied when that run is normalized; never in the learned layer, a pack or a contribution. `--confirm` gains `o` for it.
+- Dubbed videos (D-074): YouTube's automatic dubs add a caption track per dubbed audio. The video's own language is now the original: listed first and the default, the dubs named "<language>, dubbed audio (automatic)", then English, then the rest. `fetch --list` shows them as `dubbed:`. With arrow keys, only the default row looks selected.
+- No decision numbers in what the program says (D-075): help, menu, messages and command help no longer show "(D-0nn)".
+- Linux full is a folder in a tar.gz, like Windows and macOS full (D-076): extract it and run `transcript-normalizer` inside the folder.
 - Releases are gated on the tests: the release workflow runs the whole CI matrix (Linux, Windows, macOS; Python 3.11 and 3.12) on the tagged commit first, and builds and publishes nothing unless all six runs pass. Windows CI had been failing since 0.6.1 without stopping a release.
 
 ## 0.6.4

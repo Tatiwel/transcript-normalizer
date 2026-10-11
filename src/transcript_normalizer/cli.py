@@ -39,6 +39,7 @@ from .core.standoff import (
     write_json,
 )
 from .core.text import Transcript, read_caption
+from .review import apply_local, read_local, write_local
 from .catalog import list_runs
 from .languages import LanguageNotFound
 from .ingest import fetch as ingest_fetch
@@ -74,7 +75,7 @@ UNIT_CLASS = "unidade"
 #: `l`: it is this term, but the speaker said it that way.
 CONFIRM_PROMPT = (
     "    {variant} -> {term}? "
-    "[y]es / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no: "
+    "[y]es / [o]nly in this video / [n]o / [s]kip / a[l]ias / [a]ll-yes / [r]est-no: "
 )
 BULK_ANSWERS = {"a": "y", "r": "n"}
 
@@ -275,6 +276,8 @@ class Session:
     outcomes: dict[tuple[str, str], str] = field(default_factory=dict)
     kept: int = 0  # answers written to the learned layer
     interrupted: bool = False
+    local: list[tuple[str, str]] = field(default_factory=list)  # D-073: (term, form), this run only
+    discarded: bool = False  # D-072: the review's answers were not saved
 
 
 def confirm_loop(
@@ -333,6 +336,11 @@ def _ask_all(transcript, groups, session: Session, save) -> None:
                 learned = learned.alias(term, variant)
                 outcomes[(term, variant)] = "l"
                 print(f"    alias: {variant} is {term}, left as said")
+            elif answer.startswith("o"):  # D-073: this run only, never the learned layer
+                session.local.append((term, variant))
+                outcomes[(term, variant)] = "o"
+                print(f"    only in this video: {variant} -> {term}")
+                continue
             else:
                 outcomes[(term, variant)] = "s"
                 print("    skipped.")
@@ -364,90 +372,45 @@ def print_summary(annotations: list[Annotation], normalized: Path) -> None:
     say("result: ", mark(normalized, "path"))
 
 
-#: How much of an example line the review screen shows around the form.
-EXAMPLE_WIDTH = 72
-
-
-def highlighted_example(transcript: Transcript, annotation: Annotation) -> str:
-    """One example line, the form in «guillemets», cut to fit one row."""
-    lines = transcript.spans(annotation.start, annotation.end)
-    stamp = lines[0].timestamp
-    text = " ".join(" ".join(l.text for l in lines).split())
-    form = annotation.original
-    at = text.find(form)
-    if at < 0:
-        return f"{stamp}  {text[:EXAMPLE_WIDTH]}"
-    text = f"{text[:at]}«{form}»{text[at + len(form):]}"
-    start = max(0, min(at - 25, len(text) - EXAMPLE_WIDTH))
-    if start:  # begin at a word, not in the middle of one
-        space = text.find(" ", start, at)
-        start = space + 1 if space >= 0 else start
-    clip = text[start : start + EXAMPLE_WIDTH]
-    return f"{stamp}  {'…' if start else ''}{clip}{'…' if start + EXAMPLE_WIDTH < len(text) else ''}"
-
-
-def review_terms(
+def review_forms(
     transcript: Transcript,
     annotations: list[Annotation],
     learned: Learned,
     save=None,
 ) -> Session:
-    """D-053: the review one term per screen, as a multi-select.
-
-    Selected forms are the recognizer mishearing the term: confirmed. The rest
-    are rejected. Of the selected, a second question takes those the speaker
-    really said that way: aliases instead of variants (D-020). Esc on a term
-    leaves all its forms pending. The learned layer is saved after each term.
-    """
-    from .prompts import Option, multi_select
+    """D-072: the review, one stop per pending form in the order of the video,
+    then a summary and one question before anything is written. Enter at a
+    stop decides later; only "No" rejects. `save(learned)` runs once, after a
+    yes; a no, or Ctrl+C at that question, keeps nothing."""
+    from . import prompts, review
 
     session = Session(learned)
-    groups = confirm_groups(annotations)
-    if not groups:
+    all_stops = review.stops(annotations)
+    if not all_stops:
         print("nothing to confirm.")
         return session
+    answers = review.ask_stops(transcript, all_stops)
+    session.outcomes = {pair: answer for pair, answer in answers.given.items()}
+    decided = {pair: a for pair, a in answers.given.items() if a != review.LATER}
+    prompts.stage("Summary")
+    for line in review.summary_lines(answers, len(all_stops)):
+        prompts.say(line)
+    if not decided:
+        return session
     try:
-        for term, group in groups:
-            forms = variant_groups(group)
-            options = [
-                Option(
-                    variant,
-                    f"{occurrences(len(found))} · {highlighted_example(transcript, found[0])}",
-                    value=variant,
-                )
-                for variant, found in forms
-            ]
-            chosen = multi_select(
-                f'Which of these are the recognizer mishearing "{term}"?',
-                options,
-                hint=f"pick the ones that should read {term}; the others are rejected",
-            )
-            if chosen is None:
-                for variant, _ in forms:
-                    session.outcomes[(term, variant)] = "s"
-                continue
-            aliases = []
-            if chosen:
-                aliases = multi_select(
-                    f'Any of these are "{term}" said another way (keep the text, just recognise it)?',
-                    [o for o in options if o.result in chosen],
-                    hint="a ticker, a plural, a nickname: the speaker's own words. - if none",
-                ) or []
-            for variant, _ in forms:
-                if variant in aliases:
-                    session.learned = session.learned.alias(term, variant)
-                    session.outcomes[(term, variant)] = "l"
-                elif variant in chosen:
-                    session.learned = session.learned.confirm(term, variant)
-                    session.outcomes[(term, variant)] = "y"
-                else:
-                    session.learned = session.learned.reject(variant, term)
-                    session.outcomes[(term, variant)] = "n"
-                session.kept += 1
-            if save is not None:
-                save(session.learned)  # D-037, per term
+        keep = prompts.confirm("Save these answers?", default=True)
     except KeyboardInterrupt:
-        session.interrupted = True
+        keep, session.interrupted = False, True
+    if not keep:
+        session.discarded = True
+        session.outcomes = {pair: review.LATER for pair in answers.given}
+        if not session.interrupted:
+            print(f"nothing saved: the {len(decided)} answer(s) of this review were discarded.")
+        return session
+    session.learned, session.local = review.apply(answers, learned)
+    session.kept = len(decided)
+    if save is not None:
+        save(session.learned)
     return session
 
 
@@ -544,7 +507,7 @@ def run_normalize(args: argparse.Namespace) -> int:
         if args.pack == default_pack():
             print(
                 "that is the default pack; pass --pack, or put one in "
-                f"{default_pack().parent}{os.sep} (D-017).",
+                f"{default_pack().parent}{os.sep}.",
                 file=sys.stderr,
             )
         return 2
@@ -556,10 +519,11 @@ def run_normalize(args: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 2
     transcript = read_caption(args.caption)
-    annotations = resolve_overlaps(find_annotations(transcript, pack))
-
     out_dir = run_dir(args.caption, args.out, transcript.header_field("URL"))
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # D-073: what the review decided for this run only.
+    annotations = apply_local(resolve_overlaps(find_annotations(transcript, pack)), read_local(out_dir))
 
     # D-054: a pack that names fewer than three of its terms here does not fit.
     if not fits(annotations) and not args.force:
@@ -607,19 +571,28 @@ def run_normalize(args: argparse.Namespace) -> int:
 
     if args.confirm or args.review:
         # D-013 and D-017: the learned layer under packs/, never pack.yaml.
-        # D-037: saved after every answer (--confirm) or every term (--review).
-        ask_all = review_terms if args.review else confirm_loop
+        # D-037: --confirm saves after every answer; D-072: --review saves
+        # once, after its summary, or not at all.
+        ask_all = review_forms if args.review else confirm_loop
         session = ask_all(
             transcript, annotations, pack.learned, save=lambda learned: save_learned(learned, learned_at)
         )
+        local = write_local(out_dir, session.local)  # D-073
         pending, count = write_pending(out_dir, transcript, annotations, session.outcomes)
         if session.interrupted:
-            print(
-                f"\ninterrupted: {session.kept} answer(s) kept in {learned_at}; "
-                f"run {'--review' if args.review else '--confirm'} again to go on from there"
-            )
+            if args.review:
+                print("\ninterrupted: nothing saved; run --review again to go on")
+            else:
+                print(
+                    f"\ninterrupted: {session.kept} answer(s) kept in {learned_at}; "
+                    "run --confirm again to go on from there"
+                )
             return 130
-        if not session.learned.is_empty():
+        if session.discarded:
+            return 0
+        if local is not None:
+            print(f"\nonly in this video: kept in {local}; applied when this run is normalized")
+        if session.kept and not session.learned.is_empty():
             print(f"\nlearned layer written to {save_learned(session.learned, learned_at)}")
         if count:
             print(f"{count} variant(s) still pending in {pending}")
@@ -699,12 +672,14 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
     asking.add_argument(
         "--confirm",
         action="store_true",
-        help="review the medium band form by form and record the answers in the learned layer (D-013)",
+        help="review the medium band form by form and record the answers in the learned layer",
     )
     asking.add_argument(
         "--review",
         action="store_true",
-        help="the same, one screen per term: pick the forms that are the term (D-053)",
+        help="one stop per uncertain form, in the order of the video, with the lines around it "
+        "and a link to that moment; Enter decides later, and nothing is saved until you say yes "
+        "to the summary at the end",
     )
     parser.add_argument(
         "--summary",
@@ -715,7 +690,7 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--force",
         action="store_true",
         help=f"apply the pack even when fewer than {MIN_FIT_TERMS} of its terms are found "
-        "with confidence (D-054)",
+        "with confidence",
     )
     parser.add_argument(
         "--quiet",
@@ -729,7 +704,7 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--allow-generic",
         action="store_true",
         help="if the pack's language has no module, match with the generic one "
-        "(no inflections, no unit rules) instead of stopping (D-033)",
+        "(no inflections, no unit rules) instead of stopping",
     )
 
 
@@ -737,8 +712,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG,
         description="Domain-term normalization for ASR transcripts and auto-captions. "
-        "The transcript is never modified (D-004) and every output goes under "
-        "runs/ (D-015).",
+        "The transcript is never modified and every output goes under "
+        "runs/.",
     )
     commands = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
@@ -753,7 +728,7 @@ def build_parser() -> argparse.ArgumentParser:
     fetch = commands.add_parser(
         "fetch",
         help="download a platform caption, or transcribe locally with --whisper",
-        description=ingest_fetch.run.__doc__,
+        description="Fetch a caption for a video: the platform's, or local speech recognition.",
     )
     ingest_fetch.add_arguments(fetch)
     fetch.set_defaults(run=ingest_fetch.run)
@@ -762,7 +737,7 @@ def build_parser() -> argparse.ArgumentParser:
         "list",
         help="print id, date and title for every run",
         description="List every run under runs/: the video id, its publication "
-        "date and its title (D-022).",
+        "date and its title.",
     )
     listing.set_defaults(run=run_list)
 
@@ -770,8 +745,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     packs = commands.add_parser(
         "pack",
-        help="list, install and update packs from the packs repository (D-055); propose what you "
-        "taught the tool (D-056); create, import and remove your own (D-065)",
+        help="list, install and update packs from the packs repository; propose what you "
+        "taught the tool; create, import and remove your own",
         description=f"Domain packs from {registry.REPOSITORY}, installed into packs/, and your own.",
     )
     actions = registry.add_arguments(packs)

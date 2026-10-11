@@ -23,6 +23,7 @@ class Metadata:
     duration: int = 0
     manual_captions: tuple[str, ...] = field(default=())
     automatic_captions: tuple[str, ...] = field(default=())
+    language: str = ""  # D-074: the spoken language, as yt-dlp's `language` reports it
 
 
 def _today() -> str:

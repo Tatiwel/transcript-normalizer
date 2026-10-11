@@ -740,6 +740,42 @@ No change under core/; the product layer only.
 
 Help has a section "YOUTUBE SAYS I'M A BOT", and both guides one under section 3, with how to export a cookies.txt.
 
+## D-072 The review is one stop per form, in the order of the video, and Enter decides nothing
+
+**What happened.** A user reviewed 4tTmY8Buask in the menu. The review was one screen per term, a multi-select (D-053): the forms selected were confirmed and the ones left unselected were **rejected**. He pressed Enter with nothing selected to move on, believing he was skipping, and rejected every form of two terms, which the tool then never proposed again. Nothing on the screen said Enter rejects; the hint said "the others are rejected", under a list he did not mean to answer.
+
+**The review now** (the menu and `normalize --review`) stops once at each pending form: one stop per (term, form) in the ask bands, ordered by the form's first occurrence. A form taken as a term (yes, only here, or said that way) is not asked again for another term, and its later occurrences take the same answer, since an answer is per form. A form answered "No" for one term can still be asked about another.
+
+**Each stop shows** the caption line before, the line with the form in «guillemets» and the line after, with their timestamps (all of them when the form straddles a break); the other timestamps where the same form occurs ("also at"); and where to watch it: for YouTube (`watch?v=`, `youtu.be/`, `shorts/`, `live/`, `embed/`) `https://youtu.be/<id>?t=<seconds>`; for another platform its URL and "at m:ss", since not every platform takes a time in the link; for a local file nothing beyond the timestamp. The URL is the caption header's.
+
+**One question, single choice**, "Is «form» term?": "Yes: this is <term> (fix it from now on)" (confirmed in the learned layer), "Yes, but only in this video" (D-073), "This is <term>, said that way (recognise it, keep the text)" (an alias, D-020), "No: this is not <term>" (rejected), and "Decide later", the default, which Enter takes. **Nothing is rejected unless "No" was chosen.** Back (b, Esc) or Ctrl+C ends the stops; the rest is left for later.
+
+**Nothing is written until the summary.** After the last stop, "will remember: X → term (and aliases, `X (as said) = term`); rejected: Y is not term; only in this video: Z → term; left for later: N", then "Save these answers? [Y/n]". Yes writes the learned layer once and the run's local decisions; no discards every answer of that review and writes nothing (pending.txt then lists them as skipped). When every answer was "Decide later" there is nothing to save and the question is not asked. This amends D-037 for the review: it no longer saves per term; a Ctrl+C at the summary's question keeps nothing and exits 130. `--confirm` is unchanged (D-019, D-037: per answer, saved as it goes), and gains `o` for "only in this video".
+
+The multi-select of D-053 is gone from the review; `prompts.multi_select` stays for other questions. Tests drive the plain prompts: Enter on every stop writes neither the learned layer nor a local file; of the five answers only "No" produces a rejection; the summary appears and "n" discards; stops follow the timeline, a repeated form is one stop that lists its other timestamps; the link for YouTube, another platform and no URL.
+
+## D-073 "Only in this video": a decision kept beside the run
+
+Some forms are right for one video only: a guest's name the recognizer garbled into a word that, elsewhere, is a real word. Confirming them would correct every video from then on; rejecting them leaves this one wrong.
+
+"Yes, but only in this video" (in the review, and `o` in `--confirm`) is written to `runs/<id>/local-decisions.yaml`, a list of `{form, term}` with a comment saying what it is, merged with what is already there. When that run is normalized, after overlaps are resolved, every annotation of that term whose form matches, and that is not already high, becomes a high-band correction with rule `local` in annotations.json (stand-off, D-004): applied in normalized.txt, counted as corrected, never asked again in that run. It is never written to the learned layer, so `pack propose` (which reads only the learned layer) never includes it, and `pack merge` never reads runs. Another run with the same words is not affected. A test reviews one form as local, normalizes again, finds the `local` annotation applied and the form no longer pending, finds it pending and not local in another run, and finds the learned layer empty and nothing to propose.
+
+## D-074 Dubbed caption tracks: the video's own language is the original
+
+YouTube now dubs some videos automatically, and each dubbed audio brings its own automatic caption with the `-orig` suffix: 4tTmY8Buask, in Portuguese, listed `en-US-orig`, `es-US-orig` and `pt-orig`. D-045 took any `-orig` track as the original audio's, so the menu listed three "original audio" tracks, sorted by code, and English came first.
+
+The original is now the `-orig` track in the video's language as yt-dlp's `language` field reports it (exact code first, then by base language). The other `-orig` tracks are dubbed (source `automatica dublada`, in the header and meta.yaml) and named "<language>, dubbed audio (automatic)". The track list goes by language: the original language first (its original-audio track, then the channel's own), then English, then the rest, each in D-045's order within. `choose_language` (`--lang`) ranks a dub after a manual track of that language and before an automatic translation. `fetch --list` prints the dubs on a line of their own, `dubbed:`. When yt-dlp names no language, or one with no `-orig` track, every `-orig` track is original, as before.
+
+The menu's default is the original. With questionary the default was passed as questionary's `default`, which also paints that row as chosen, and it stayed painted after the pointer moved, so two rows looked selected. The pointer now starts on the default and nothing else is painted.
+
+## D-075 No decision numbers in what the program says
+
+Decision numbers are for whoever reads the code and the docs; in a message or a help line they read as noise ("Instead of Settings (D-071)"). They are removed from every user-facing string: the help, argparse help and descriptions (two were taken from docstrings, and are now their own text), menu prompts, errors and warnings. They stay in code comments, docstrings, these decisions, the guides and the changelog. The comment block written at the top of a new pack file, and the field templates, keep theirs: they are file comments, read like the code's own. A test reads every string literal in the package (but docstrings and that comment block) and finds no `D-0nn`; others check `help`, each command's `--help` and a walk through the menu.
+
+## D-076 Linux full is a folder too
+
+The Linux full executable was one file (D-063 kept it so, since it is started from a terminal). As one file it unpacks its whole speech stack to a temporary folder on every start, which is what made the Windows one slow. It is now built `--onedir`, like Windows and macOS full, and shipped as `transcript-normalizer-<version>-linux-full.tar.gz` holding the folder `transcript-normalizer-<version>-linux-full/` with `transcript-normalizer` inside. The release runner's smoke tests run the program inside the folder; the release page says to extract it and run it from inside. Linux lite stays one file in a tar.gz.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
