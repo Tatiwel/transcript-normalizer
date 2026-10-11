@@ -4,7 +4,7 @@ Este guia serve a três leitores ao mesmo tempo: quem só quer transcrições ma
 
 **Comece por aqui** (os detalhes estão na seção 2):
 - *Só quero usar:* baixe o programa do seu sistema em [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) e dê dois cliques.
-- *Uso Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"`.
+- *Uso Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.4"`.
 - *Quero contribuir:* `git clone https://github.com/Tatiwel/transcript-normalizer` e depois [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 1. O que faz, e o que não faz
@@ -20,7 +20,7 @@ Ela nunca muda o que o falante disse; corrige o que o reconhecedor ouviu. Daí a
 **Uso Python.**
 
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.4"
 ```
 
 Sem extra, vem só o normalizador (poucos MB): para chamar do seu próprio programa, ou normalizar legendas que você já tem. `[captions]` acrescenta o `fetch` com legendas das plataformas (yt-dlp); `[ingest]` acrescenta também o reconhecimento de fala local (faster-whisper). Os arquivos ficam no diretório atual, a não ser que o Settings do menu tenha escolhido uma pasta. O pacote ainda não está no PyPI; o wheel também vai anexado a cada Release.
@@ -47,7 +47,7 @@ O build full do Windows também vem como zip portátil (`-portable.zip`). Descom
 **O menu.** Dê dois cliques no programa, ou digite `transcript-normalizer`, sem mais nada, num terminal. Com o extra `[menu]` (todo executável tem) você navega pelas setas. O menu está em inglês:
 
 ```
-transcript-normalizer 0.6.3
+transcript-normalizer 0.6.4
 full build: captions and local transcription
 Your files: /home/ana/Documentos/transcript-normalizer
 Typical flow: 1 fetch → 2 normalize → 3 review

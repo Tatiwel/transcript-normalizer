@@ -3,7 +3,7 @@
 Domain-term normalization for ASR transcripts and auto-captions.
 
 - **Just want to use it:** download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it; your files go to `Documents/transcript-normalizer/`.
-- **Use Python:** `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.3"`.
+- **Use Python:** `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.4"`.
 - **Want to contribute:** `git clone https://github.com/Tatiwel/transcript-normalizer`, `uv sync --extra ingest`, then [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **New here?** Read the guide: [docs/GUIDE.md](docs/GUIDE.md) (English) or [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) (português). It covers installing, a first run, reading the outputs, reviewing what the tool was unsure about and writing a pack for your own field.
