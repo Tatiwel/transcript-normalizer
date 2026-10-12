@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- "How does this work?" in the sign-in list now speaks of any site: YouTube's check usually depends on the connection, Instagram's and Facebook's often on the video. Both guides say Kwai is not supported (yt-dlp has no extractor for it).
 - Other sites (D-078). The sign-in is now "Sign-in (your browser's login)" and is used for every site, not only YouTube; a setting saved under the old name still works. A site that asks for a login (Instagram, Facebook, TikTok, X, Vimeo, private or followers-only videos) is said plainly: "Instagram asked you to sign in for this video.", or, when a sign-in is already set, "The browser you chose (Firefox) may not be signed in to Instagram. …", with the same ways out as YouTube's bot check (exit code 3).
 - A link with no captions (most sites other than YouTube) goes straight to transcribing in the full build; the lite build says "<Site> doesn't provide captions for this video. The full build can transcribe its audio on this computer." and stops, with no error.
 - The downloaded audio is now deleted once the transcription is written; Settings → "Keep the audio after transcribing", or `fetch --keep-audio`, keeps it in the run folder as `<video id>.<ext>`. Until now it stayed as `audio.<ext>`.

@@ -296,7 +296,7 @@ def test_how_does_this_work_explains_then_lists_again(tmp_path, monkeypatch, cap
     picked, out = sign_in_list(monkeypatch, capsys, ["4", "1"])  # How does this work?, then Firefox
     for paragraph in cookies.HOW_IT_WORKS.split("\n"):
         assert f"  {paragraph}" in out
-    assert "YouTube sometimes asks to confirm you're a person." in out
+    assert "Some sites sometimes ask to confirm you're a person" in out
     assert out.count("How does this work?") == 2 and picked == "firefox"
 
 

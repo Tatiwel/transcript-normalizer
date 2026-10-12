@@ -191,11 +191,13 @@ def chromium_warning() -> str:
     return "on Windows usually cannot be read" if system() == "windows" else ""
 
 
-#: D-077: the "How does this work?" row of the sign-in list.
+#: D-077: the "How does this work?" row of the sign-in list; D-078: for any site.
 HOW_IT_WORKS = (
-    "YouTube sometimes asks to confirm you're a person. It depends on your internet connection, "
-    "not on the video.\n"
-    "Signing in solves it: the program borrows your browser's YouTube login, the same way your "
+    "Some sites sometimes ask to confirm you're a person, or only show a video to signed-in users. "
+    "With YouTube it usually depends on your internet connection, not on the video; with Instagram "
+    "and Facebook, often on the video itself (private, followers-only, or too many downloads without "
+    "signing in).\n"
+    "Signing in solves it: the program borrows your browser's login for that site, the same way your "
     "browser proves who you are.\n"
     "Firefox works on every computer. On Windows, Chrome, Edge and other Chromium-based browsers "
     "lock their login so that only they can use it (this protects you from viruses that steal "
