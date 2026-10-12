@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A link the downloader does not support says "This site isn't supported. Download the video another way and use 'A file on this computer'." instead of yt-dlp's "Unsupported URL" and a failure line (D-079).
+- A site that gives no duration (Instagram) shows "duration: unknown" instead of "0min00s"; after transcribing, the audio's measured length is shown and written to meta.yaml, which now records the duration whenever it is known (D-079).
+- `fetch` on a site with no captions at all says "<Site> doesn't provide captions for this video." instead of "there is no caption in 'pt' … (manual: none; automatic: none)"; the detailed line stays when there are captions in other languages (D-079).
 - "How does this work?" in the sign-in list now speaks of any site: YouTube's check usually depends on the connection, Instagram's and Facebook's often on the video. Both guides say Kwai is not supported (yt-dlp has no extractor for it).
 - Other sites (D-078). The sign-in is now "Sign-in (your browser's login)" and is used for every site, not only YouTube; a setting saved under the old name still works. A site that asks for a login (Instagram, Facebook, TikTok, X, Vimeo, private or followers-only videos) is said plainly: "Instagram asked you to sign in for this video.", or, when a sign-in is already set, "The browser you chose (Firefox) may not be signed in to Instagram. …", with the same ways out as YouTube's bot check (exit code 3).
 - A link with no captions (most sites other than YouTube) goes straight to transcribing in the full build; the lite build says "<Site> doesn't provide captions for this video. The full build can transcribe its audio on this computer." and stops, with no error.

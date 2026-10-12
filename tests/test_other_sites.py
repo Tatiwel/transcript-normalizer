@@ -3,6 +3,7 @@ walls said plainly, no captions (straight to transcription), keeping the
 audio, and `fetch --list` as a quick check of a link."""
 
 import pytest
+import yaml
 
 from transcript_normalizer import cli, interactive, runs
 from transcript_normalizer.ingest import cookies, fetch
@@ -200,3 +201,85 @@ def test_list_on_youtube_keeps_its_track_lines(tmp_path, monkeypatch, capsys):
     lines = [line.strip() for line in capsys.readouterr().out.splitlines()]
     assert code == 0 and lines[0] == "site: YouTube"
     assert "original: pt-orig" in lines and "login: not asked" in lines
+
+
+# ------------------------------------------------------------------ D-079: unsupported, duration, one message
+
+
+UNSUPPORTED_URL = "https://example.org/videos/42"
+
+
+def unsupported():
+    return FakeYtDlp(url=UNSUPPORTED_URL, metadata=[f"ERROR: Unsupported URL: {UNSUPPORTED_URL}"])
+
+
+def test_an_unsupported_site_on_the_command_line(tmp_path, monkeypatch, capsys):
+    code, _ = fetched(tmp_path, monkeypatch, unsupported(), UNSUPPORTED_URL)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err.strip() == fetch.UNSUPPORTED
+    assert "Unsupported URL" not in captured.out + captured.err and "could not read" not in captured.err
+
+
+def test_an_unsupported_site_in_the_menu(tmp_path, monkeypatch, capsys):
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["1", "1", UNSUPPORTED_URL, "q"], ytdlp=unsupported())
+    assert ("This site isn't supported. Download the video another way and use "
+            "'A file on this computer'.") in out
+    assert "Unsupported URL" not in out and "error:" not in out and "fetch did not finish" not in out
+
+
+def instagram_reel():
+    """The real case: no duration in the metadata, no captions, 50 s of audio."""
+    return FakeYtDlp(url=INSTAGRAM, site="Instagram", has_caption=False, formats=AUDIO_ONLY,
+                     video_id="C0ffee12345", duration=None)
+
+
+class FiftySeconds(fetch_fakes.FakeWhisper):
+    def transcribe(self, audio, **options):
+        segments, _ = super().transcribe(audio, **options)
+        return segments, fetch_fakes.Info(duration=50.04)
+
+
+def test_list_says_unknown_when_the_site_gives_no_duration(tmp_path, monkeypatch, capsys):
+    code, _ = fetched(tmp_path, monkeypatch, instagram_reel(), INSTAGRAM, "--list")
+    out = capsys.readouterr().out
+    assert code == 0 and "   duration: unknown" in out and "0min00s" not in out
+
+
+def test_step_2_measures_the_duration_from_the_audio(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    fetch_fakes.install(monkeypatch, fetch, instagram_reel())
+    monkeypatch.setattr(fetch, "load_whisper", FiftySeconds)
+    assert cli.main(["fetch", INSTAGRAM]) == 0
+    out = capsys.readouterr().out
+    assert "   duration: unknown" in out
+    assert "   duration: 0min50s (measured from the audio)" in out
+    meta = yaml.safe_load((tmp_path / "runs" / "C0ffee12345" / "meta.yaml").read_text(encoding="utf-8"))
+    assert (meta["duration"], meta["duration_from"]) == (50, "audio")
+
+
+def test_a_site_s_own_duration_is_kept(tmp_path, monkeypatch, capsys):
+    code, _ = fetched(tmp_path, monkeypatch, vimeo(), VIMEO)
+    meta = yaml.safe_load((run_folder(tmp_path) / "meta.yaml").read_text(encoding="utf-8"))
+    assert code == 0 and meta["duration"] == 125 and "duration_from" not in meta
+    assert "measured from the audio" not in capsys.readouterr().out
+
+
+def test_no_captions_at_all_is_one_sentence_on_the_command_line(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    fetch_fakes.install(monkeypatch, fetch, vimeo())
+    # Step 2 fails too, so the failure list is printed and can be read.
+    monkeypatch.setattr(fetch, "load_whisper", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no model")))
+    assert cli.main(["fetch", VIMEO]) == 1
+    captured = capsys.readouterr()
+    text = captured.out + captured.err
+    assert "there is no caption in" not in text
+    assert "warning: Vimeo doesn't provide captions for this video." in text
+    assert "  - Vimeo doesn't provide captions for this video." in captured.err  # the failure list too
+
+
+def test_captions_but_not_in_the_language_keeps_the_detail(tmp_path, monkeypatch, capsys):
+    code, _ = fetched(tmp_path, monkeypatch, FakeYtDlp(automatic=("en",)), URL, "--caption-only")
+    err = capsys.readouterr().err.strip()
+    assert code == 1
+    assert err == "there is no caption in 'pt' for this video (manual: none; automatic: en)"

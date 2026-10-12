@@ -193,8 +193,8 @@ def fetch_link() -> str | None:
     """Paste a link, read the video, choose caption or transcription."""
     from .ingest.console import Output
     from .ingest.fetch import (
-        FULL_CAN_TRANSCRIBE, CookiesUnreadable, FetchError, SignInRequired, is_lite_build, missing_extra,
-        no_captions, read_metadata, tracks,
+        FULL_CAN_TRANSCRIBE, CookiesUnreadable, FetchError, SignInRequired, UnsupportedSite, duration_text,
+        is_lite_build, missing_extra, no_captions, read_metadata, tracks,
     )
 
     source = prompts.text("The video's link", hint="YouTube, Vimeo, TikTok, Instagram and others")
@@ -212,13 +212,16 @@ def fetch_link() -> str | None:
             way = sign_in_way_out(failure)
             if way != SIGNED_IN:
                 return way
+        except UnsupportedSite as failure:  # D-079: said plainly, not as an error
+            say(mark(str(failure), "need"))
+            return None
         except FetchError as failure:
             error(f"could not read the video: {failure}")
             return None
     for label, value, kind in (
         ("title", meta.title, "value"), ("channel", meta.channel, "value"),
         ("published", meta.published, "value"),
-        ("duration", f"{meta.duration // 60}min{meta.duration % 60:02d}s", "number"),
+        ("duration", duration_text(meta.duration), "number"),
     ):
         detail(label, value, kind)
     listed, translations = tracks(meta)

@@ -38,7 +38,8 @@ class FakeYtDlp:
     """
 
     def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",), audio=None,
-                 metadata=("ok",), unreadable_browser=False, url=URL, site="", formats=None, video_id=VIDEO_ID):
+                 metadata=("ok",), unreadable_browser=False, url=URL, site="", formats=None, video_id=VIDEO_ID,
+                 duration=125):
         self.caption = list(caption)
         self.has_caption = has_caption
         # Each audio download, in order: "ok", "416" (leaves a .part behind,
@@ -56,6 +57,7 @@ class FakeYtDlp:
         self.unreadable_browser = unreadable_browser
         # D-078: another site: its link, yt-dlp's extractor_key, its formats.
         self.url, self.site, self.formats, self.video_id = url, site, formats, video_id
+        self.duration = duration  # D-079: None, as Instagram gives none
         self.cookies: list[str] = []
 
     def open(self, params):
@@ -72,7 +74,7 @@ class FakeYtDlp:
             "title": "Video sintetico de teste",
             "uploader": "Canal de Teste",
             "upload_date": "20260825",
-            "duration": 125,
+            "duration": self.duration,
             "subtitles": {c: [{}] for c in self.manual} if self.has_caption else {},
             "automatic_captions": {c: [{}] for c in self.automatic} if self.has_caption else {},
         }

@@ -804,6 +804,16 @@ No change under core/; the product layer only. From a discussion with a user who
 
 Tests use a fake yt-dlp for a site with no captions and an audio-only format (Vimeo) and for Instagram's login wall: the full build goes to transcription, the lite build prints its line; the wall with no sign-in, with a browser from the flag and from Settings; the old key read and replaced; the audio deleted, kept with `--keep-audio` and with Settings; `--list` for Vimeo, for Instagram's wall and for YouTube.
 
+## D-079 Unsupported sites, unknown durations, and one no-caption sentence
+
+Three findings from a real Instagram test.
+
+**Unsupported sites.** yt-dlp answers a link it has no extractor for with "Unsupported URL: <link>" (its UnsupportedError, raised by the generic extractor). That was printed raw, after "could not read the video:" and, in the menu, as an error. It now raises `UnsupportedSite` and says only "This site isn't supported. Download the video another way and use 'A file on this computer'.": on stderr with exit 1 for `fetch` (also `--list`), as a plain line in the menu, which then returns. Kwai is one such site (D-078).
+
+**Unknown duration.** A site that gives no duration (Instagram) showed "0min00s". The details and `fetch --list` now say "duration: unknown". When step 2 runs, the decoder's length of the audio (faster-whisper's `info.duration`), rounded to the second, becomes the duration: printed as "duration: 0min50s (measured from the audio)" and written to meta.yaml. meta.yaml now records `duration` (seconds) whenever it is known, with `duration_from: audio` when it was measured; a site's own duration is never replaced. A local file (D-038) gets its measured duration the same way.
+
+**One no-caption sentence.** On the command line, a site with no captions at all still printed step 1's "there is no caption in 'pt' for this video (manual: none; automatic: none)", in the warning and in the failure list. It now prints the menu's sentence, "<Site> doesn't provide captions for this video.". The detailed line stays when the site has captions but none in the language asked, or not the `--track` named; for that case `--caption-only` now prints the detailed line too, where D-078 had wrongly said the site had no captions, and the lite build goes on to D-057's notice as before D-078.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

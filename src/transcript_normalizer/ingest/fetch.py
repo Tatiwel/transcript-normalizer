@@ -31,7 +31,7 @@ import os
 import re
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from ..catalog import write_meta
@@ -86,6 +86,14 @@ class SignInRequired(FetchError):
     def __init__(self, plainly: str, raw: str = ""):
         super().__init__(plainly)
         self.raw = raw
+
+
+class UnsupportedSite(FetchError):
+    """D-079: yt-dlp has no extractor for this link ("Unsupported URL")."""
+
+
+#: D-079: said instead of yt-dlp's "Unsupported URL", in the menu and in `fetch`.
+UNSUPPORTED = "This site isn't supported. Download the video another way and use 'A file on this computer'."
 
 
 class CookiesUnreadable(FetchError):
@@ -353,6 +361,8 @@ def ytdlp(params: dict, call, what: str, out: Output, cookies: sign_in.Cookies |
             if unreadable is not None:
                 raise unreadable from error
             message = str(error).strip()
+            if "unsupported url" in message.lower():  # D-079: no extractor for it
+                raise UnsupportedSite(UNSUPPORTED) from error
             plainly = sign_in_needed(message, url, cookies)
             if plainly:
                 raise SignInRequired(plainly, message) from error
@@ -746,8 +756,16 @@ def run_selftest_audio(path: Path) -> int:
     return 0
 
 
-def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) -> str:
-    """Local speech recognition, as `m:ss text` lines.
+def duration_text(seconds: int) -> str:
+    """`28min53s`; D-079: "unknown" when the site gave none (Instagram)."""
+    if not seconds:
+        return "unknown"
+    return f"{seconds // 60}min{seconds % 60:02d}s"
+
+
+def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) -> tuple[str, float]:
+    """Local speech recognition, as `m:ss text` lines, and the audio's length
+    in seconds as the decoder measured it (D-079), 0 when it says nothing.
 
     `vad_filter` is required, not optional. Without it a stretch with no speech,
     such as a jingle or background music, produces text nobody said: measured
@@ -773,7 +791,16 @@ def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) ->
             minutes, seconds = divmod(int(segment.start), 60)
             lines.append(f"{minutes}:{seconds:02d} {text}")
     out.info(f"segments with speech: {len(lines)}")
-    return "\n".join(lines)
+    return "\n".join(lines), float(info.duration or 0)
+
+
+def measured(meta: Metadata, seconds: float, out: Output) -> Metadata:
+    """D-079: a site that gave no duration gets the audio's own, said and kept."""
+    if meta.duration or not seconds:
+        return meta
+    meta = replace(meta, duration=round(seconds), duration_from_audio=True)
+    out.detail("duration", f"{duration_text(meta.duration)} (measured from the audio)", "number")
+    return meta
 
 
 # --------------------------------------------------------------------------- the chain
@@ -785,6 +812,10 @@ def save_meta(
     """D-022: runs/<id>/meta.yaml, with the step of D-036 that produced the text,
     and (D-038) whether the input was a url or a local file."""
     extra = {"source": "file", "path": str(path)} if path is not None else {"source": "url"}
+    if meta.duration:  # D-079: in seconds, when known; measured when the site gave none
+        extra["duration"] = meta.duration
+        if meta.duration_from_audio:
+            extra["duration_from"] = "audio"
     extra.update(step.meta() if step else {})
     return write_meta(target, meta.title, meta.channel, url, meta.published, extra=extra)
 
@@ -818,10 +849,11 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
     step = Step(STEP_SPEECH, reason="arquivo local")
     try:
-        body = transcribe(media, args.lang, args.model, out)
+        body, seconds = transcribe(media, args.lang, args.model, out)
     except Exception as error:  # a decoder or model failure: the chain's step 3
         print(f"could not transcribe {media}: {error}", file=sys.stderr)
         return 1
+    meta = measured(meta, seconds, out)
     caption = target / CAPTION_FILE
     caption.write_text(
         speech_header(meta, "", args.lang, args.model, step=step.header(), file_name=media.name)
@@ -876,8 +908,9 @@ def step_caption(
 def step_speech(
     args: argparse.Namespace, meta: Metadata, target: Path, reason: str, out: Output,
     cookies: sign_in.Cookies | None = None,
-) -> Step:
-    """Step 2: local speech recognition. Raises FetchError."""
+) -> tuple[Step, Metadata]:
+    """Step 2: local speech recognition, and the metadata with the measured
+    duration when the site gave none (D-079). Raises FetchError."""
     if is_lite_build():  # D-057: only here, where step 2 is really needed
         raise FetchError(LITE_BUILD)
     missing = missing_extra("faster_whisper")
@@ -885,14 +918,15 @@ def step_speech(
         raise FetchError(f"local speech recognition needs {', '.join(missing)} (the ingest extra)")
     audio = download_audio(args.url, target, out, cookies)
     out.detail("audio", audio, "path")
-    body = transcribe(audio, args.lang, args.model, out)
+    body, seconds = transcribe(audio, args.lang, args.model, out)
+    meta = measured(meta, seconds, out)  # D-079
     step = Step(STEP_SPEECH, reason=reason)
     (target / CAPTION_FILE).write_text(
         speech_header(meta, args.url, args.lang, args.model, step=step.header()) + body + "\n",
         encoding="utf-8",
     )
     keep_or_delete(audio, meta, target, keeps_audio(args), out)
-    return step
+    return step, meta
 
 
 #: D-078: config.toml's key for Settings → "Keep the audio after transcribing".
@@ -1138,6 +1172,9 @@ def run(args: argparse.Namespace) -> int:
     cookies = sign_in.chosen(args.cookies_from_browser, args.cookies)
     try:
         meta = read_metadata(args.url, out, cookies)
+    except UnsupportedSite as error:  # D-079: plainly, and nothing else
+        print(error, file=sys.stderr)
+        return 1
     except (SignInRequired, CookiesUnreadable) as error:
         if args.list and isinstance(error, SignInRequired):  # D-078: part of the check
             out.detail("site", site_name(error.raw, args.url))
@@ -1153,7 +1190,7 @@ def run(args: argparse.Namespace) -> int:
         out.detail("title", meta.title)
         out.detail("channel", meta.channel)
         out.detail("published", meta.published)
-        out.detail("duration", f"{meta.duration // 60}min{meta.duration % 60:02d}s", "number")
+        out.detail("duration", duration_text(meta.duration), "number")
 
     if args.list:
         return list_site(meta, out)
@@ -1184,11 +1221,14 @@ def run(args: argparse.Namespace) -> int:
             give_back()
             return report_sign_in(error, args)
         except NoCaption as error:
-            failures.append(str(error))
-            reason, plainly = "sem legenda na plataforma", no_captions(meta.site)
-            if args.track:  # other tracks exist: name the one that does not
-                plainly = str(error)
-            elif is_lite_build() and not args.caption_only:
+            # D-079: a site with no captions at all gets the menu's sentence; the
+            # detailed line is for one with captions, none in the language asked
+            # (or not the --track named).
+            has_any = bool(meta.manual_captions or meta.automatic_captions)
+            reason = "sem legenda na plataforma"
+            plainly = str(error) if has_any or args.track else no_captions(meta.site)
+            failures.append(plainly)
+            if is_lite_build() and not args.caption_only and not (has_any or args.track):
                 # D-078: no step 2 here, and nothing failed: say what would help.
                 print(f"{plainly} {FULL_CAN_TRANSCRIBE}", file=sys.stderr)
                 give_back()
@@ -1212,7 +1252,7 @@ def run(args: argparse.Namespace) -> int:
     if step is None:
         out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
         try:
-            step = step_speech(args, meta, target, reason, out, cookies)
+            step, meta = step_speech(args, meta, target, reason, out, cookies)
         except (SignInRequired, CookiesUnreadable) as error:
             give_back()
             return report_sign_in(error, args)

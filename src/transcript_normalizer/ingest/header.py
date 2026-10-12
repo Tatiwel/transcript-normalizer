@@ -26,6 +26,7 @@ class Metadata:
     language: str = ""  # D-074: the spoken language, as yt-dlp's `language` reports it
     site: str = ""  # D-078: "YouTube", "Instagram", from yt-dlp's extractor
     audio: str = ""  # D-078: "audio only (m4a)", "with the video", or "" for none offered
+    duration_from_audio: bool = False  # D-079: the site gave none; step 2 measured it
 
 
 def _today() -> str:
