@@ -5,10 +5,18 @@ import shutil
 import pytest
 
 from transcript_normalizer.cli import main
+from transcript_normalizer.core import matcher
 from transcript_normalizer.core.pack import Learned, load_learned, save_learned
 from transcript_normalizer.runs import learned_file
 
 from .conftest import CAPTION, PACK, medium_order
+
+
+@pytest.fixture(autouse=True)
+def three_forms_or_more(monkeypatch):
+    """These tests interrupt at the third question. D-083's common-word guard
+    leaves the fixture two medium forms, so it is off here."""
+    monkeypatch.setattr(matcher, "COMMON_WORD_GUARD", False)
 
 
 def answering(monkeypatch, answers, asked):

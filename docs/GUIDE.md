@@ -376,8 +376,8 @@ Four videos have a hand-checked answer key (a **gold** file) and are re-measured
 
 | video | rows to get right | right | missed | wrong changes |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 142 | 25 | 15 |
-| wxgFO_fyfXg | 222 | 211 | 11 | 9 |
+| R2Qgz8tFWVI | 167 | 142 | 25 | 13 |
+| wxgFO_fyfXg | 222 | 211 | 11 | 8 |
 | 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
 | 4tTmY8Buask | 119 | 108 | 11 | 4 |
 
@@ -388,7 +388,7 @@ Four videos have a hand-checked answer key (a **gold** file) and are re-measured
 
 The limits, honestly:
 
-- **Ordinary words are left alone**, even when the recognizer used one for a term (`tira` for TIR, `divide` for dividendo). Telling them apart needs the surrounding words, which the tool does not read yet.
+- **Ordinary words are left alone**, even when the recognizer used one for a term (`tira` for TIR, `divide` for dividendo). Telling them apart needs the surrounding words, which the tool does not read yet. For the same reason a close guess never takes in an ordinary word the term does not have: `impressora que` is not taken for `impressora 3D` (D-083).
 - **The same garble can mean two terms.** `dividendio` is dividend yield for one speaker and dividendo for the other; the pack can hold it for only one (D-046).
 - **Short strings match only exactly.** `RO` for ROE, `sel` for Selic: a form under six letters is never guessed by spelling, and the phonetic check for names needs five consonants.
 - **A new field starts from zero.** The fourth video found 4 of 81 corrections before its company name was in the pack.

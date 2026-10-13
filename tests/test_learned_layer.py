@@ -24,10 +24,12 @@ def mixed_group_as_designed(monkeypatch):
     D-047 demoted `dos 10` and `nesse ramo` (fuzzy from a variant, under 85) to
     marks, which leaves two, too few for y/n/y/s or rest-no to mean anything,
     so the variant threshold is held at the canonical one here. D-050's
-    phonetic source is off too, so none of its proposals reshape the group.
+    phonetic source is off too, so none of its proposals reshape the group, and
+    D-083's common-word guard, which rejects `dos 10`, `e caiu` and `preço dela`.
     """
     monkeypatch.setattr(matcher, "VARIANT_APPLY_THRESHOLD", matcher.APPLY_THRESHOLD)
     monkeypatch.setattr(matcher, "PHONETIC_THRESHOLD", 101)
+    monkeypatch.setattr(matcher, "COMMON_WORD_GUARD", False)
 
 CONFIRMED_SEMIGA = (
     "version: 1\n"

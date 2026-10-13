@@ -376,8 +376,8 @@ Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são me
 
 | vídeo | linhas a acertar | acertos | faltas | mudanças erradas |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 142 | 25 | 15 |
-| wxgFO_fyfXg | 222 | 211 | 11 | 9 |
+| R2Qgz8tFWVI | 167 | 142 | 25 | 13 |
+| wxgFO_fyfXg | 222 | 211 | 11 | 8 |
 | 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
 | 4tTmY8Buask | 119 | 108 | 11 | 4 |
 
@@ -388,7 +388,7 @@ Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são me
 
 Os limites, sem rodeio:
 
-- **Palavras comuns ficam de fora**, mesmo quando o reconhecedor usou uma no lugar do termo (`tira` por TIR, `divide` por dividendo). Separar os casos exige ler as palavras ao redor, coisa que a ferramenta ainda não faz.
+- **Palavras comuns ficam de fora**, mesmo quando o reconhecedor usou uma no lugar do termo (`tira` por TIR, `divide` por dividendo). Separar os casos exige ler as palavras ao redor, coisa que a ferramenta ainda não faz. Pelo mesmo motivo, um palpite próximo nunca engole uma palavra comum que o termo não tem: `impressora que` não vira `impressora 3D` (D-083).
 - **O mesmo erro pode significar dois termos.** `dividendio` é dividend yield para um falante e dividendo para o outro; o pacote só consegue guardá-lo para um dos dois (D-046).
 - **Forma curta só casa exata.** `RO` por ROE, `sel` por Selic: forma com menos de seis letras nunca é adivinhada pela grafia, e a checagem fonética de nomes pede cinco consoantes.
 - **Área nova começa do zero.** O quarto vídeo achou 4 de 81 correções antes de o nome da empresa entrar no pacote.

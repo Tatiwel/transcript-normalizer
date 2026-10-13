@@ -834,8 +834,29 @@ Nothing changes on the four fixtures: `fetch --list` on 2026-10-12 shows no manu
 
 Wording only, from Marco's test: "to confirm 6" read as six changes waiting for a yes, when the medium band (D-011) is already applied in normalized.txt. The summary's counter is now "applied, please confirm N" and the report's section "applied, please confirm:"; the help (menu item 3 and `--review`) and both guides say the close guesses are already in normalized.txt and that the review confirms or undoes them. The counts are unchanged: the same forms, medium and ask band (D-060) as before; an ask-band name, never applied, is still counted there, as it was under "to confirm".
 
+## D-083 A fuzzy match never takes in an ordinary word the term does not have
+
+From Marco's test: `impressora que` was applied as `impressora 3D` (fuzzy, 81, medium band), and "comprei uma impressora que imprime peças" became "comprei uma impressora 3D imprime peças". The window is the term's first word plus an ordinary word that happens to be about as long as the rest.
+
+When a fuzzy candidate's window holds a token that is one of the language module's `common_words` (D-032, D-066) and is not a word of the term (its canonical name or the form it was reached from), the fuzzy match is rejected, in every band. `impressora que` vs `impressora 3D`: `que` is ordinary and not in the term, rejected. `BR Portness` vs `BR Partners`: no ordinary word, allowed. `fluxo de caixo` vs `fluxo de caixa`: `de` is ordinary but is in the term, allowed. Exact, alias, inflection, unit and phonetic matches are not touched: a listed variant made of ordinary words is the pack editor's warning to give (D-066), not this guard's. English's list applies to English packs; the generic module has none, so nothing changes there. `COMMON_WORD_GUARD` in the matcher turns it off, for the tests of the confirmation loop and the pending list, which script answers against forms it now rejects (as D-047's tests hold the variant threshold).
+
+Gate: annotations.json for the eight fixture × pack runs (frozen and bundled 0.3.7, no learned layer), before and after. None is byte-identical; every difference, with its gold verdict:
+
+- No gold hit is lost. 4wCtn8BWR4o, bundled, 5:03: `a DAPTA Valdre` (fuzzy 81) gave way to `DAPTA Valdre` (fuzzy 80), which is exactly the gold row's `wrong`; still a hit for the same row, and the speaker's `a` now stays ("a Adapta Valuer").
+- Seven false positives fewer (applied, medium band): R2Qgz8tFWVI, frozen and bundled, 19:36 `preço dela` → preço teto (85) and 29:16 `e caiu` → CEMIG (92); wxgFO_fyfXg, frozen, 15:54 `divide` → dividendo (85), which also leaves the manter row `15:54 divide a` untouched without D-027's rejection; wxgFO_fyfXg, frozen and bundled, 33:27 `preço até` → preço teto (84).
+- Low marks (never applied, never scored) go, all of them windows with an ordinary word (`meu amigo` → CEMIG, `de venda` → dividendo, `projeção de` → preço teto, `de Minas` → M&A …), and six low marks take a shorter or neighbouring span instead: `dentre` → debêntures (4tTmY8Buask 3:59; 4wCtn8BWR4o 5:29 and 5:40), `preço-alvo` → preço teto (4wCtn8BWR4o 15:02), `dívida` → dividendo (R2Qgz8tFWVI 5:38), `preciso` → preço teto (wxgFO_fyfXg 20:57).
+
+| fixture | false positives, frozen | false positives, bundled 0.3.7 | low marks at 70 | at 60 |
+|---|---|---|---|---|
+| 4tTmY8Buask | 6 → 6 | 4 → 4 | 106 → 84 | 456 → 291 |
+| 4wCtn8BWR4o | 4 → 4 | 2 → 2 | 74 → 49 | 302 → 180 |
+| R2Qgz8tFWVI | 14 → 12 | 15 → 13 | 110 → 80 | 466 → 245 |
+| wxgFO_fyfXg | 53 → 51 | 9 → 8 | 89 → 52 | 554 → 250 |
+
+Hits, misses, aliases recognized and aliases wrongly substituted do not move anywhere, nor does pack fit. The regression test's bounds hold unchanged.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
-- Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually.
+- Multi-word term fuzzy matching (`preço dela` → `preço teto`): whether each word of a multi-word term must match its counterpart individually. D-083 rejects that example, since `dela` is an ordinary word; the question stands for windows without one.
 - A collocation layer (D-032): matching a term by the words around it, for misrecognitions that are ordinary words (`tira`, `rápido`, `divide`) and cannot be exact variants.

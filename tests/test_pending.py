@@ -6,10 +6,21 @@ import shutil
 from transcript_normalizer.cli import NEVER_ASKED, SKIPPED, main
 from transcript_normalizer.runs import PENDING_FILE, needs_review_dir
 
+import pytest
+
+from transcript_normalizer.core import matcher
+
 from .conftest import CAPTION, PACK, medium_order, output_dir
 
-# The fixture's medium band, in the order the loop asks it (derived).
-MEDIUM = medium_order()
+
+@pytest.fixture(autouse=True)
+def medium(monkeypatch):
+    """The fixture's medium band, in the order the loop asks it (derived).
+
+    D-083's common-word guard is off: it leaves two forms, too few for these
+    tests of the list (`e caiu` is one it rejects)."""
+    monkeypatch.setattr(matcher, "COMMON_WORD_GUARD", False)
+    return medium_order()
 
 
 def run(tmp_path, monkeypatch, *extra, answers=None):
@@ -32,9 +43,9 @@ def tagged(text):
     return out
 
 
-def test_without_confirm_everything_is_never_asked(tmp_path, monkeypatch):
+def test_without_confirm_everything_is_never_asked(tmp_path, monkeypatch, medium):
     text = run(tmp_path, monkeypatch).read_text(encoding="utf-8")
-    assert tagged(text) == {variant: NEVER_ASKED for _, variant in MEDIUM}
+    assert tagged(text) == {variant: NEVER_ASKED for _, variant in medium}
     # Grouped by term, each variant with its own examples (D-019).
     assert text.count("CEMIG  (2 occurrences)") == 1
     assert "  e caiu  (1 occurrence)  [never asked]" in text
@@ -43,25 +54,25 @@ def test_without_confirm_everything_is_never_asked(tmp_path, monkeypatch):
     assert "[y]es" not in text
 
 
-def test_answered_variants_leave_and_skipped_ones_say_so(tmp_path, monkeypatch):
+def test_answered_variants_leave_and_skipped_ones_say_so(tmp_path, monkeypatch, medium):
     # yes, no on the first two variants, skip on the third; end of input skips the rest.
     path = run(tmp_path, monkeypatch, "--confirm", answers=["y", "n", "s"])
     left = tagged(path.read_text(encoding="utf-8"))
 
-    assert MEDIUM[0][1] not in left and MEDIUM[1][1] not in left
-    assert left == {variant: SKIPPED for _, variant in MEDIUM[2:]}
+    assert medium[0][1] not in left and medium[1][1] not in left
+    assert left == {variant: SKIPPED for _, variant in medium[2:]}
 
 
-def test_an_alias_answer_is_an_answer(tmp_path, monkeypatch):
+def test_an_alias_answer_is_an_answer(tmp_path, monkeypatch, medium):
     path = run(tmp_path, monkeypatch, "--confirm", answers=["l"])
-    assert MEDIUM[0][1] not in tagged(path.read_text(encoding="utf-8"))
+    assert medium[0][1] not in tagged(path.read_text(encoding="utf-8"))
 
 
-def test_nothing_pending_leaves_no_file_behind(tmp_path, monkeypatch):
+def test_nothing_pending_leaves_no_file_behind(tmp_path, monkeypatch, medium):
     # The first run leaves a pending.txt; answering everything removes it.
     path = run(tmp_path, monkeypatch)
     assert path.exists()
-    groups = len(dict.fromkeys(term for term, _ in MEDIUM))
+    groups = len(dict.fromkeys(term for term, _ in medium))
     run(tmp_path, monkeypatch, "--confirm", answers=["a"] * groups)  # all-yes, every term
     assert not path.exists()
     assert not path.parent.exists()

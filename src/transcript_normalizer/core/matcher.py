@@ -44,6 +44,10 @@ VARIANT_APPLY_THRESHOLD = 85
 MIN_FUZZY_LEN = 6
 MAX_LEN_DIFF = 2
 
+#: D-083: a fuzzy window holding an ordinary word of the language that is not a
+#: word of the term is rejected. Tests about other things turn it off.
+COMMON_WORD_GUARD = True
+
 #: Word n-grams the matcher considers.
 NGRAM_SIZES = (1, 2, 3)
 
@@ -261,6 +265,14 @@ def find_annotations(
         return found
 
 
+    # D-083: a fuzzy window with an ordinary word the term does not have is not
+    # a garble of the term (`impressora que` is not `impressora 3D`).
+    common_words = getattr(language, "common_words", frozenset())
+
+    def common_word_outside(folded_span: str, term: str, candidate: str) -> bool:
+        own = set(norm(term).split()) | set(candidate.split())
+        return any(w in common_words and w not in own for w in folded_span.split())
+
     tokens = tokenize(text, language.sentence_boundaries)
 
     def windows():
@@ -389,6 +401,12 @@ def find_annotations(
         # not market share).
         if rule == term_rule("fuzzy") and any(
             exact_at[k] - {term} for k in range(i, i + len(window))
+        ):
+            continue
+        if (
+            COMMON_WORD_GUARD
+            and rule == term_rule("fuzzy")
+            and common_word_outside(folded_span, term, candidate)
         ):
             continue
         # D-040: D-034 for exact corrections too, when the name is longer.

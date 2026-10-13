@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from transcript_normalizer import find_annotations, load_pack, parse_caption
+from transcript_normalizer.core import matcher
 from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.evaluate import Fixture, evaluate
 
@@ -21,18 +22,26 @@ def manter_touched(pack):
     return result.touched_keep["15:54 divide a"]
 
 
-def test_without_the_rejection_the_manter_row_is_touched():
+def test_without_the_rejection_the_manter_row_is_touched(monkeypatch):
     """The measured regression: `divide a -> dividendo` on a must-not-touch row.
 
     Since D-047 `divide a` (82, reached from a variant) is only a mark, but
-    `divide` (85) is still applied there, so the row is still touched.
+    `divide` (85) is still applied there, so the row is still touched. That is
+    without D-083's common-word guard, which rejects `divide` on its own.
     """
+    monkeypatch.setattr(matcher, "COMMON_WORD_GUARD", False)
     touched = manter_touched(load_pack(FIXTURE.pack, learned=Learned()))
     assert ("divide", "dividendo") in touched
     assert ("divide a", "dividendo") not in touched
 
 
-def test_rejecting_divide_keeps_the_manter_row_clean():
+def test_the_common_word_guard_keeps_the_manter_row_clean_without_a_rejection():
+    """D-083: `divide` is an ordinary word, and not a word of `dividendo`."""
+    assert manter_touched(load_pack(FIXTURE.pack, learned=Learned())) == []
+
+
+def test_rejecting_divide_keeps_the_manter_row_clean(monkeypatch):
+    monkeypatch.setattr(matcher, "COMMON_WORD_GUARD", False)
     pack = load_pack(FIXTURE.pack, learned_from=LEARNED)
     assert pack.is_rejected("divide", "dividendo")
     assert manter_touched(pack) == []

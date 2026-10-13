@@ -79,7 +79,7 @@ Experimental, but the engine is a package with a regression test.
 `uv run python scripts/measure.py` prints every fixture's numbers side by side; the regression test holds each one to its own bounds.
 - `experiments/`: throwaway scripts that measured how far naive approaches go against that fixture. Results are in `docs/DECISIONS.md`.
 
-Measured on the first fixture with its frozen pack (RapidFuzz plus a hand-curated variant list, unit rules and disciplined thresholds): 150 of 167 hits and 14 false positives in ~1000 caption lines; with the bundled pack 0.3.7, 142 hits and 15 false positives. `scripts/measure.py` is the source of these numbers: if they disagree with it, it is right.
+Measured on the first fixture with its frozen pack (RapidFuzz plus a hand-curated variant list, unit rules and disciplined thresholds): 150 of 167 hits and 12 false positives in ~1000 caption lines; with the bundled pack 0.3.7, 142 hits and 13 false positives. `scripts/measure.py` is the source of these numbers: if they disagree with it, it is right.
 
 ## Contributing
 

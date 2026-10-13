@@ -92,7 +92,9 @@ def medium_order():
 
 
 #: The matcher settings tests monkeypatch; the cache is keyed on their values.
-_PATCHED = ("APPLY_THRESHOLD", "MARK_THRESHOLD", "VARIANT_APPLY_THRESHOLD", "PHONETIC_THRESHOLD")
+_PATCHED = (
+    "APPLY_THRESHOLD", "MARK_THRESHOLD", "VARIANT_APPLY_THRESHOLD", "PHONETIC_THRESHOLD", "COMMON_WORD_GUARD",
+)
 
 
 @cache
