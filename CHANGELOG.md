@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- "to confirm N" is now "applied, please confirm N", in the summary and in the report (D-082): the close guesses are already in normalized.txt. The help and both guides say so, and that the review can undo them. The counts are the same.
 - In the video's original language, a caption written by the channel is now taken before YouTube's automatic one, by `fetch` and as the menu's default (D-081, provisional, amending D-045). The order: the channel's own in the original language, the original audio's automatic one, other languages written by the channel, then automatic dubs and translations. `--track` still takes exactly the track named. None of the four fixtures has a manual track, so nothing changes for them.
 - `fetch` without `--lang` takes the video's own language, as the site reports it, instead of always `pt` (D-080). When the site does not say: the video's only original-audio track, else its only manual track, else `pt`, with a line saying the language is unknown. `--lang` still wins.
 - A link the downloader does not support says "This site isn't supported. Download the video another way and use 'A file on this computer'." instead of yt-dlp's "Unsupported URL" and a failure line (D-079).

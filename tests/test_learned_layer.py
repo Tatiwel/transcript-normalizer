@@ -205,7 +205,7 @@ def test_confirm_run_writes_the_learned_file_and_never_the_pack(
     assert all(r.decided for r in learned.rejected)
 
     out = capsys.readouterr().out
-    assert "to confirm:" in out
+    assert "applied, please confirm:" in out
     assert str(layer) in out
 
 

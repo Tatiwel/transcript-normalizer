@@ -830,6 +830,10 @@ Provisional: it rests on one observed video, 3S4vuHxGh7c. A channel's manual tra
 
 Nothing changes on the four fixtures: `fetch --list` on 2026-10-12 shows no manual track at all on any of them (4tTmY8Buask and 4wCtn8BWR4o: `pt-orig` and two dubs; R2Qgz8tFWVI and wxgFO_fyfXg: `pt-orig`), so the choice for each is the same track as before, and `scripts/measure.py` does not move.
 
+## D-082 "Applied, please confirm", not "to confirm"
+
+Wording only, from Marco's test: "to confirm 6" read as six changes waiting for a yes, when the medium band (D-011) is already applied in normalized.txt. The summary's counter is now "applied, please confirm N" and the report's section "applied, please confirm:"; the help (menu item 3 and `--review`) and both guides say the close guesses are already in normalized.txt and that the review confirms or undoes them. The counts are unchanged: the same forms, medium and ask band (D-060) as before; an ask-band name, never applied, is still counted there, as it was under "to confirm".
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -107,7 +107,7 @@ def _lines(groups: dict[str, Counter]) -> list[str]:
 
 
 def report(annotations: list[Annotation]) -> str:
-    """High band by term, then the unit rules, then D-011's medium band to confirm."""
+    """High band by term, then the unit rules, then D-011's medium band, applied, to confirm (D-082)."""
     high = [a for a in annotations if a.band == BAND_HIGH]
     fixed = [a for a in high if a.is_correction]
     sections = [
@@ -115,7 +115,7 @@ def report(annotations: list[Annotation]) -> str:
         ("unit rules", group_by_term([a for a in fixed if a.rule == RULE_UNIT])),
         # D-020: another name of the term, as the speaker said it.
         ("recognized (not changed)", group_by_term([a for a in high if a.is_alias])),
-        ("to confirm", group_by_term(in_band(annotations, QUESTION_BANDS))),
+        ("applied, please confirm", group_by_term(in_band(annotations, QUESTION_BANDS))),
     ]
 
     out: list[str] = []
@@ -368,7 +368,7 @@ def print_summary(annotations: list[Annotation], normalized: Path) -> None:
     pairs = list(dict.fromkeys(f"{a.original} → {a.replacement}" for a in fixed))[:2]
     say(mark(f"corrected {len(fixed)}", "ok"), f"  ({', '.join(pairs)})" if pairs else "")
     say(mark(f"recognized {len(recognized)}", "title"), "  (terms already spelled right, left as they are)")
-    say(mark(f"to confirm {doubtful}", "need"), "  (the tool was unsure; your answer is remembered)")
+    say(mark(f"applied, please confirm {doubtful}", "need"), "  (the tool was unsure; your answer is remembered)")
     say("result: ", mark(normalized, "path"))
 
 

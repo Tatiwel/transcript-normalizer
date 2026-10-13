@@ -145,7 +145,7 @@ def test_fetch_then_normalize_then_review_chained(tmp_path, monkeypatch, capsys)
     assert fake.downloads == [("writeautomaticsub", "pt")]
     # The summary, not the full report.
     assert "corrected 1  (SEMIG → CEMIG)" in out
-    assert "to confirm 1  (the tool was unsure; your answer is remembered)" in out
+    assert "applied, please confirm 1  (the tool was unsure; your answer is remembered)" in out
     assert f"result: {run / NORMALIZED_FILE}" in out
     assert "terms:" not in out
     assert "The result is usable as it is" in out

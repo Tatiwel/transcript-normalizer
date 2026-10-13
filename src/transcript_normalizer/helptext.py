@@ -36,7 +36,8 @@ ACTIONS = (
            "pick a run; shows three counters, then offers the review if anything is pending",
            f"{PROG} runs/<id>/legenda.txt --summary"),
     Action("3", "Review pending", "answer what the tool was unsure about",
-           "pick a run; one stop per uncertain form, in the order of the video; Enter decides later, "
+           "pick a run; the close guesses are already in normalized.txt, and the review can undo them; "
+           "one stop per uncertain form, in the order of the video; Enter decides later, "
            "and a summary asks before anything is saved",
            f"{PROG} runs/<id>/legenda.txt --review"),
     Action("4", "Show a run's outputs", "where the files are, first lines of the result",
@@ -98,7 +99,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("runs/<id>/needs-review/", "what still needs your answer (pending.txt)"),
         ]),
         ("THE REVIEW LOOP", [
-            ("--review", "one stop per uncertain form, in the order of the video: the line before, the line with the form, the line after, where else it occurs, and a link to that moment. Choose yes (fix it from now on), yes only in this video, said that way (recognise it, keep the text), no, or decide later; Enter decides later. At the end a summary, and nothing is saved unless you say yes to it. The menu reviews this way"),
+            ("--review", "the close guesses (medium band) are already applied in normalized.txt; the review confirms them or undoes them. One stop per uncertain form, in the order of the video: the line before, the line with the form, the line after, where else it occurs, and a link to that moment. Choose yes (fix it from now on), yes only in this video, said that way (recognise it, keep the text), no, or decide later; Enter decides later. At the end a summary, and nothing is saved unless you say yes to it. The menu reviews this way"),
             ("--confirm", "one question per form, grouped by term, answered with one of:"),
             ("y", "the recognizer garbled the term: correct it from now on"),
             ("o", "the same, but only in this video: kept beside the run, never learned or contributed"),
