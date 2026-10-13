@@ -861,6 +861,10 @@ From Marco's test: a speaker says tickers as words ("BOVA onze"), and the recogn
 
 Measured, eight fixture × pack runs: hits, misses, false positives, aliases, pack fit and the low marks at 70 do not move. annotations.json is byte-identical for six runs; for R2Qgz8tFWVI and wxgFO_fyfXg with the bundled 0.3.7, one ask-band proposal each is gone, `para três` and `por três` → BR Partners (phonetic, 90, never applied, not scored): `três` is now `3`, and its skeleton no longer sounds like the name. The diagnostic count of low marks at 60 moves by one or two (4tTmY8Buask 291 → 289, R2Qgz8tFWVI 245 → 244, wxgFO_fyfXg 250 → 251).
 
+## D-085 Applied and suggested are counted apart (amends D-082)
+
+D-082's "applied, please confirm N" counted the ask band (D-060) with the medium band, though an ask-band proposal (a name found by sound) is never in normalized.txt. The count now holds only the medium-band corrections, which are applied, one per form of each term as before. The ask-band proposals get their own line, "suggested, not applied M" ("(names that sound like a pack name)"), in the summary that `--summary` and the menu print, shown when M is not 0; report.txt has the matching section, "suggested, not applied:", after "applied, please confirm:". What the review asks, pending.txt and "Next: review the N uncertain one(s) now?" still cover both bands. Help and both guides say which is which. Tested with one of each: `fluxo de caixo` (fuzzy, medium) and `Berry Portene` (phonetic, ask).
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

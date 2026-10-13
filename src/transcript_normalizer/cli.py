@@ -29,8 +29,10 @@ from .core.matcher import find_annotations, resolve_overlaps
 from .core.pack import Learned, Pack, load_pack, save_learned
 from .core.render import render_normalized
 from .core.standoff import (
+    BAND_ASK,
     BAND_HIGH,
     BAND_LOW,
+    BAND_MEDIUM,
     QUESTION_BANDS,
     RULE_UNIT,
     Annotation,
@@ -106,8 +108,22 @@ def _lines(groups: dict[str, Counter]) -> list[str]:
     return out
 
 
+def applied_to_confirm(annotations: list[Annotation]) -> list[Annotation]:
+    """D-085: the medium-band corrections, which are in normalized.txt."""
+    return [a for a in in_band(annotations, BAND_MEDIUM) if a.applied and a.is_correction]
+
+
+def forms_count(annotations: list[Annotation]) -> int:
+    """How many forms the review asks about: one per form of each term (D-019)."""
+    by_term: dict[str, list[Annotation]] = defaultdict(list)
+    for a in annotations:
+        by_term[a.term].append(a)
+    return sum(len(variant_groups(group)) for group in by_term.values())
+
+
 def report(annotations: list[Annotation]) -> str:
-    """High band by term, then the unit rules, then D-011's medium band, applied, to confirm (D-082)."""
+    """High band by term, then the unit rules, then D-011's medium band, applied, to
+    confirm (D-082), then D-060's ask band, suggested and not applied (D-085)."""
     high = [a for a in annotations if a.band == BAND_HIGH]
     fixed = [a for a in high if a.is_correction]
     sections = [
@@ -115,7 +131,8 @@ def report(annotations: list[Annotation]) -> str:
         ("unit rules", group_by_term([a for a in fixed if a.rule == RULE_UNIT])),
         # D-020: another name of the term, as the speaker said it.
         ("recognized (not changed)", group_by_term([a for a in high if a.is_alias])),
-        ("applied, please confirm", group_by_term(in_band(annotations, QUESTION_BANDS))),
+        ("applied, please confirm", group_by_term(applied_to_confirm(annotations))),
+        ("suggested, not applied", group_by_term(in_band(annotations, BAND_ASK))),
     ]
 
     out: list[str] = []
@@ -356,7 +373,7 @@ def _ask_all(transcript, groups, session: Session, save) -> None:
 
 
 def print_summary(annotations: list[Annotation], normalized: Path) -> None:
-    """The menu's view of a run: three counters and where the result is.
+    """The menu's view of a run: its counters (D-085: a fourth for suggestions) and where the result is.
 
     `report.txt` keeps the full report; this is what `--summary` prints instead.
     """
@@ -364,11 +381,14 @@ def print_summary(annotations: list[Annotation], normalized: Path) -> None:
 
     fixed = [a for a in annotations if a.band == BAND_HIGH and a.is_correction]
     recognized = [a for a in annotations if a.band == BAND_HIGH and a.is_alias]
-    doubtful = sum(len(variant_groups(group)) for _, group in confirm_groups(annotations))
+    doubtful = forms_count(applied_to_confirm(annotations))
+    suggested = forms_count(in_band(annotations, BAND_ASK))
     pairs = list(dict.fromkeys(f"{a.original} → {a.replacement}" for a in fixed))[:2]
     say(mark(f"corrected {len(fixed)}", "ok"), f"  ({', '.join(pairs)})" if pairs else "")
     say(mark(f"recognized {len(recognized)}", "title"), "  (terms already spelled right, left as they are)")
     say(mark(f"applied, please confirm {doubtful}", "need"), "  (the tool was unsure; your answer is remembered)")
+    if suggested:  # D-085: names found by sound, never in normalized.txt until confirmed
+        say(mark(f"suggested, not applied {suggested}", "need"), "  (names that sound like a pack name)")
     say("result: ", mark(normalized, "path"))
 
 
@@ -684,7 +704,7 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--summary",
         action="store_true",
-        help="print three counters instead of the full report; report.txt is unchanged",
+        help="print the counters instead of the full report; report.txt is unchanged",
     )
     parser.add_argument(
         "--force",
