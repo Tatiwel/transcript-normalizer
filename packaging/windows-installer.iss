@@ -1,8 +1,8 @@
 ; The Windows installer of the full build (D-070), compiled by Inno Setup 6 in
 ; the release workflow:
 ;
-;   ISCC /DAppVersion=0.6.4 /DSourceDir=<onedir folder> /DOutputDir=out
-;        /DOutputBase=transcript-normalizer-0.6.4-windows-full-setup
+;   ISCC /DAppVersion=0.6.5 /DSourceDir=<onedir folder> /DOutputDir=out
+;        /DOutputBase=transcript-normalizer-0.6.5-windows-full-setup
 ;        packaging\windows-installer.iss
 ;
 ; Per-user by default, so no administrator is needed; the first page offers

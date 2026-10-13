@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.6.5
+
+Other sites besides YouTube: their sign-in, login walls and missing captions (D-078, D-079); a review with one stop per form where Enter decides nothing (D-072, D-073); the caption in the video's own language, the channel's own first (D-080, D-081); fewer wrong guesses, from a common-word guard and number words matched as digits (D-083, D-084); applied and suggested counted apart (D-082, D-085).
+
 - "applied, please confirm N" now counts only the close guesses that are in normalized.txt; names found by sound, which are never applied until you confirm them, have their own line, "suggested, not applied M", in the summary, the menu and report.txt (D-085, amending D-082).
 - Number words from 2 to 20 match their digits (D-084), in Portuguese and English: "BOVA onze" is found as BOVA11, "nove" matches 9, "nine" matches 9. Only for matching: the text is never rewritten from it. "um", "uma" and "one" are not folded.
 - A close guess (fuzzy match) is no longer made when its words include an ordinary word the term does not have (D-083): "impressora que" is left alone instead of becoming "impressora 3D"; "BR Portness" → BR Partners and "fluxo de caixo" → fluxo de caixa still are. Exact, alias and phonetic matches are unaffected. On the fixtures no hit is lost and false positives go from 14 to 12 and 53 to 51 (frozen packs), 15 to 13 and 9 to 8 (bundled 0.3.7); about a third of the low-confidence marks go too.
