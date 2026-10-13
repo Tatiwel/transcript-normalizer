@@ -336,12 +336,12 @@ RATE_LIMITED = "(translations are rate-limited more often)"
 
 
 def default_track(meta, listed) -> str | None:
-    """D-045: the original-audio track; without one, what fetch without --lang
-    would take (D-080: the video's own language)."""
-    from .ingest.fetch import AUTOMATIC_ORIGINAL, choose_language, video_language
+    """D-045: the original language's track, the channel's own first (D-081);
+    without one, what fetch without --lang would take (D-080)."""
+    from .ingest.fetch import choose_language, in_original_language, video_language
 
     for track in listed:
-        if track.source == AUTOMATIC_ORIGINAL:
+        if in_original_language(meta, track):
             return track.code
     code, _ = choose_language(meta, video_language(meta)[0])
     return code or (listed[0].code if listed else None)
@@ -361,7 +361,8 @@ def choose_track(meta, listed, translations) -> str | None:
         picked = prompts.select(
             "Which caption?",
             options,
-            hint="the original audio's own caption is the closest to what was said",
+            hint="in the original language, the channel's own caption, then the original audio's, "
+            "are the closest to what was said",
             default=default_track(meta, listed),
         )
         if picked != TRANSLATIONS:

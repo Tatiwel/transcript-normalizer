@@ -488,10 +488,10 @@ def unknown_language_notice() -> str:
 
 
 def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> tuple[str, str]:
-    """Return (code, source), in D-045's order.
+    """Return (code, source), in D-045's order as D-081 amends it.
 
-    1. the automatic caption of the spoken language, `<lang>-orig`;
-    2. a manual `<lang>`;
+    1. a manual `<lang>`, the channel's own (D-081: it was second);
+    2. the automatic caption of the spoken language, `<lang>-orig`;
     3. D-074: the automatic caption of a dubbed audio, `<lang>-orig` when
        `<lang>` is not the video's own language;
     4. an automatic `<lang>`, which is a machine translation whenever a
@@ -507,8 +507,8 @@ def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> t
     dubbed = tuple(c[: -len(ORIGINAL_SUFFIX)] for c in orig if is_dubbed(meta, c))
     translated = tuple(c for c in meta.automatic_captions if not c.endswith(ORIGINAL_SUFFIX))
     for available, source, suffix in (
-        (original, AUTOMATIC_ORIGINAL, ORIGINAL_SUFFIX),
         (meta.manual_captions, MANUAL, ""),
+        (original, AUTOMATIC_ORIGINAL, ORIGINAL_SUFFIX),
         (dubbed, AUTOMATIC_DUBBED, ORIGINAL_SUFFIX),
         (translated, AUTOMATIC, ""),
     ):
@@ -569,14 +569,15 @@ class Track:
 def tracks(meta: Metadata) -> tuple[list[Track], list[Track]]:
     """D-062: (the tracks to list, the automatic translations), in D-045's order.
 
-    Listed: the original-audio tracks, the dubbed-audio ones (D-074), the
-    manual ones, and the plain automatic ones when the video has no `-orig`
-    track (then they are not translations). A code with a manual track is
-    listed once, as manual, which is what `--track` takes for it.
+    Listed: the manual tracks, the original-audio ones, the dubbed-audio ones
+    (D-074), and the plain automatic ones when the video has no `-orig` track
+    (then they are not translations). A code with a manual track is listed
+    once, as manual, which is what `--track` takes for it.
 
-    D-074: when yt-dlp names the video's language, the list goes by language:
-    that language first (its original-audio track, then its manual one), then
-    English, then the rest, each in the order above.
+    The list goes by language: the original's first, then English, then the
+    rest (D-074), and within each, manual before automatic (D-081). So: the
+    channel's own caption in the original language, its original-audio
+    caption, then other languages' manual tracks before anything automatic.
     """
     orig = [c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
     originals = [Track(c, AUTOMATIC_ORIGINAL) for c in orig if not is_dubbed(meta, c)]
@@ -589,15 +590,32 @@ def tracks(meta: Metadata) -> tuple[list[Track], list[Track]]:
     ]
     if not orig:
         return manual + automatic, []
-    listed = originals + dubbed + manual
-    spoken = original_language(meta).split("-")[0].lower()
-    if spoken:
-        def group(track: Track) -> int:
-            base = track.base.split("-")[0].lower()
-            return 0 if base == spoken else 1 if base == "en" else 2
+    listed = manual + originals + dubbed
+    spoken = original_bases(meta)
 
-        listed.sort(key=group)  # stable: the order above, within each language
+    def group(track: Track) -> tuple[int, bool]:
+        base = track.base.split("-")[0].lower()
+        return 0 if base in spoken else 1 if base == "en" else 2, track.source != MANUAL
+
+    listed.sort(key=group)  # stable: the order above, within each language and kind
     return listed, automatic
+
+
+def original_bases(meta: Metadata) -> set[str]:
+    """The base languages of the original-audio tracks: the video's own when
+    yt-dlp names it (D-074), else every `-orig` track's."""
+    return {
+        c[: -len(ORIGINAL_SUFFIX)].split("-")[0].lower()
+        for c in meta.automatic_captions
+        if c.endswith(ORIGINAL_SUFFIX) and not is_dubbed(meta, c)
+    }
+
+
+def in_original_language(meta: Metadata, track: Track) -> bool:
+    """D-081: an original-audio track, or the channel's own in that language."""
+    if track.source == AUTOMATIC_ORIGINAL:
+        return True
+    return track.source == MANUAL and track.base.split("-")[0].lower() in original_bases(meta)
 
 
 def track_named(meta: Metadata, code: str) -> Track | None:

@@ -1,4 +1,5 @@
-"""D-045: `<lang>-orig`, then a manual `<lang>`, then an automatic `<lang>`."""
+"""D-045, as D-081 amends it: a manual `<lang>`, then `<lang>-orig`, then an
+automatic `<lang>`."""
 
 import pytest
 import yaml
@@ -20,12 +21,14 @@ TRANSLATED = ("de", "en", "es", "fr", "pt", "pt-orig", "zh-Hans")
     "manual, automatic, expected",
     [
         ((), TRANSLATED, ("pt-orig", "automatica original")),
-        (("pt",), TRANSLATED, ("pt-orig", "automatica original")),
+        (("pt",), TRANSLATED, ("pt", "manual")),  # D-081: the channel's own first
         (("pt",), ("en", "pt"), ("pt", "manual")),
         ((), ("en", "pt"), ("pt", "automatica")),
         ((), ("en-orig", "pt"), ("pt", "automatica")),  # another language's original
         ((), ("en-orig", "pt-BR-orig", "pt"), ("pt-BR-orig", "automatica original")),
         (("pt-BR",), ("en-orig", "pt"), ("pt-BR", "manual")),
+        (("pt-BR",), ("pt-orig", "pt"), ("pt-BR", "manual")),
+        (("en",), ("pt-orig", "pt"), ("pt-orig", "automatica original")),  # another language's manual
         ((), ("en-orig",), ("", "")),
     ],
 )
@@ -45,7 +48,7 @@ def fetched(tmp_path, monkeypatch, ytdlp):
 
 
 def test_the_original_track_is_downloaded_and_recorded(tmp_path, monkeypatch):
-    fake = FakeYtDlp(manual=("pt",), automatic=TRANSLATED)
+    fake = FakeYtDlp(manual=("en",), automatic=TRANSLATED)
     header, meta = fetched(tmp_path, monkeypatch, fake)
     assert fake.downloads == [("writeautomaticsub", "pt-orig")]
     assert header == "automatica original (pt-orig)"
@@ -89,3 +92,16 @@ def test_list_says_when_there_is_no_original(tmp_path, monkeypatch, capsys):
     lines = listed(tmp_path, monkeypatch, capsys, FakeYtDlp(automatic=("pt",)))
     assert lines[0].endswith("original: none")
     assert lines[2].endswith("automatic captions: pt")
+
+
+def test_a_manual_track_in_the_original_language_wins(tmp_path, monkeypatch):
+    """D-081, from 3S4vuHxGh7c: `en` written by the channel beside `en-orig`."""
+    fake = FakeYtDlp(language="en", manual=("en",), automatic=("de", "en", "en-orig", "pt"))
+    header, meta = fetched(tmp_path, monkeypatch, fake)
+    assert fake.downloads == [("writesubtitles", "en")]
+    assert header == "manual (en)"
+    listed, _ = fetch.tracks(Metadata(language="en", manual_captions=("en", "pt"),
+                                      automatic_captions=("de", "en", "en-orig", "pt")))
+    assert [(t.code, t.source) for t in listed] == [
+        ("en", fetch.MANUAL), ("en-orig", fetch.AUTOMATIC_ORIGINAL), ("pt", fetch.MANUAL),
+    ]

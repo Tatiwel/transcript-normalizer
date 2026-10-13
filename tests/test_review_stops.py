@@ -241,8 +241,8 @@ def test_the_video_s_own_language_is_the_original_and_comes_first():
     listed, translations = fetch.tracks(DUBBED)
     assert [(t.code, t.name) for t in listed] == [
         ("pt-orig", "Portuguese, original audio (automatic)"),
+        ("en", "English (written by the channel)"),  # D-081: manual before automatic
         ("en-US-orig", "English (en-US), dubbed audio (automatic)"),
-        ("en", "English (written by the channel)"),
         ("es-US-orig", "Spanish (es-US), dubbed audio (automatic)"),
     ]
     assert all(t.translated for t in translations)

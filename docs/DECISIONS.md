@@ -820,6 +820,16 @@ From Marco's test. `fetch` without `--lang` asked for `pt` whatever the video sp
 
 `--lang` has no fixed default now. Without it, the language is yt-dlp's `language` field, spelt as its `-orig` track spells it when there is one (D-074), and its base code (`pt`) when it is regional (`pt-BR`) and only the base language has tracks. When yt-dlp names no language, a fixed order, never a guess between tracks: the only `-orig` track, when there is exactly one; else the only manual track, when there is exactly one; else `pt` (the old default), with one line: "the video's language is unknown: using 'pt' (--lang chooses another)". Several `-orig` tracks (dubs) with no language named is not resolved by picking one. `--lang` given wins, as before; `--track` wins over both (D-062). The menu's default track, when there is no original-audio track, is what fetch without `--lang` would take. Local speech recognition gets the base code (faster-whisper knows `en`, not `en-US`); a local file (D-038) has no site to ask, and keeps `pt`.
 
+## D-081 In the original language, the channel's caption before the automatic one (provisional, amends D-045)
+
+From Marco's test of 3S4vuHxGh7c (English): it has a manual `en` written by the channel beside `en-orig`, and the tool took `en-orig`. D-045 put the original automatic caption first because its measured alternative was a machine translation (4tTmY8Buask's `pt`), never a manual track; no fixture or run had shown a manual track in the original language until this one.
+
+The order is now: a manual track in the original language, then the original audio's automatic one (`-orig`), then manual tracks of other languages, then automatic ones (dubs, D-074, and translations). `choose_language` (`--lang`, and fetch without it, D-080) tries the manual `<lang>` first; the menu's list puts, within each language group of D-074, manual before automatic, and its default is the first track in the original language, so the channel's own when there is one. The manual one is named "(written by the channel)", as since D-062. `--track` still takes exactly the track named.
+
+Provisional: it rests on one observed video, 3S4vuHxGh7c. A channel's manual track can be worse than YouTube's recognition (a summary, or out of sync); if one turns up, this is revisited.
+
+Nothing changes on the four fixtures: `fetch --list` on 2026-10-12 shows no manual track at all on any of them (4tTmY8Buask and 4wCtn8BWR4o: `pt-orig` and two dubs; R2Qgz8tFWVI and wxgFO_fyfXg: `pt-orig`), so the choice for each is the same track as before, and `scripts/measure.py` does not move.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -672,12 +672,23 @@ def test_a_translation_is_picked_from_its_own_list(tmp_path, monkeypatch, capsys
     assert fake.downloads == [("writeautomaticsub", "en")]
 
 
-def test_manual_tracks_come_after_the_original(tmp_path, monkeypatch, capsys):
+def test_the_channel_s_own_caption_comes_before_the_original_audio_s(tmp_path, monkeypatch, capsys):
+    """D-081: manual over automatic in the original language, and the default."""
     platform = FakeYtDlp(manual=("pt",), automatic=("en", "pt-orig"))
-    _, out, fake = menu(tmp_path, monkeypatch, capsys, [*LINK, "2", "n", "q"], platform)
+    _, out, fake = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "n", "q"], platform)
     listed = out.split("Which caption?")[1].split("> ")[0]
-    assert listed.index("Portuguese, original audio (automatic)") < listed.index("Portuguese (written by the channel)")
+    assert listed.index("Portuguese (written by the channel)") < listed.index("Portuguese, original audio (automatic)")
+    assert "enter alone: Portuguese (written by the channel)" in listed
     assert fake.downloads == [("writesubtitles", "pt")]
+
+
+def test_track_still_takes_the_original_audio_s_caption(tmp_path, monkeypatch):
+    """D-081: `--track` overrides the order."""
+    platform = FakeYtDlp(manual=("pt",), automatic=("en", "pt-orig"))
+    monkeypatch.chdir(tmp_path)
+    fetch_fakes.install(monkeypatch, fetch, platform)
+    assert cli.main(["fetch", fetch_fakes.URL, "--track", "pt-orig"]) == 0
+    assert platform.downloads == [("writeautomaticsub", "pt-orig")]
 
 
 def test_a_video_with_one_track_names_it_without_asking(tmp_path, monkeypatch, capsys):
