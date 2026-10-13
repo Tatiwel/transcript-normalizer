@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .base import UnitRule
+from .base import UnitRule, fold_numbers
 
 CODE = "pt-BR"
 
@@ -14,11 +14,23 @@ CODE = "pt-BR"
 _KEEP = re.compile(r"[^a-z0-9$ ]+")
 
 
+#: D-084: the words for 2 to 20, folded, and their digits. 1 is left out: `um`
+#: and `uma` are articles far more often than numbers.
+NUMBER_WORDS = {
+    "dois": "2", "duas": "2", "tres": "3", "quatro": "4", "cinco": "5", "seis": "6",
+    "sete": "7", "oito": "8", "nove": "9", "dez": "10", "onze": "11", "doze": "12",
+    "treze": "13", "catorze": "14", "quatorze": "14", "quinze": "15", "dezesseis": "16",
+    "dezasseis": "16", "dezessete": "17", "dezassete": "17", "dezoito": "18",
+    "dezenove": "19", "dezanove": "19", "vinte": "20",
+}
+
+
 def normalize(text: str) -> str:
-    """Lowercase, accents stripped, anything else flattened to a space."""
+    """Lowercase, accents stripped, anything else flattened to a space; then
+    D-084's number words as digits."""
     s = unicodedata.normalize("NFD", unicodedata.normalize("NFC", text).lower())
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    return _KEEP.sub(" ", s).strip()
+    return fold_numbers(_KEEP.sub(" ", s).strip(), NUMBER_WORDS, common_words)
 
 
 # ------------------------------------------------------------------ inflections

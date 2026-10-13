@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .base import UnitRule
+from .base import UnitRule, fold_numbers
 
 CODE = "en"
 
@@ -16,11 +16,22 @@ CODE = "en"
 _KEEP = re.compile(r"[^a-z0-9$ ]+")
 
 
+#: D-084: the words for 2 to 20 and their digits. `one` is left out: it is a
+#: pronoun (`the one`, `one of`) far more often than a number.
+NUMBER_WORDS = {
+    "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7",
+    "eight": "8", "nine": "9", "ten": "10", "eleven": "11", "twelve": "12",
+    "thirteen": "13", "fourteen": "14", "fifteen": "15", "sixteen": "16",
+    "seventeen": "17", "eighteen": "18", "nineteen": "19", "twenty": "20",
+}
+
+
 def normalize(text: str) -> str:
-    """Lowercase, accents stripped (`café` -> `cafe`), anything else a space."""
+    """Lowercase, accents stripped (`café` -> `cafe`), anything else a space;
+    then D-084's number words as digits."""
     s = unicodedata.normalize("NFD", unicodedata.normalize("NFC", text).lower())
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    return _KEEP.sub(" ", s).strip()
+    return fold_numbers(_KEEP.sub(" ", s).strip(), NUMBER_WORDS, common_words)
 
 
 # ------------------------------------------------------------------ inflections

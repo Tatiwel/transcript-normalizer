@@ -52,7 +52,7 @@ The core knows no language (D-033). Everything language-specific lives in one mo
   # "Warn Buffet. Tem" is never matched as one span
   ```
 
-Two more names: `skeleton`, a function for the phonetic source or `None` to leave it off (D-050; `en` has none yet), and, optionally, `common_words`, a frozenset of ordinary words in normalized form. The pack editor warns when a new variant is made of these only (D-032, D-066); without it, it never warns.
+Two more names: `skeleton`, a function for the phonetic source or `None` to leave it off (D-050; `en` has none yet), and, optionally, `common_words`, a frozenset of ordinary words in normalized form. The pack editor warns when a new variant is made of these only (D-032, D-066), and the matcher rejects a fuzzy match that takes in one the term does not have (D-083); without it, neither happens. To match number words against digits, have `normalize` end with `base.fold_numbers(text, NUMBER_WORDS, common_words)`, with a dict of your language's words for 2 to 20 and their digits (D-084); leave out the word for 1 when it is also an article.
 
 **1.3 Register it.** Usually there is nothing to do: a module at `languages/<code>.py` is found by its name when a pack declares that `language:`. A module kept anywhere else (a plugin, a test) is made known with `transcript_normalizer.languages.register("xx-YY", module)`, which also checks that it keeps the protocol.
 

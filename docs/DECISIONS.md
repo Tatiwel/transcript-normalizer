@@ -855,6 +855,12 @@ Gate: annotations.json for the eight fixture × pack runs (frozen and bundled 0.
 
 Hits, misses, aliases recognized and aliases wrongly substituted do not move anywhere, nor does pack fit. The regression test's bounds hold unchanged.
 
+## D-084 Number words fold to digits, for matching only
+
+From Marco's test: a speaker says tickers as words ("BOVA onze"), and the recognizer writes them so; the pack has `BOVA11`. Both language modules now fold the words for 2 to 20 to digits inside `normalize` (pt-BR: `dois`/`duas` … `vinte`, with `catorze`/`quatorze` and the pt-PT `dezasseis`, `dezassete`, `dezanove`; English: `two` … `twenty`). 1 is left out: `um`, `uma` and `one` are articles and pronouns far more often than numbers. A number word one space after a word ending in a letter joins it, as a ticker is written (`bova onze` → `bova11`), unless that word is itself a number word or one of the module's `common_words` (`de onze` → `de 11`). The spacing is otherwise kept, so no fuzzy score of a window without number words changes. It is folding: what normalized.txt shows is never rewritten from it, and an exact match of the term's own name stays a recognition (D-041), so "BOVA onze" is found as BOVA11 and left as said. The generic module does not fold.
+
+Measured, eight fixture × pack runs: hits, misses, false positives, aliases, pack fit and the low marks at 70 do not move. annotations.json is byte-identical for six runs; for R2Qgz8tFWVI and wxgFO_fyfXg with the bundled 0.3.7, one ask-band proposal each is gone, `para três` and `por três` → BR Partners (phonetic, 90, never applied, not scored): `três` is now `3`, and its skeleton no longer sounds like the name. The diagnostic count of low marks at 60 moves by one or two (4tTmY8Buask 291 → 289, R2Qgz8tFWVI 245 → 244, wxgFO_fyfXg 250 → 251).
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

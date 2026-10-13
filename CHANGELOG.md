@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Number words from 2 to 20 match their digits (D-084), in Portuguese and English: "BOVA onze" is found as BOVA11, "nove" matches 9, "nine" matches 9. Only for matching: the text is never rewritten from it. "um", "uma" and "one" are not folded.
 - A close guess (fuzzy match) is no longer made when its words include an ordinary word the term does not have (D-083): "impressora que" is left alone instead of becoming "impressora 3D"; "BR Portness" → BR Partners and "fluxo de caixo" → fluxo de caixa still are. Exact, alias and phonetic matches are unaffected. On the fixtures no hit is lost and false positives go from 14 to 12 and 53 to 51 (frozen packs), 15 to 13 and 9 to 8 (bundled 0.3.7); about a third of the low-confidence marks go too.
 - "to confirm N" is now "applied, please confirm N", in the summary and in the report (D-082): the close guesses are already in normalized.txt. The help and both guides say so, and that the review can undo them. The counts are the same.
 - In the video's original language, a caption written by the channel is now taken before YouTube's automatic one, by `fetch` and as the menu's default (D-081, provisional, amending D-045). The order: the channel's own in the original language, the original audio's automatic one, other languages written by the channel, then automatic dubs and translations. `--track` still takes exactly the track named. None of the four fixtures has a manual track, so nothing changes for them.
