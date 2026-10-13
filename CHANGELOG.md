@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `fetch` without `--lang` takes the video's own language, as the site reports it, instead of always `pt` (D-080). When the site does not say: the video's only original-audio track, else its only manual track, else `pt`, with a line saying the language is unknown. `--lang` still wins.
 - A link the downloader does not support says "This site isn't supported. Download the video another way and use 'A file on this computer'." instead of yt-dlp's "Unsupported URL" and a failure line (D-079).
 - A site that gives no duration (Instagram) shows "duration: unknown" instead of "0min00s"; after transcribing, the audio's measured length is shown and written to meta.yaml, which now records the duration whenever it is known (D-079).
 - `fetch` on a site with no captions at all says "<Site> doesn't provide captions for this video." instead of "there is no caption in 'pt' … (manual: none; automatic: none)"; the detailed line stays when there are captions in other languages (D-079).

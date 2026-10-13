@@ -336,13 +336,14 @@ RATE_LIMITED = "(translations are rate-limited more often)"
 
 
 def default_track(meta, listed) -> str | None:
-    """D-045: the original-audio track; without one, what --lang would take."""
-    from .ingest.fetch import AUTOMATIC_ORIGINAL, DEFAULT_LANG, choose_language
+    """D-045: the original-audio track; without one, what fetch without --lang
+    would take (D-080: the video's own language)."""
+    from .ingest.fetch import AUTOMATIC_ORIGINAL, choose_language, video_language
 
     for track in listed:
         if track.source == AUTOMATIC_ORIGINAL:
             return track.code
-    code, _ = choose_language(meta, DEFAULT_LANG)
+    code, _ = choose_language(meta, video_language(meta)[0])
     return code or (listed[0].code if listed else None)
 
 

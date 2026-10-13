@@ -457,6 +457,36 @@ def is_dubbed(meta: Metadata, code: str) -> bool:
     return bool(original) and code.endswith(ORIGINAL_SUFFIX) and code[: -len(ORIGINAL_SUFFIX)] != original
 
 
+def video_language(meta: Metadata) -> tuple[str, bool]:
+    """D-080: the caption language when `--lang` is not given, the video's own,
+    and whether it was a guess.
+
+    yt-dlp's `language` (as the matching `-orig` track spells it, when there is
+    one). Without it, in a fixed order: the only `-orig` track, when there is
+    exactly one; else the only manual track, when there is exactly one; else
+    DEFAULT_LANG, which is the guess the caller says it made.
+    """
+    if meta.language:
+        spoken = original_language(meta) or meta.language
+        codes = {c[: -len(ORIGINAL_SUFFIX)] if c.endswith(ORIGINAL_SUFFIX) else c
+                 for c in meta.manual_captions + meta.automatic_captions}
+        base = spoken.split("-")[0]
+        # `pt-BR` with only `pt` tracks: ask for the base, which finds them.
+        if spoken not in codes and any(c.split("-")[0] == base for c in codes):
+            return base, False
+        return spoken, False
+    orig = [c for c in meta.automatic_captions if c.endswith(ORIGINAL_SUFFIX)]
+    if len(orig) == 1:
+        return orig[0][: -len(ORIGINAL_SUFFIX)], False
+    if len(meta.manual_captions) == 1:
+        return meta.manual_captions[0], False
+    return DEFAULT_LANG, True
+
+
+def unknown_language_notice() -> str:
+    return f"the video's language is unknown: using '{DEFAULT_LANG}' (--lang chooses another)"
+
+
 def choose_language(meta: Metadata, wanted: str, out: Output | None = None) -> tuple[str, str]:
     """Return (code, source), in D-045's order.
 
@@ -777,7 +807,7 @@ def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) ->
     out.info(f"loading speech model '{model}'")
     engine = load_whisper(model, out)
     segments, info = engine.transcribe(
-        str(audio), language=lang, vad_filter=True, condition_on_previous_text=False
+        str(audio), language=lang.split("-")[0], vad_filter=True, condition_on_previous_text=False
     )
     lines = []
     done = 0.0
@@ -841,6 +871,7 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     if missing:
         return report_missing(missing)
 
+    args.lang = args.lang or DEFAULT_LANG  # no site to say the language: as before D-080
     meta = Metadata(id=media.stem, title=media.stem)
     target = fetch_dir(media.stem, args.out)  # D-018 rule 3: the file's stem
     target.mkdir(parents=True, exist_ok=True)
@@ -984,7 +1015,9 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         help="use the platform caption or fail; never fall back to local speech (step 1 only)",
     )
     parser.add_argument(
-        "--lang", default=DEFAULT_LANG, help=f"caption language code. default: {DEFAULT_LANG}"
+        "--lang",
+        help="caption language code. default: the video's own language, as the site reports it "
+        f"(else its only original or only manual track, else {DEFAULT_LANG})",
     )
     parser.add_argument(
         "--track",
@@ -1194,6 +1227,11 @@ def run(args: argparse.Namespace) -> int:
 
     if args.list:
         return list_site(meta, out)
+
+    if not args.lang:  # D-080: the video's own language
+        args.lang, guessed = video_language(meta)
+        if guessed:
+            out.info(unknown_language_notice())
 
     target = fetch_dir(meta.id, args.out)
     # D-059: what was here before this attempt, so a failure can take back

@@ -814,6 +814,12 @@ Three findings from a real Instagram test.
 
 **One no-caption sentence.** On the command line, a site with no captions at all still printed step 1's "there is no caption in 'pt' for this video (manual: none; automatic: none)", in the warning and in the failure list. It now prints the menu's sentence, "<Site> doesn't provide captions for this video.". The detailed line stays when the site has captions but none in the language asked, or not the `--track` named; for that case `--caption-only` now prints the detailed line too, where D-078 had wrongly said the site had no captions, and the lite build goes on to D-057's notice as before D-078.
 
+## D-080 The default caption language is the video's own
+
+From Marco's test. `fetch` without `--lang` asked for `pt` whatever the video spoke, so an English video with an `en-orig` track came out as YouTube's machine translation into Portuguese, or as nothing.
+
+`--lang` has no fixed default now. Without it, the language is yt-dlp's `language` field, spelt as its `-orig` track spells it when there is one (D-074), and its base code (`pt`) when it is regional (`pt-BR`) and only the base language has tracks. When yt-dlp names no language, a fixed order, never a guess between tracks: the only `-orig` track, when there is exactly one; else the only manual track, when there is exactly one; else `pt` (the old default), with one line: "the video's language is unknown: using 'pt' (--lang chooses another)". Several `-orig` tracks (dubs) with no language named is not resolved by picking one. `--lang` given wins, as before; `--track` wins over both (D-062). The menu's default track, when there is no original-audio track, is what fetch without `--lang` would take. Local speech recognition gets the base code (faster-whisper knows `en`, not `en-US`); a local file (D-038) has no site to ask, and keeps `pt`.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

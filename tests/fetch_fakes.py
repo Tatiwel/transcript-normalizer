@@ -39,7 +39,7 @@ class FakeYtDlp:
 
     def __init__(self, caption=("ok",), has_caption=True, audio_ok=True, manual=(), automatic=("pt",), audio=None,
                  metadata=("ok",), unreadable_browser=False, url=URL, site="", formats=None, video_id=VIDEO_ID,
-                 duration=125):
+                 duration=125, language=None):
         self.caption = list(caption)
         self.has_caption = has_caption
         # Each audio download, in order: "ok", "416" (leaves a .part behind,
@@ -58,6 +58,7 @@ class FakeYtDlp:
         # D-078: another site: its link, yt-dlp's extractor_key, its formats.
         self.url, self.site, self.formats, self.video_id = url, site, formats, video_id
         self.duration = duration  # D-079: None, as Instagram gives none
+        self.language = language  # D-080: yt-dlp's `language`, often missing
         self.cookies: list[str] = []
 
     def open(self, params):
@@ -66,6 +67,8 @@ class FakeYtDlp:
 
     def info(self):
         extra = {"extractor_key": self.site} if self.site else {}
+        if self.language:
+            extra["language"] = self.language
         if self.formats is not None:
             extra["formats"] = self.formats
         return {
