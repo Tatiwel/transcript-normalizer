@@ -48,6 +48,11 @@ MAX_LEN_DIFF = 2
 #: word of the term is rejected. Tests about other things turn it off.
 COMMON_WORD_GUARD = True
 
+#: D-086: how near an `unless_near` term makes an occurrence of a conditioned
+#: form a question: by caption timestamp, or by tokens when there are none.
+NEAR_SECONDS = 90
+NEAR_TOKENS = 200
+
 #: Word n-grams the matcher considers.
 NGRAM_SIZES = (1, 2, 3)
 
@@ -206,12 +211,20 @@ def find_annotations(
         if c.origin in ("term", "alias") and " " not in c.folded:
             base_owner.setdefault(c.folded, (index, c.term))
 
-    def inflection_of(word: str) -> str | None:
-        """The term a normalized word is an inflection of, if any."""
+    def inflection_base(word: str) -> tuple[str, str] | None:
+        """(term, base form) for a normalized word that inflects a term, if any."""
         if word in explicit:
             return None
-        owners = [base_owner[b] for b in language.inflections(word) if b in base_owner]
-        return min(owners)[1] if owners else None
+        owners = [(base_owner[b], b) for b in language.inflections(word) if b in base_owner]
+        if not owners:
+            return None
+        (_, term), base = min(owners)
+        return term, base
+
+    def inflection_of(word: str) -> str | None:
+        """The term a normalized word is an inflection of, if any."""
+        found = inflection_base(word)
+        return found[0] if found else None
 
     candidates = [
         c
@@ -273,6 +286,11 @@ def find_annotations(
         own = set(norm(term).split()) | set(candidate.split())
         return any(w in common_words and w not in own for w in folded_span.split())
 
+    # D-086: (term, folded form) -> (context, unless_near), for the forms that
+    # declare a context; and, per annotation index, (first token, condition).
+    conditions = {(c.term, c.folded): (c.context, c.unless_near) for c in candidates if c.context}
+    conditioned: dict[int, tuple[int, tuple | None]] = {}
+
     tokens = tokenize(text, language.sentence_boundaries)
 
     def windows():
@@ -324,9 +342,11 @@ def find_annotations(
             continue
 
         # D-031a: an inflected single word is its term spelled out: an alias.
-        owner = inflection_of(folded_span) if " " not in folded_span else None
+        inflected = inflection_base(folded_span) if " " not in folded_span else None
+        owner = inflected[0] if inflected else None
         if owner is not None:
             if not pack.is_rejected(folded_span, owner):
+                conditioned[len(annotations)] = (i, conditions.get(inflected))
                 original = text[window[0].start : window[-1].end]
                 annotations.append(
                     Annotation(
@@ -371,6 +391,7 @@ def find_annotations(
         # D-020: exactly another name of the term. Recognized, never substituted.
         # D-041: so is the term's own name, as `term:exact`.
         if origin in ("alias", "term") and folded_span == candidate:
+            conditioned[len(annotations)] = (i, conditions.get((term, candidate)))
             annotations.append(
                 Annotation(
                     start=window[0].start,
@@ -412,6 +433,7 @@ def find_annotations(
         # D-040: D-034 for exact corrections too, when the name is longer.
         if inside_a_longer_name(i, i + len(window), term):
             continue
+        conditioned[len(annotations)] = (i, conditions.get((term, candidate)))
         annotations.append(
             Annotation(
                 start=window[0].start,
@@ -426,7 +448,80 @@ def find_annotations(
             )
         )
     annotations += phonetic_proposals(text, tokens, pack, annotations)
-    return annotations
+    if not conditions:
+        return annotations
+    return in_context(annotations, conditioned, conditions, pack, transcript, tokens, every_window, exact_terms)
+
+
+def in_context(annotations, conditioned, conditions, pack, transcript, tokens, every_window, exact_terms):
+    """D-086: the forms that declare a `context` match only where it holds.
+
+    A context term appears where the run holds one of its forms exactly (its
+    name, an alias, a curated or learned variant, an inflection), never by
+    fuzzy or phonetic similarity; its distinct occurrences are counted over the
+    whole run, all context terms together. None: the form is not proposed.
+    One: asked (ask band), not applied. Two or more: as it would be. Then an
+    occurrence with an `unless_near` term within NEAR_SECONDS (NEAR_TOKENS
+    without timestamps) is asked. A low mark stays a low mark.
+    """
+    spans: dict[str, list[tuple[int, int]]] = {}
+
+    def occurrences(term: str) -> list[tuple[int, int]]:
+        if term not in spans:
+            found = sorted(
+                ((i, i + len(window)) for i, window, folded in every_window
+                 if term in exact_terms(" ".join(folded.split()))),
+                key=lambda s: (s[0] - s[1], s[0]),  # longest first
+            )
+            kept: list[tuple[int, int]] = []
+            for s, e in found:
+                if not any(s < ke and ks < e for ks, ke in kept):
+                    kept.append((s, e))
+            spans[term] = sorted(kept)
+        return spans[term]
+
+    seconds = [_seconds(transcript.line_at(t.start).timestamp) for t in tokens]
+    timed = all(s is not None for s in seconds)
+
+    def near(i: int, terms: tuple[str, ...]) -> bool:
+        for term in terms:
+            for s, _ in occurrences(term):
+                if (abs(seconds[s] - seconds[i]) <= NEAR_SECONDS) if timed else abs(s - i) <= NEAR_TOKENS:
+                    return True
+        return False
+
+    # The phonetic source names a term, not a form: its canonical name's condition.
+    by_name = {term: cond for (term, folded), cond in conditions.items()
+               if pack.normalize(term) == folded}
+    out = []
+    for index, a in enumerate(annotations):
+        i, cond = conditioned.get(index, (None, None))
+        if index not in conditioned and a.rule == term_rule("phonetic"):
+            cond = by_name.get(a.term)
+            i = bisect_left([t.start for t in tokens], a.start)
+        if cond is None:
+            out.append(a)
+            continue
+        context, unless_near = cond
+        count = sum(len(occurrences(t)) for t in context)
+        if count == 0:
+            continue
+        asked = count == 1 or near(i, unless_near)
+        if asked and a.band in (BAND_HIGH, BAND_MEDIUM):
+            a = replace(a, band=BAND_ASK)
+        out.append(a)
+    return out
+
+
+def _seconds(timestamp: str) -> int | None:
+    """`m:ss` or `h:mm:ss` in seconds, or None."""
+    parts = timestamp.split(":")
+    if not 2 <= len(parts) <= 3 or not all(p.isdigit() for p in parts):
+        return None
+    total = 0
+    for p in parts:
+        total = total * 60 + int(p)
+    return total
 
 
 def phonetic_proposals(

@@ -865,6 +865,18 @@ Measured, eight fixture × pack runs: hits, misses, false positives, aliases, pa
 
 D-082's "applied, please confirm N" counted the ask band (D-060) with the medium band, though an ask-band proposal (a name found by sound) is never in normalized.txt. The count now holds only the medium-band corrections, which are applied, one per form of each term as before. The ask-band proposals get their own line, "suggested, not applied M" ("(names that sound like a pack name)"), in the summary that `--summary` and the menu print, shown when M is not 0; report.txt has the matching section, "suggested, not applied:", after "applied, please confirm:". What the review asks, pending.txt and "Next: review the N uncertain one(s) now?" still cover both bands. Help and both guides say which is which. Tested with one of each: `fluxo de caixo` (fuzzy, medium) and `Berry Portene` (phonetic, ask).
 
+## D-086 Context-conditioned forms (amends D-032)
+
+D-032 keeps out of a pack any variant that is also an ordinary word or a common string, since a variant is corrected wherever it appears (`Ox` for OPEX is also an ox, and the start of Oxford). Some of those are the recognizer's usual error for a term in one kind of video and a plain word in every other. A form may now say when it is the term.
+
+**Schema.** A term may have `context:` and `unless_near:`, each a mapping from one of its forms, its canonical name or a variant, to canonical names of terms of the same pack: `context: {Ox: [CAPEX]}`, `unless_near: {Ox: [pecuária]}`. The canonical name may carry them too, for a name that is an ordinary word (`Vale`). Aliases do not. The `variants:` list stays a list of strings.
+
+**Detection.** A context term appears where the run holds one of its forms exactly, folded: its name, an alias, a curated or learned variant, an inflection (D-031a). Never by fuzzy or phonetic similarity: `a gente` is close to `agente` and must not stand for it. Its distinct occurrences (overlapping windows counted once, longest first) are counted over the whole run, all the form's context terms together.
+
+**The rule**, only for a form that declares `context`, and for whatever matches through it (exactly, by inflection, or fuzzily from it): no occurrence, the form is not proposed at all; exactly one, it is asked (ask band, not applied); two or more, it matches as it would without a context. Then an occurrence with an `unless_near` term within 90 seconds, by caption timestamp (200 tokens when a timestamp cannot be read), is asked. A low mark stays a low mark. A phonetic proposal for a term follows its canonical name's condition. Forms without `context` behave exactly as before.
+
+Gate: with no `context` in any pack, annotations.json for the eight fixture × pack runs is byte-identical before and after.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

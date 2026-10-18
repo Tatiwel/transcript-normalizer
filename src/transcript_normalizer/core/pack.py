@@ -72,6 +72,10 @@ class Candidate:
     term: str
     origin: str  # "term" | "alias" | "variant"
     source: str = SOURCE_PACK  # "pack" | "learned"
+    #: D-086: pack terms that must appear in the run for this form to match,
+    #: and terms whose nearness makes an occurrence a question. Empty: as before.
+    context: tuple[str, ...] = ()
+    unless_near: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -296,6 +300,20 @@ def _strings(raw: dict, key: str) -> tuple[str, ...]:
     return tuple(nfc(str(s)) for s in raw.get(key) or ())
 
 
+def form_conditions(raw: dict, key: str, norm) -> dict[str, tuple[str, ...]]:
+    """D-086: a term's `context:` or `unless_near:`, a mapping from one of its
+    forms (its canonical name or a variant) to pack terms; by folded form."""
+    mapping = raw.get(key) or {}
+    if not isinstance(mapping, dict):
+        raise ValueError(f"term {raw.get('term')!r}: `{key}:` maps a form to a list of terms, e.g. `{key}: {{Ox: [CAPEX]}}`")
+    out = {}
+    for form, terms in mapping.items():
+        if isinstance(terms, str):
+            terms = [terms]
+        out[norm(nfc(str(form)))] = tuple(nfc(str(t)) for t in terms or ())
+    return out
+
+
 def pack_classes(data: dict, path: Path) -> tuple[str, ...]:
     """D-064: the classes a pack's terms may use: the common ones, then the
     pack's own `classes:`; D-021's eight for a pack with no `classes:` line."""
@@ -390,6 +408,8 @@ def load_pack(
             learned_aliases=learned_aliases,
         )
         terms.append(term)
+        context = form_conditions(raw, "context", norm)
+        unless_near = form_conditions(raw, "unless_near", norm)
         # Order matters: it is the order the matcher scans candidates in.
         for display, origin, source in (
             [(term.term, "term", SOURCE_PACK)]
@@ -398,7 +418,13 @@ def load_pack(
             + [(v, "variant", SOURCE_LEARNED) for v in learned_variants]
             + [(a, "alias", SOURCE_LEARNED) for a in learned_aliases]
         ):
-            candidates.append(Candidate(display, norm(display), term.term, origin, source))
+            folded = norm(display)
+            conditioned = origin in ("term", "variant") and folded in context
+            candidates.append(Candidate(
+                display, folded, term.term, origin, source,
+                context=context[folded] if conditioned else (),
+                unless_near=unless_near.get(folded, ()) if conditioned else (),
+            ))
 
     unit_rules = tuple(
         UnitRule(pattern=str(r.get("pattern", "")), correction=str(r.get("replacement", "")))

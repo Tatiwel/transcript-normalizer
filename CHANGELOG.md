@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A pack form can now depend on context (D-086): `context: {Ox: [CAPEX]}` makes `Ox` count as OPEX only in a video where CAPEX appears, at least twice (once: asked, not applied; never: not proposed), and `unless_near:` asks instead of applying when another term is within 90 seconds. Context terms are found only exactly, never by similarity. Packs without it behave as before.
+
 ## 0.6.5
 
 Other sites besides YouTube: their sign-in, login walls and missing captions (D-078, D-079); a review with one stop per form where Enter decides nothing (D-072, D-073); the caption in the video's own language, the channel's own first (D-080, D-081); fewer wrong guesses, from a common-word guard and number words matched as digits (D-083, D-084); applied and suggested counted apart (D-082, D-085).
