@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- financas-ptbr 0.3.8: OPEX gets `Ox` back as a variant, only in a video where CAPEX appears (D-086), its first context-conditioned form. R2Qgz8tFWVI regains its three `Ox` → OPEX rows (142 → 145 hits, false positives unchanged); the street-prank video where `Ox` was the Northeastern `oxe` gets nothing. The guides have a paragraph on words that are only an error near other words, and CONTRIBUTING section 2.3a says how to write a context.
 - Writing a context (D-086): `pack add-term ... --variant <form> --context <terms> [--unless-near <terms>]`; the menu asks, after each variant, whether it is also an ordinary word and which pack terms mark its meaning; the review, after "only in this video", offers to save the form for every video where one of the run's terms appears. A pack whose context names an unknown term or an ordinary word is refused on load. `pack propose` keeps the context.
 - A pack form can now depend on context (D-086): `context: {Ox: [CAPEX]}` makes `Ox` count as OPEX only in a video where CAPEX appears, at least twice (once: asked, not applied; never: not proposed), and `unless_near:` asks instead of applying when another term is within 90 seconds. Context terms are found only exactly, never by similarity. Packs without it behave as before.
 

@@ -1,0 +1,8 @@
+0:05 hoje eu vou falar do Claude, o modelo da Anthropic
+0:20 o cloud escreve código muito bem
+1:10 a Anthropic lançou uma versão nova do cloud
+2:20 e eu uso o cloud todo dia no trabalho
+4:00 o cloud da Anthropic agora também roda na AWS
+6:30 agora outro assunto: infraestrutura na AWS
+6:50 o cloud da AWS cobra por hora de máquina
+7:30 com Kubernetes você escala tudo no cloud

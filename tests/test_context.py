@@ -113,3 +113,35 @@ def test_a_canonical_name_that_is_an_ordinary_word(tmp_path):
     assert [o for _, o, t, _ in found(path, "0:01 vale a pena ver\n") if t == "Vale"] == []
     caption = "0:01 o minério de ferro subiu\n0:10 o minério de ferro caiu\n0:20 a Vale lucrou\n"
     assert [(o, b) for _, o, t, b in found(path, caption) if t == "Vale"] == [("Vale", BAND_HIGH)]
+
+
+# ------------------------------------------------------------------ the mixed caption
+
+DATA = __import__("pathlib").Path(__file__).resolve().parent / "data"
+
+
+def cloud(caption):
+    pack = load_pack(DATA / "context-ia.yaml", learned=Learned())
+    transcript = parse_caption(caption)
+    found = resolve_overlaps(find_annotations(transcript, pack))
+    return [(transcript.locate(a.start)[1], a.band, a.applied) for a in found if a.original == "cloud"]
+
+
+def test_the_mixed_caption_occurrence_by_occurrence():
+    """Half a video on Claude, half on cloud infrastructure, one sentence with both.
+
+    Anthropic appears three times, so `cloud` is Claude where nothing says
+    otherwise; within 90 seconds of AWS or Kubernetes it is only asked."""
+    assert cloud((DATA / "context-mixed.txt").read_text(encoding="utf-8")) == [
+        ("0:20", BAND_HIGH, True),
+        ("1:10", BAND_HIGH, True),
+        ("2:20", BAND_HIGH, True),  # 100 s before the AWS at 4:00
+        ("4:00", BAND_ASK, False),  # the sentence with both
+        ("6:50", BAND_ASK, False),
+        ("7:30", BAND_ASK, False),
+    ]
+
+
+def test_the_infrastructure_half_alone_proposes_nothing():
+    lines = (DATA / "context-mixed.txt").read_text(encoding="utf-8").splitlines()
+    assert cloud("\n".join(lines[5:]) + "\n") == []

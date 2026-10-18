@@ -22,8 +22,11 @@
 # sozinha, `trio` e palavra comum (D-032; "trio de irmas" em yJxxTf0IQC8).
 # 0.3.6 declara as classes do pacote (D-064): as oito de D-021. Nenhum termo muda.
 # 0.3.7 declara as classes foneticas (D-068): as duas de D-050, como foram medidas.
+# 0.3.8 devolve `Ox` a OPEX com contexto (D-086), a primeira variante condicionada do pacote:
+# so conta num video em que CAPEX aparece (duas vezes para aplicar, uma para perguntar).
+# Fora disso continua sendo o `oxe` nordestino, e nao e proposta (D-035).
 language: pt-BR
-version: 0.3.7
+version: 0.3.8
 classes: [companhia, indicador, conceito, unidade, pessoa, organizacao, ferramenta, sigla]
 phonetic_classes: [companhia, pessoa]
 
@@ -71,7 +74,9 @@ terms:
     collocations: [dívida líquida sobre EBITDA, margem EBITDA]
   - term: OPEX
     class: indicador
-    variants: [O PX]
+    variants: [O PX, Ox]
+    context: {Ox: [CAPEX]}
+    unless_near: {Ox: []}
   - term: CAPEX
     class: indicador
     variants: [capx, autocapex]

@@ -883,6 +883,14 @@ Gate: with no `context` in any pack, annotations.json for the eight fixture × p
 
 **From the review.** After "Yes, but only in this video" (D-073), one question: "Save it for every video, but only when one of these terms appears?", with up to five terms found in this run at high band, most frequent first. Picking any saves the form as a learned variant with that context (the learned file's entry gains `context:`), instead of a local decision; Enter keeps it local. `pack propose` carries the context with the variant, so a conditional form is never proposed as an unconditional one.
 
+**Why the whole run, by simulation.** The design was validated by simulation before it was written. A window of words around each occurrence fails, because the context word is said once and the garble thirty times: window-based context had 1 of 30 in recall. Context counted over the whole run had 27 of 30. Detecting context by free string or fuzzy similarity creates context that is not there (`a gente` ≈ `agente`), and weak context words destroy unrelated videos: 20 false positives. The rule above, whole-run positive context from pack terms plus a local negative check, made 0 false positives on the pure and the mixed runs, with the ambiguous occurrences asked.
+
+**First real case: `Ox` → OPEX, financas-ptbr 0.3.8.** D-035 took `Ox` out of OPEX (0.3.4): the Northeastern `oxe` in a street-prank video (BIrASod49XY) became OPEX twice, at the cost of three gold hits in R2Qgz8tFWVI, where the speaker spells the term out ("Ox. O PX. O editor vai escrever aí"). 0.3.8 puts it back with `context: {Ox: [CAPEX]}` and `unless_near: {Ox: []}`. Measured, no learned layer:
+
+- R2Qgz8tFWVI against the bundled pack: 142 → 145 hits, 25 → 22 misses, false positives 13 → 13. The three gold rows come back (10:59, 11:03, 11:20), and a fourth `Ox` on the 11:03 line ("Ox é") is applied too, scored as the same row. CAPEX is found there 18 times. No other annotation of any fixture changes beyond the pack version; the frozen numbers do not move.
+- The silence runs, forced: BIrASod49XY (pt-orig, 481 lines, fetched again 2026-10-17), whose two `Ox` lines (2:08, 2:12) were D-035's false positives: CAPEX never appears, so `Ox` is neither applied nor proposed. yJxxTf0IQC8 (its new manual pt track, and its pt-orig): no `Ox`, no OPEX, nothing applied.
+- A synthetic mixed caption (tests/data/context-mixed.txt with tests/data/context-ia.yaml): Claude in the first half, cloud infrastructure in the second, and one sentence with both. `cloud` → Claude is applied three times, asked in the sentence with AWS and twice near AWS and Kubernetes; the infrastructure half alone proposes nothing.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

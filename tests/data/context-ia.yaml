@@ -1,0 +1,18 @@
+# D-086: a synthetic pack for the mixed caption context-mixed.txt. `cloud` is the
+# recognizer's Claude in a video about Anthropic's model, and the ordinary
+# English loanword in a video about infrastructure.
+language: pt-BR
+version: test
+classes: [ferramenta, organizacao]
+terms:
+  - term: Claude
+    class: ferramenta
+    variants: [cloud]
+    context: {cloud: [Anthropic]}
+    unless_near: {cloud: [AWS, Kubernetes]}
+  - term: Anthropic
+    class: organizacao
+  - term: AWS
+    class: organizacao
+  - term: Kubernetes
+    class: ferramenta

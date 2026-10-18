@@ -87,7 +87,7 @@ transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 `fetch` takes the platform's caption (in the original language, the channel's own track, else the original audio's automatic one; never an automatic translation, D-045, D-081) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The downloaded `.vtt` or `.srt` is deleted once converted into `legenda.txt`; `--keep-raw` keeps it. The second command normalizes, and takes a `.srt` or `.vtt` as well, which it converts into `runs/<file-name>/legenda.txt` first; the third does the same and then asks you about what it was unsure of. `fetch --list <url>` checks a link without downloading anything: the site, title and duration, the caption tracks (or none), whether there is audio to transcribe, and whether the site asks for a login (D-078); and `fetch --track <code>` takes one exactly (`pt-orig`, `pt`, `en`) instead of the choice `--lang` makes (D-062). Without `--lang`, the caption is in the video's own language, as the site reports it; when the site does not say, the video's only original-audio track, else its only manual track, else Portuguese, with a line saying so (D-080). `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
 
 ```
-runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.7
+runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.8
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
@@ -156,7 +156,7 @@ Everything goes under `runs/<video-id>/` in the current directory; nothing is wr
 ```json
 {"start": 9141, "end": 9156, "original": "dívida alíquida", "replacement": "dívida líquida",
  "term": "dívida líquida", "rule": "term:variant", "kind": "correction", "band": "high",
- "score": 100, "applied": true, "pack_version": "0.3.7"}
+ "score": 100, "applied": true, "pack_version": "0.3.8"}
 ```
 
 `kind` is `correction` or `alias`. `band` is how sure the tool is: **high** (a listed form: applied), **medium** (a close guess: applied, and listed in `pending.txt` for you to confirm), **ask** (a name that sounds like a pack name: never applied, only listed in `pending.txt` and asked about, D-050, D-060), **low** (a faint resemblance: only recorded, never applied) (D-011).
@@ -237,7 +237,7 @@ pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing
 
 ```
 name           version  language  terms  size (KB)  source   update
-financas-ptbr  0.3.7    pt-BR        70        8.1  bundled
+financas-ptbr  0.3.8    pt-BR        70        8.1  bundled
 medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
@@ -309,6 +309,8 @@ transcript-normalizer pack edit-term biomed-ptbr metformina --add-variant "met f
 transcript-normalizer pack show biomed-ptbr --search metf
 ```
 
+**Words that are only an error near other words.** Some of the recognizer's mistakes are also ordinary words: `Ox` is OPEX in a video about a company's spending, and the Northeastern `oxe` anywhere else. Such a form can be added with a context, the pack terms that show which meaning is meant: Add a term and Edit a term ask, after each variant, "Is '<form>' also an ordinary word? If so, pick the pack terms that appear in a video when it means <term>", and on the command line `pack add-term financas-ptbr OPEX --variant Ox --context CAPEX`. The form is then corrected only in a video where one of those terms appears at least twice; once, it is asked; never, it is left alone. `--unless-near <terms>` asks instead of correcting within 90 seconds of other terms. In the review, after "Yes, but only in this video", the same can be saved for every video: pick the terms of this run that mark its meaning, or press Enter to keep it for this video only (D-086).
+
 **When upstream releases a new version.** Your copy remembers what it was copied from (`based_on: financas-ptbr@0.3.7`) and how many changes you saved since (`local_edits`). When a newer version comes out, bundled with a new release of the program or in the packs repository, the menu says so in one line (it looks in the background, so it never makes you wait; the answer is kept for a day), Packs offers "Merge an update", Installed packs marks it `↑ merge available`, and `pack update` mentions it:
 
 ```
@@ -354,7 +356,7 @@ transcript-normalizer pack propose --pack financas-ptbr
 ```
 
 ```
-What would be contributed to financas-ptbr 0.3.7 (3), from packs/financas-ptbr.learned.yaml:
+What would be contributed to financas-ptbr 0.3.8 (3), from packs/financas-ptbr.learned.yaml:
   + variant   esse mig -> CEMIG
   + alias     Klabinha -> Klabin
   - rejected  saber se  (not Sabesp)
@@ -372,11 +374,11 @@ A pack declares its language (`language: pt-BR`), and a language module supplies
 
 ## 8. How good is it
 
-Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change. The numbers below come from `uv run python scripts/measure.py`, which is the source: if they disagree, it is right. With the pack that ships (0.3.7):
+Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change. The numbers below come from `uv run python scripts/measure.py`, which is the source: if they disagree, it is right. With the pack that ships (0.3.8):
 
 | video | rows to get right | right | missed | wrong changes |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 142 | 25 | 13 |
+| R2Qgz8tFWVI | 167 | 145 | 22 | 13 |
 | wxgFO_fyfXg | 222 | 211 | 11 | 8 |
 | 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
 | 4tTmY8Buask | 119 | 108 | 11 | 4 |

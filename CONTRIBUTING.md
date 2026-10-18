@@ -133,6 +133,18 @@ The eight of `financas-ptbr`, which declares them all:
 
 If a speaker actually said it, it is an alias. If it is the caption's mistake, it is a variant. Aliases match exactly only; variants are also the base of fuzzy matching (D-025).
 
+**2.3a Forms that are an error only near other words (D-086).** Some misrecognitions are also ordinary words: `Ox` is OPEX in a video on a company's spending and the Northeastern `oxe` everywhere else. As a plain variant it would be corrected in every video, so D-032 kept such forms out. A form may instead say when it is the term:
+
+```yaml
+  - term: OPEX
+    class: indicador
+    variants: [O PX, Ox]
+    context: {Ox: [CAPEX]}     # Ox counts only in a video where CAPEX appears
+    unless_near: {Ox: []}      # optional: terms that make a nearby Ox a question
+```
+
+`context:` and `unless_near:` map one of the term's forms (a variant, or the canonical name itself for a name that is an ordinary word, such as `Vale`) to canonical names of other terms of the same pack. The context terms are found only exactly (any form of theirs, never by similarity), and counted over the whole video: none, the form is not proposed; one, it is asked; two or more, it is applied as usual. Within 90 seconds of an `unless_near` term it is asked instead. Choose context terms that are specific to the meaning you want, and that a speaker on that subject says more than once: a context term that is an ordinary word is refused when the pack loads, and a weak one (said in unrelated videos too) brings the false positives back. Measure the result on a silence run (2.5) where the form appears with its other meaning. `pack add-term <pack> <term> --variant <form> --context <term,term>` writes it; a form with a context may be shorter than three letters.
+
 **2.4 Curation rules.**
 
 - **Short strings match exactly, and one- and two-letter strings stay out** (D-005). Fuzzy matching needs at least 6 characters on both sides and lengths within 2, so anything shorter matches only if it is identical. Single letters and two-letter strings (`R`, `TI`, `EB`) match too much ordinary text even exactly, so new ones do not enter the pack. Two from the first version predate the rule: `TR` (a variant of the unit tri) and `Lu` (of Leo). Check each against a silence run (below) before the next pack release, and remove it if it fires. `Ox` was the third: it was removed in 0.3.4 after the silence run of D-035 found it was the Northeastern interjection `oxe`.
