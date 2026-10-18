@@ -82,7 +82,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("pack create --template <field> --name <n> --lang <l>", "a new pack in packs/, with the field's classes and no terms"),
             ("pack import <file> | remove <name>", "check a pack file and copy it into packs/; delete one from packs/ (never a bundled one)"),
             ("pack copy <name>", "make a bundled or repository pack your own, to edit"),
-            ("pack add-term <pack> <term>", "add a term (--class, --alias, --variant), or forms to an existing one; checked, saved with the next patch version"),
+            ("pack add-term <pack> <term>", "add a term (--class, --alias, --variant), or forms to an existing one; --context <terms> for a variant that is also an ordinary word, matched only where those terms appear (--unless-near asks near others); checked, saved with the next patch version"),
             ("pack edit-term | remove-term", "change a term of a pack (--rename, --class, --add-variant, --remove-alias, …); remove one"),
             ("pack show <pack>", "a pack's terms with their forms; --search <text>, --page <n>"),
             ("pack export <name> [--to <path>]", "write <name>-<version>.yaml"),

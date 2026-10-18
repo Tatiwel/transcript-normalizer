@@ -165,16 +165,18 @@ def owner_of(data: dict, form: str, language) -> dict | None:
     return None
 
 
-def add_forms(data: dict, term: dict, aliases, variants, language) -> list[str]:
+def add_forms(data: dict, term: dict, aliases, variants, language, conditioned: bool = False) -> list[str]:
     """Add aliases and variants to `term`; what was done, line by line. A form
-    already in this term is skipped; one in another term is an EditError."""
+    already in this term is skipped; one in another term is an EditError.
+    D-086: a variant added with a context (`conditioned`) may be short, and is
+    not warned about as an ordinary word: the context is what answers both."""
     said = []
     for kind, forms in (("aliases", aliases), ("variants", variants)):
         for form in forms or ():
             form = form.strip()
             if not form:
                 continue
-            if kind == "variants":
+            if kind == "variants" and not conditioned:
                 problem = variant_problem(form, language)
                 if problem:
                     raise EditError(problem)
@@ -186,7 +188,7 @@ def add_forms(data: dict, term: dict, aliases, variants, language) -> list[str]:
                 raise EditError(f"{form!r} is already a form of {owner['term']}; one form, one term")
             term.setdefault(kind, []).append(form)
             said.append(f"  + {SINGULAR[kind]:8s} {form} -> {term['term']}")
-            if kind == "variants":
+            if kind == "variants" and not conditioned:
                 warning = variant_warning(form, language)
                 if warning:
                     said.append(f"  {warning}")
@@ -277,6 +279,42 @@ def run_copy(args) -> int:
     return 0
 
 
+def term_list(value: str | None) -> list[str]:
+    """`CAPEX,EBITDA` -> ["CAPEX", "EBITDA"]."""
+    return [t.strip() for t in (value or "").split(",") if t.strip()]
+
+
+def set_conditions(data: dict, term: dict, args, language) -> list[str]:
+    """D-086: `--context` and `--unless-near` for this command's variants, or
+    for the term's own name when it adds none. Each entry is a term of the
+    pack, by any of its names; it is written as its canonical name. The pack
+    check on saving refuses an ordinary word."""
+    context, unless = term_list(args.context), term_list(args.unless_near)
+    if not context and not unless:
+        return []
+    if unless and not context:
+        raise EditError("--unless-near goes with --context")
+    named = []
+    for entry in context + unless:
+        found = find_term(data, entry, language, by_alias=True)
+        if found is None:
+            raise EditError(f"{entry!r} is not a term of {args.pack}; context names terms of the same pack")
+        named.append(str(found["term"]))
+    context, unless = named[: len(context)], named[len(context):]
+    forms = [f.strip() for f in args.variant or () if f.strip()] or [str(term["term"])]
+    said = []
+    for form in forms:
+        stored = next((str(f) for f in [term["term"], *(term.get("variants") or [])]
+                       if language.normalize(str(f)) == language.normalize(form)), form)
+        term.setdefault("context", {})[stored] = context
+        line = f"  context  {stored}: only with {', '.join(context)}"
+        if unless:
+            term.setdefault("unless_near", {})[stored] = unless
+            line += f"; asked near {', '.join(unless)}"
+        said.append(line)
+    return said
+
+
 def run_add_term(args) -> int:
     def change(data, language):
         check_class(data, args.klass)
@@ -288,7 +326,8 @@ def run_add_term(args) -> int:
                     "`pack edit-term --class` changes its class"
                 )
             return [f"{existing['term']} is in the pack; adding to it:",
-                    *add_forms(data, existing, args.alias, args.variant, language)]
+                    *add_forms(data, existing, args.alias, args.variant, language, bool(args.context)),
+                    *set_conditions(data, existing, args, language)]
         owner = owner_of(data, args.term, language)
         if owner is not None:
             raise EditError(f"{args.term!r} is already a variant of {owner['term']}")
@@ -297,7 +336,8 @@ def run_add_term(args) -> int:
             term["class"] = args.klass
         data["terms"].append(term)
         return [f"+ term     {term['term']}" + (f" ({args.klass})" if args.klass else ""),
-                *add_forms(data, term, args.alias, args.variant, language)]
+                *add_forms(data, term, args.alias, args.variant, language, bool(args.context)),
+                *set_conditions(data, term, args, language)]
 
     return edit(args, change)
 
@@ -416,6 +456,15 @@ def add_arguments(commands) -> None:
     adding.add_argument("--class", dest="klass", metavar="CLASS", help="one of the pack's classes")
     adding.add_argument("--alias", action="append", metavar="FORM", help="another correct name; repeatable")
     adding.add_argument("--variant", action="append", metavar="FORM", help="a mishearing; repeatable")
+    adding.add_argument(
+        "--context", metavar="TERM,TERM",
+        help="the variants (or, with none, the term's name) are an ordinary word too: match them only in a "
+        "video where one of these pack terms appears (twice to apply, once to ask)",
+    )
+    adding.add_argument(
+        "--unless-near", metavar="TERM,TERM",
+        help="with --context: ask instead of applying within 90 seconds of one of these pack terms",
+    )
     adding.set_defaults(run=run_add_term)
 
     editing = commands.add_parser("edit-term", help="change a term of one of your packs")

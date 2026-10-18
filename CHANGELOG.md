@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Writing a context (D-086): `pack add-term ... --variant <form> --context <terms> [--unless-near <terms>]`; the menu asks, after each variant, whether it is also an ordinary word and which pack terms mark its meaning; the review, after "only in this video", offers to save the form for every video where one of the run's terms appears. A pack whose context names an unknown term or an ordinary word is refused on load. `pack propose` keeps the context.
 - A pack form can now depend on context (D-086): `context: {Ox: [CAPEX]}` makes `Ox` count as OPEX only in a video where CAPEX appears, at least twice (once: asked, not applied; never: not proposed), and `unless_near:` asks instead of applying when another term is within 90 seconds. Context terms are found only exactly, never by similarity. Packs without it behave as before.
 
 ## 0.6.5

@@ -21,8 +21,11 @@ from .core.pack import Learned
 from .core.standoff import BAND_HIGH, KIND_CORRECTION, QUESTION_BANDS, Annotation, in_band
 from .core.text import Transcript
 
-#: The answers, as cli's outcomes record them (D-019, D-020; `o` is D-073).
-YES, LOCAL, ALIAS, NO, LATER = "y", "o", "l", "n", "s"
+#: The answers, as cli's outcomes record them (D-019, D-020; `o` is D-073;
+#: `c`, D-086, is "only in this video" saved for every video with a context).
+YES, LOCAL, ALIAS, NO, LATER, CONTEXT = "y", "o", "l", "n", "s", "c"
+#: D-086: how many of the run's terms the context question offers.
+CONTEXT_CHOICES = 5
 
 #: D-073: beside the run's annotations.json.
 LOCAL_FILE = "local-decisions.yaml"
@@ -149,15 +152,34 @@ class Answers:
 
     given: dict[tuple[str, str], str] = field(default_factory=dict)
     ended: bool = False  # Back or Ctrl+C before the last stop
+    contexts: dict[tuple[str, str], tuple[str, ...]] = field(default_factory=dict)  # D-086
 
     def of(self, value: str) -> list[tuple[str, str]]:
         return [pair for pair, answer in self.given.items() if answer == value]
 
 
-def ask_stops(transcript: Transcript, all_stops: list[Stop]) -> Answers:
+def ask_context(stop: Stop, offered) -> tuple[str, ...]:
+    """D-086: after "only in this video", once: the same answer for every video,
+    but only where one of the run's terms appears. Enter keeps it local."""
+    from . import prompts
+    from .prompts import Option
+
+    terms = [t for t in offered if t != stop.term][:CONTEXT_CHOICES]
+    if not terms:
+        return ()
+    picked = prompts.multi_select(
+        "Save it for every video, but only when one of these terms appears?",
+        [Option(t, value=t) for t in terms],
+        hint="terms found in this video; Enter keeps it for this video only",
+    )
+    return tuple(picked or ())
+
+
+def ask_stops(transcript: Transcript, all_stops: list[Stop], offered=()) -> Answers:
     """D-072: the stops, one question each. Back (or Ctrl+C) ends them; what
     is left is for later. A form taken as one term is not asked again for
-    another (its later occurrences took the answer already)."""
+    another (its later occurrences took the answer already). `offered`: the
+    run's terms, most frequent first, for D-086's context question."""
     from . import prompts
 
     answers = Answers()
@@ -177,8 +199,13 @@ def ask_stops(transcript: Transcript, all_stops: list[Stop]) -> Answers:
             if answer is None:
                 answers.ended = True
                 break
+            if answer == LOCAL:
+                terms = ask_context(stop, offered)
+                if terms:
+                    answer = CONTEXT
+                    answers.contexts[(stop.term, stop.form)] = terms
             answers.given[(stop.term, stop.form)] = answer
-            if answer in (YES, LOCAL, ALIAS):
+            if answer in (YES, LOCAL, ALIAS, CONTEXT):
                 taken.add(stop.form)
     except KeyboardInterrupt:
         answers.ended = True
@@ -190,7 +217,11 @@ def summary_lines(answers: Answers, total: int) -> list[str]:
     later = total - sum(1 for a in answers.given.values() if a != LATER)
     pairs = lambda value, sep: ", ".join(f"{f} {sep} {t}" for t, f in answers.of(value))  # noqa: E731
     lines = []
-    remembered = [f"{f} → {t}" for t, f in answers.of(YES)] + [f"{f} (as said) = {t}" for t, f in answers.of(ALIAS)]
+    remembered = (
+        [f"{f} → {t}" for t, f in answers.of(YES)]
+        + [f"{f} → {t} (only with {', '.join(answers.contexts[(t, f)])})" for t, f in answers.of(CONTEXT)]
+        + [f"{f} (as said) = {t}" for t, f in answers.of(ALIAS)]
+    )
     if remembered:
         lines.append(f"will remember: {', '.join(remembered)}")
     if answers.of(NO):
@@ -206,6 +237,8 @@ def apply(answers: Answers, learned: Learned) -> tuple[Learned, list[tuple[str, 
     for (term, text), answer in answers.given.items():
         if answer == YES:
             learned = learned.confirm(term, text)
+        elif answer == CONTEXT:
+            learned = learned.confirm(term, text, context=answers.contexts[(term, text)])
         elif answer == ALIAS:
             learned = learned.alias(term, text)
         elif answer == NO:

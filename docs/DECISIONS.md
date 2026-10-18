@@ -877,6 +877,12 @@ D-032 keeps out of a pack any variant that is also an ordinary word or a common 
 
 Gate: with no `context` in any pack, annotations.json for the eight fixture × pack runs is byte-identical before and after.
 
+**Checked on load.** Every `context` and `unless_near` entry must be the canonical name of a term of the same pack (the error names the file, the term and the entry), and not one of the language's `common_words` ("context must be a specific term, not an ordinary word"): a context that is itself an ordinary word would be found in every video. A `context:` key must be the term's name or one of its variants.
+
+**Writing it.** `pack add-term <pack> <term> --variant <form> --context <term,term> [--unless-near <term,term>]` writes the mapping for the command's variants, or for the term's own name when it adds none; entries may be given by any name of the term and are written as canonical names. A variant added with a context is exempt from D-005's three-letter refusal and from D-066's ordinary-word warning: the context is the answer to both (`Ox`). The menu, after each variant typed in Add a term, Edit a term → Add variants and Add a term you noticed, asks once "Is '<form>' also an ordinary word? If so, pick the pack terms that appear in a video when it means <term>", a multi-select over the pack's terms (ordinary-word terms left out); Enter skips.
+
+**From the review.** After "Yes, but only in this video" (D-073), one question: "Save it for every video, but only when one of these terms appears?", with up to five terms found in this run at high band, most frequent first. Picking any saves the form as a learned variant with that context (the learned file's entry gains `context:`), instead of a local decision; Enter keeps it local. `pack propose` carries the context with the variant, so a conditional form is never proposed as an unconditional one.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -102,6 +102,8 @@ class UnitRule:
 class Confirmation:
     variant: str
     decided: str  # ISO date
+    #: D-086: a variant learned with a context: corrected only where these terms appear.
+    context: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -131,14 +133,17 @@ class Learned:
     def is_empty(self) -> bool:
         return not self.confirmed and not self.rejected and not self.aliases
 
-    def confirm(self, term: str, variant: str, decided: str | None = None) -> "Learned":
-        """A variant: substituted from now on. Replaces an alias entry for the same text."""
+    def confirm(
+        self, term: str, variant: str, decided: str | None = None, context: tuple[str, ...] = ()
+    ) -> "Learned":
+        """A variant: substituted from now on. Replaces an alias entry for the same text.
+        D-086: with a `context`, only in a run where those terms appear."""
         decided = decided or date.today().isoformat()
         existing = self.confirmed.get(term, ())
         if any(_same(c.variant, variant) for c in existing):
             return self
         merged = dict(self.confirmed)
-        merged[term] = existing + (Confirmation(nfc(variant), decided),)
+        merged[term] = existing + (Confirmation(nfc(variant), decided, tuple(context)),)
         return replace(self, confirmed=merged, aliases=_without(self.aliases, term, variant))
 
     def alias(self, term: str, text: str, decided: str | None = None) -> "Learned":
@@ -170,7 +175,10 @@ class Learned:
         data = {
             "version": self.version,
             "confirmed": {
-                term: [{"variant": c.variant, "date": c.decided} for c in confirmations]
+                term: [
+                    {"variant": c.variant, "date": c.decided, **({"context": list(c.context)} if c.context else {})}
+                    for c in confirmations
+                ]
                 for term, confirmations in self.confirmed.items()
             },
             "aliases": {
@@ -205,9 +213,10 @@ def load_learned(path: str | Path) -> Learned:
         items = []
         for entry in entries or ():
             if isinstance(entry, dict):
-                items.append(
-                    Confirmation(nfc(str(entry["variant"])), str(entry.get("date", "")))
-                )
+                items.append(Confirmation(
+                    nfc(str(entry["variant"])), str(entry.get("date", "")),
+                    tuple(nfc(str(t)) for t in entry.get("context") or ()),
+                ))
             else:  # a bare string is accepted; it just has no date
                 items.append(Confirmation(nfc(str(entry)), ""))
         confirmed[nfc(str(term))] = tuple(items)
@@ -300,18 +309,44 @@ def _strings(raw: dict, key: str) -> tuple[str, ...]:
     return tuple(nfc(str(s)) for s in raw.get(key) or ())
 
 
-def form_conditions(raw: dict, key: str, norm) -> dict[str, tuple[str, ...]]:
+def form_conditions(raw: dict, key: str, norm, path: Path) -> dict[str, tuple[str, ...]]:
     """D-086: a term's `context:` or `unless_near:`, a mapping from one of its
     forms (its canonical name or a variant) to pack terms; by folded form."""
     mapping = raw.get(key) or {}
+    name = nfc(str(raw.get("term")))
     if not isinstance(mapping, dict):
-        raise ValueError(f"term {raw.get('term')!r}: `{key}:` maps a form to a list of terms, e.g. `{key}: {{Ox: [CAPEX]}}`")
+        raise ValueError(
+            f"{path}: term {name!r}: `{key}:` maps a form to a list of terms, e.g. `{key}: {{Ox: [CAPEX]}}`"
+        )
+    own = {norm(name)} | {norm(v) for v in _strings(raw, "variants")}
     out = {}
     for form, terms in mapping.items():
+        folded = norm(nfc(str(form)))
+        if folded not in own:
+            raise ValueError(
+                f"{path}: term {name!r}: `{key}:` names {str(form)!r}, which is not its name or one of its variants"
+            )
         if isinstance(terms, str):
             terms = [terms]
-        out[norm(nfc(str(form)))] = tuple(nfc(str(t)) for t in terms or ())
+        out[folded] = tuple(nfc(str(t)) for t in terms or ())
     return out
+
+
+def check_conditions(path: Path, terms_raw, language) -> None:
+    """D-086: every `context` and `unless_near` entry is the canonical name of a
+    term of this pack, and not an ordinary word of the language."""
+    names = {nfc(str(raw["term"])) for raw in terms_raw}
+    common = getattr(language, "common_words", frozenset())
+    for raw in terms_raw:
+        for key in ("context", "unless_near"):
+            for form, entries in (raw.get(key) or {}).items():
+                for entry in [entries] if isinstance(entries, str) else entries or ():
+                    entry = nfc(str(entry))
+                    where = f"{path}: term {nfc(str(raw['term']))!r}, {key} of {str(form)!r}: {entry!r}"
+                    if entry not in names:
+                        raise ValueError(f"{where} is not a term of this pack (use its canonical name)")
+                    if language.normalize(entry) in common:
+                        raise ValueError(f"{where}: context must be a specific term, not an ordinary word")
 
 
 def pack_classes(data: dict, path: Path) -> tuple[str, ...]:
@@ -377,6 +412,7 @@ def load_pack(
 
     terms: list[Term] = []
     candidates: list[Candidate] = []
+    check_conditions(path, data.get("terms") or (), language)
     for raw in data.get("terms") or ():
         name = nfc(str(raw["term"]))
         pack_variants = _strings(raw, "variants")
@@ -408,8 +444,11 @@ def load_pack(
             learned_aliases=learned_aliases,
         )
         terms.append(term)
-        context = form_conditions(raw, "context", norm)
-        unless_near = form_conditions(raw, "unless_near", norm)
+        context = form_conditions(raw, "context", norm, path)
+        unless_near = form_conditions(raw, "unless_near", norm, path)
+        for c in learned.confirmed.get(name, ()):  # D-086: learned with a context
+            if c.context and c.variant in learned_variants:
+                context.setdefault(norm(c.variant), c.context)
         # Order matters: it is the order the matcher scans candidates in.
         for display, origin, source in (
             [(term.term, "term", SOURCE_PACK)]

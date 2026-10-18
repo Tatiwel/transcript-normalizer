@@ -811,13 +811,15 @@ def add_noticed(run: Path, pack: Path | None) -> bool:
         if kind is None:
             return False
         argv = ["pack", "add-term", name, existing.term, f"--{kind}", form]
+        if kind == "variant":
+            argv += ask_context(name, existing.term, form)
     else:
         klass = choose_class(pack)
         if klass is None:
             return False
         argv = ["pack", "add-term", name, canonical, "--class", klass]
         if loaded.normalize(form) != loaded.normalize(canonical):
-            argv += ["--variant", form]
+            argv += ["--variant", form, *ask_context(name, canonical, form)]
     if run_command(argv) != 0:
         return False
     if prompts.confirm(f"Normalize {run.name} again with it?", default=True):
@@ -887,6 +889,43 @@ def lines_typed(title: str, hint: str) -> list[str]:
         out.append(line)
 
 
+def ask_context(name: str, term: str, form: str) -> list[str]:
+    """D-086: after a variant, whether it is also an ordinary word, and if so
+    the pack terms that appear in a video when it means `term`. Enter skips."""
+    from .packedit import language_of, read
+
+    _, data = read(installed_packs()[name])
+    language = language_of(data)
+    common = getattr(language, "common_words", frozenset())
+    others = [str(t["term"]) for t in data.get("terms") or []
+              if str(t["term"]) != term and language.normalize(str(t["term"])) not in common]
+    if not others:
+        return []
+    picked = prompts.multi_select(
+        f"Is '{form}' also an ordinary word? If so, pick the pack terms that appear in a video "
+        f"when it means {term}",
+        [Option(t, value=t) for t in others],
+        hint="Enter skips: it is corrected wherever it appears",
+    )
+    return ["--context", ",".join(picked)] if picked else []
+
+
+def add_variants(name: str, term: str, variants: list[str], first: list[str]) -> None:
+    """`first` (an add-term or edit-term command) with the variants that need
+    no context, then one add-term per variant that has one (D-086)."""
+    contexts = {v: ask_context(name, term, v) for v in variants}
+    plain = [v for v in variants if not contexts[v]]
+    if run_command([*first, *[a for v in plain for a in (first_flag(first), v)]]) != 0:
+        return
+    for variant, extra in contexts.items():
+        if extra:
+            run_command(["pack", "add-term", name, term, "--variant", variant, *extra])
+
+
+def first_flag(command: list[str]) -> str:
+    return "--add-variant" if command[1] == "edit-term" else "--variant"
+
+
 def add_term(name: str) -> None:
     term = prompts.text("The term, as it should be written", hint="its canonical form, e.g. metformina", kind="type")
     if not term:
@@ -896,9 +935,8 @@ def add_term(name: str) -> None:
         return
     aliases = lines_typed("Other correct names", "one per line: a brand, a plural, the full form; empty line ends")
     variants = lines_typed("What the recognizer wrote instead", "one per line, as the caption has it; empty line ends")
-    run_command(["pack", "add-term", name, term, "--class", klass,
-                 *[a for alias in aliases for a in ("--alias", alias)],
-                 *[a for variant in variants for a in ("--variant", variant)]])
+    add_variants(name, term, variants, ["pack", "add-term", name, term, "--class", klass,
+                                        *[a for alias in aliases for a in ("--alias", alias)]])
 
 
 def edit_term(name: str) -> None:
@@ -919,8 +957,13 @@ def edit_term(name: str) -> None:
     elif change == "rename":
         new = prompts.text("Its new name", hint="the canonical form", kind="type")
         values = [("--rename", new)] if new else []
+    elif change == "add-variant":
+        forms = lines_typed("The mishearing", "one per line; empty line ends")
+        if forms:
+            add_variants(name, term, forms, ["pack", "edit-term", name, term])
+        return
     elif change.startswith("add"):
-        forms = lines_typed("The form" if change == "add-alias" else "The mishearing", "one per line; empty line ends")
+        forms = lines_typed("The form", "one per line; empty line ends")
         values = [(f"--{change}", f) for f in forms]
     else:
         form = prompts.text("Which one, exactly as listed?", kind="type")

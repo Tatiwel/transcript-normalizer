@@ -409,7 +409,9 @@ def review_forms(
     if not all_stops:
         print("nothing to confirm.")
         return session
-    answers = review.ask_stops(transcript, all_stops)
+    # D-086: the terms this run found for sure, most frequent first.
+    found = Counter(a.term for a in annotations if a.band == BAND_HIGH)
+    answers = review.ask_stops(transcript, all_stops, [t for t, _ in found.most_common()])
     session.outcomes = {pair: answer for pair, answer in answers.given.items()}
     decided = {pair: a for pair, a in answers.given.items() if a != review.LATER}
     prompts.stage("Summary")

@@ -65,7 +65,7 @@ def test_a_form_not_in_the_run_is_asked_again(tmp_path, monkeypatch, capsys):
 
 def test_normalizing_again_uses_the_new_variant(tmp_path, monkeypatch, capsys):
     setup(tmp_path, monkeypatch)
-    lines = [*NORMALIZED, "y", "y", "melhorou", "y", "Melhoria Energia", "5", "y", "n", "n", "n", "q"]
+    lines = [*NORMALIZED, "y", "y", "melhorou", "y", "Melhoria Energia", "5", "", "y", "n", "n", "n", "q"]  # "": no context (D-086)
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     annotations = json.loads((tmp_path / "runs" / VIDEO_ID / ANNOTATIONS_FILE).read_text(encoding="utf-8"))
     assert any(a["original"] == "melhorou" and a["term"] == "Melhoria Energia" for a in annotations)

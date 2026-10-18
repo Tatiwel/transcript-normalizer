@@ -71,7 +71,7 @@ def test_no_is_the_only_way_to_a_rejection(tmp_path, monkeypatch, answer):
 
 
 def test_the_summary_comes_before_anything_is_written(tmp_path, monkeypatch, capsys):
-    reviewed(tmp_path, monkeypatch, [YES, LOCAL, NO, "y"])
+    reviewed(tmp_path, monkeypatch, [YES, LOCAL, "", NO, "y"])  # "": keep it local (D-086)
     out = capsys.readouterr().out
     summary = out.split("Summary")[1]
     assert "will remember: Klabine → Klabin" in summary
@@ -85,7 +85,7 @@ def test_the_summary_comes_before_anything_is_written(tmp_path, monkeypatch, cap
 
 
 def test_no_to_the_summary_discards_every_answer(tmp_path, monkeypatch, capsys):
-    reviewed(tmp_path, monkeypatch, [YES, LOCAL, NO, "n"])
+    reviewed(tmp_path, monkeypatch, [YES, LOCAL, "", NO, "n"])
     out = capsys.readouterr().out
     assert "nothing saved: the 3 answer(s) of this review were discarded." in out
     assert not (tmp_path / "packs" / "financas-ptbr.learned.yaml").exists()
@@ -169,7 +169,7 @@ def test_a_youtube_run_links_each_stop(tmp_path, monkeypatch, capsys):
 
 
 def test_only_in_this_video_applies_on_renormalize_and_is_never_learned(tmp_path, monkeypatch, capsys):
-    reviewed(tmp_path, monkeypatch, [LOCAL, "", "", "y"])
+    reviewed(tmp_path, monkeypatch, [LOCAL, "", "", "", "y"])
     run = run_of(tmp_path)
     assert review.read_local(run) == [("Klabin", "Klabine")]
     assert layer(tmp_path).is_empty()
@@ -321,7 +321,7 @@ def test_no_decision_number_in_any_message_string():
 def test_only_local_answers_neither_announce_the_layer_nor_offer_to_contribute(tmp_path, monkeypatch, capsys):
     # fetch, normalize, review now: only in this video, later, later; save;
     # no term noticed; no folder.
-    lines = [*LINK, "", "1", "", LOCAL, "", "", "", "", "", "q"]
+    lines = [*LINK, "", "1", "", LOCAL, "", "", "", "", "", "", "q"]
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines, vtt="review.vtt")
     assert "only in this video: Klabine → Klabin" in out
     assert "learned layer written" not in out

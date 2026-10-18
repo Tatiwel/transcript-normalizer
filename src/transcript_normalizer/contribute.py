@@ -38,11 +38,13 @@ class Item:
     form: str
     decision: str  # variant | alias | rejected
     decided: str  # ISO date
+    context: tuple[str, ...] = ()  # D-086: a variant only where these terms appear
 
     def line(self) -> str:
         if self.decision == REJECTED:
             return f"  - rejected  {self.form}  (not {self.term})"
-        return f"  + {self.decision:8s}  {self.form} -> {self.term}"
+        only = f"  (only with {', '.join(self.context)})" if self.context else ""
+        return f"  + {self.decision:8s}  {self.form} -> {self.term}{only}"
 
 
 def items(pack_path: Path, learned: Learned | None = None) -> list[Item]:
@@ -53,7 +55,7 @@ def items(pack_path: Path, learned: Learned | None = None) -> list[Item]:
         t.term: {pack.normalize(s) for s in (t.term, *t.aliases, *t.variants)} for t in pack.terms
     }
     out = [
-        Item(term, c.variant, VARIANT, c.decided)
+        Item(term, c.variant, VARIANT, c.decided, c.context)
         for term, confirmations in learned.confirmed.items()
         for c in confirmations
         if pack.normalize(c.variant) not in known.get(term, ())
@@ -77,7 +79,9 @@ def contribution_yaml(name: str, version: str, found: list[Item], today: str) ->
         "engine": engine_version(),
         "date": today,
         "entries": [
-            {"term": i.term, "form": i.form, "decision": i.decision, "decided": i.decided} for i in found
+            {"term": i.term, "form": i.form, "decision": i.decision, "decided": i.decided,
+             **({"context": list(i.context)} if i.context else {})}
+            for i in found
         ],
     }
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
