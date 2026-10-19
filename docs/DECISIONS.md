@@ -891,6 +891,29 @@ Gate: with no `context` in any pack, annotations.json for the eight fixture × p
 - The silence runs, forced: BIrASod49XY (pt-orig, 481 lines, fetched again 2026-10-17), whose two `Ox` lines (2:08, 2:12) were D-035's false positives: CAPEX never appears, so `Ox` is neither applied nor proposed. yJxxTf0IQC8 (its new manual pt track, and its pt-orig): no `Ox`, no OPEX, nothing applied.
 - A synthetic mixed caption (tests/data/context-mixed.txt with tests/data/context-ia.yaml): Claude in the first half, cloud infrastructure in the second, and one sentence with both. `cloud` → Claude is applied three times, asked in the sentence with AWS and twice near AWS and Kubernetes; the infrastructure half alone proposes nothing.
 
+## D-087 A pack may say which engine it needs (`min_engine`)
+
+D-086 gave packs something an older engine does not know. An engine up to 0.6.5 reads a pack with `context: {Ox: [CAPEX]}`, ignores the key, and corrects `Ox` everywhere: checked, 0.6.5 with financas-ptbr 0.3.8 on BIrASod49XY applies `Ox` → OPEX at 2:08 and 2:12, D-035's false positives back. The packs repository was left at 0.3.7 for that reason. Nothing said which engine a pack was written for, and `pack install`/`pack update` installed whatever the index named.
+
+**The field.** An index entry may have `min_engine`, the oldest engine version that understands the pack, as plain numbers (`"0.7.0"`). It is optional: an entry without it is read as before. A pack file may carry the same top-level `min_engine:`. Versions compare as numbers, padded with zeros (`0.7` = `0.7.0`, `0.10.0` > `0.7.0`); the engine's own version counts by its leading numbers, so a `0.7.0.dev1` build of the next release has its features. A `min_engine` that is not plain numbers cannot be checked and counts as too new: refused, not guessed. An engine whose own version is unknown (a source checkout never installed) is let through.
+
+**Several versions of one name.** Every released engine with the registry (0.4.2 to 0.6.5, checked at each tag) reads `index.json` into a dict by name, so the last entry of a name wins, and ignores keys it does not know. So `min_engine` alone protects only engines from this one on; an old engine would still install 0.3.8. The index may therefore list a pack more than once, one entry per version, each at its own path: the newest first with its `min_engine`, the one for older engines last without it. An engine from this one on takes, for each name, the newest version it can use (numbers, not text: 0.3.10 after 0.3.9; the later entry on a tie, as before), and keeps the newest one it cannot as `held`, to say so. An old engine takes the last entry, the safe one. When no version of a name is usable, the newest is kept, marked, so it is still listed with the reason.
+
+**What each command does** with a version this engine cannot use:
+
+- `pack list`: the usable version in the table, or the entry with "needs 0.7.0+" beside its status; under the table, "financas-ptbr 0.3.8 needs transcript-normalizer 0.7.0 or later (this is 0.6.5); 0.3.7 is the newest for this version" (or "it cannot be installed with this version"), and where newer releases are.
+- `pack install`: installs the usable version and says what was held back; with none, refuses, exit 1, even with `--force`, nothing written. `install()` itself refuses an entry that is too new, so no other way in (the menu, `pack update`) can write one.
+- `pack update`: never updates past the newest usable version; "0.3.7 is the latest for this version; financas-ptbr 0.3.8 needs …", or "… 0.3.7 is kept".
+- `pack list --installed`: no "↑ update" for a version that cannot be had; a line under the table says which.
+- Merges (D-069), and so the menu's background look: an upstream entry this engine cannot use is no upstream; no offer is made for it, and `pack merge` says it was left out. Get a pack shows such a pack, not choosable, with the reason; when nothing is installable it says so and asks nothing.
+- The menu's index cache keeps every entry, so the choice is made again on reading it.
+
+**A pack file copied by hand.** `load_pack` refuses a file whose `min_engine:` is newer than the engine: "<file>: this pack (0.3.8) needs transcript-normalizer 0.7.0 or later (this is 0.6.5); it uses what an older version would ignore …". It is an `EngineTooOld`, a `ValueError`, so `normalize` prints it and exits 2, and the pack checks (`pack import`, the pack lists, the editor) refuse the file as they refuse a malformed one. This protects only engines from this one on: 0.6.5 and earlier ignore the key. No per-feature check was added (an engine finding `context:` refusing the pack): every engine that would run such a check already knows `context:`; the check for what comes later is `min_engine`, declared by whoever adds the later feature to a pack.
+
+**Not done.** Packs are not refused for unknown keys: user packs written by hand may carry their own, and a strict schema is a larger change than this. The bundled financas-ptbr does not carry `min_engine`: it ships with the engine that understands it, and the version in pyproject (0.6.5 until the release) would make the engine refuse its own default.
+
+**Publishing financas-ptbr 0.3.8.** Once an engine with D-086 and this decision is released as 0.7.0: keep 0.3.7's file at a path of its own (e.g. `financas-ptbr/0.3.7/pack.yaml`, its sha256 unchanged), put 0.3.8 at `financas-ptbr/pack.yaml` with `min_engine: "0.7.0"` in the file, and list both in `index.json`, 0.3.8 first with `"min_engine": "0.7.0"`, 0.3.7 last. Engines up to 0.6.5 then keep 0.3.7; 0.7.0 and later get 0.3.8. Tested in tests/test_min_engine.py, with the running engine pinned at 0.6.5 and 0.7.0.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -14,7 +14,7 @@ import re
 import sys
 import threading
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -189,7 +189,7 @@ def cached_index(
         age = (time.time() if now is None else now) - float(data["fetched_at"])
         if data["url"] != url or not 0 <= age < INDEX_CACHE_SECONDS:
             return None
-        return {e["name"]: registry.Entry(**{f: str(e[f]) for f in registry.FIELDS}) for e in data["packs"]}
+        return registry.choose([registry.Entry.from_raw(e) for e in data["packs"]])
     except (OSError, ValueError, KeyError, TypeError):
         return None
 
@@ -207,7 +207,7 @@ def index_cached_within(
     if index is not None:
         try:
             cache.write_text(json.dumps({
-                "url": url, "fetched_at": time.time(), "packs": [asdict(e) for e in index.values()],
+                "url": url, "fetched_at": time.time(), "packs": [raw for e in index.values() for raw in e.raw()],
             }), encoding="utf-8")
         except OSError:
             pass  # a cache that cannot be written is only a slower next start
@@ -231,6 +231,7 @@ def run_installed(args) -> int:
     header = ["name", "version", "language", "terms", "size (KB)", "source"]
     lines = [[r.name, r.version, r.language, r.terms, r.size_kb, r.source] for r in table]
     marked = merges = False
+    held: list = []
     from .merge import copies, offer_for
 
     copied = copies()
@@ -244,6 +245,12 @@ def run_installed(args) -> int:
                 continue
             entry = (index or {}).get(r.name)
             update = r.source != MINE and entry is not None and newer(entry.version, r.version)
+            blocked = entry.blocked if entry is not None and r.source != MINE else None
+            if blocked is not None and newer(blocked.version, r.version):  # D-087: not for this engine
+                held.append(blocked)
+            if update and entry.too_new():
+                line.append(f"needs {entry.min_engine}+ ({entry.version})")
+                continue
             line.append(f"↑ update ({entry.version})" if update else "")
             marked |= update
     widths = [max(len(cell) for cell in column) for column in zip(header, *lines, strict=True)]
@@ -255,6 +262,8 @@ def run_installed(args) -> int:
         print("(the packs repository was not reached, so its updates are not shown)")
     if marked:
         print("↑ update: the packs repository has a newer version; `transcript-normalizer pack install <name>` gets it")
+    for entry in held:
+        print(f"{entry.needs()}; `pack update` leaves the one you have")
     if merges:
         print("↑ merge available: upstream is newer than your copy's base; `transcript-normalizer pack merge <name>` merges it, asking about each conflict")
     print(f"your packs: {packs_root()}{os.sep}")

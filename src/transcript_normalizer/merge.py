@@ -104,7 +104,7 @@ def upstream_of(name: str, index: dict | None) -> Upstream | None:
         found.append(Upstream(str(data.get("version") or ""), packfiles.BUNDLED,
                               lambda: bundled.read_text(encoding="utf-8")))
     entry = (index or {}).get(name)
-    if entry is not None:
+    if entry is not None and not entry.too_new():  # D-087: never merged into an engine too old for it
         url = registry.index_url()
         found.append(Upstream(entry.version, packfiles.REPOSITORY,
                               lambda: registry.download(entry, url).decode("utf-8")))
@@ -715,7 +715,11 @@ def run_merge(args) -> int:
         return 1
     text = path.read_text(encoding="utf-8")
     mine = yaml.safe_load(text) or {}
-    upstream = upstream_of(name, packfiles.index_within(MERGE_WAIT_SECONDS))
+    index = packfiles.index_within(MERGE_WAIT_SECONDS)
+    entry = (index or {}).get(name)
+    if entry is not None and entry.blocked is not None:  # D-087
+        print(f"  the packs repository has {entry.blocked.needs()}; it is left out of this merge")
+    upstream = upstream_of(name, index)
     if upstream is None:
         print(f"no upstream for {name}: neither bundled nor in the packs repository", file=sys.stderr)
         return 1

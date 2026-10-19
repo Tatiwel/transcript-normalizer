@@ -6,6 +6,12 @@ This module reads that index and installs packs into the user's `packs/`, where
 `--pack`, the menu and `default_pack` already look (D-017, D-054). urllib only:
 no new dependency, and a `file://` index works the same, which is what the
 tests use. The bundled financas-ptbr stays the offline default (D-043).
+
+An entry may name the oldest engine that understands its pack, `min_engine`
+(D-087): an older engine lists it with the reason and never installs it. A
+name may have several entries, one per version: this engine takes the newest
+it can use. Engines up to 0.6.5 keep the last entry of a name and ignore
+`min_engine`, so the index lists the newest first and the one for them last.
 """
 
 from __future__ import annotations
@@ -19,9 +25,10 @@ import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from . import engine
 from .runs import BUNDLED_PACKS, packs_root
 
 INDEX_URL = "https://raw.githubusercontent.com/Tatiwel/transcript-normalizer-packs/main/index.json"
@@ -36,6 +43,10 @@ TIMEOUT_SECONDS = 20
 #: A pack name is a file name in packs/, so nothing that could leave it.
 NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FIELDS = ("name", "version", "language", "description", "path", "sha256")
+#: D-087: fields an entry may leave out, and their value when it does.
+OPTIONAL = {"min_engine": ""}
+#: Where a newer engine is had, for the message that one is needed.
+RELEASES = "https://github.com/Tatiwel/transcript-normalizer/releases"
 
 
 class RegistryError(Exception):
@@ -52,6 +63,54 @@ class Entry:
     description: str
     path: str  # relative to the index
     sha256: str
+    min_engine: str = ""  # D-087: the oldest engine that understands the pack
+    #: D-087: a newer version of the pack, in the index, that this engine cannot use.
+    held: Entry | None = field(default=None, compare=False, repr=False)
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> "Entry":
+        """One entry of index.json (or of the menu's cache of it)."""
+        optional = {f: str(raw[f]) for f in OPTIONAL if raw.get(f) not in (None, "")}
+        return cls(**{f: str(raw[f]) for f in FIELDS}, **optional)
+
+    def too_new(self) -> bool:
+        """Whether its pack needs a newer engine than this one."""
+        return engine.too_old_for(self.min_engine)
+
+    def needs(self) -> str:
+        return engine.needs(self.name, self.version, self.min_engine)
+
+    @property
+    def blocked(self) -> Entry | None:
+        """The version of this pack this engine cannot have: itself, or a newer one."""
+        return self if self.too_new() else self.held
+
+    def raw(self) -> list[dict]:
+        """As index.json writes it, with the held-back version after it (for the cache)."""
+        out = {f: getattr(self, f) for f in FIELDS}
+        out.update({f: getattr(self, f) for f in OPTIONAL if getattr(self, f)})
+        return [out] + (self.held.raw() if self.held is not None else [])
+
+
+def choose(entries: list[Entry]) -> dict[str, Entry]:
+    """By name, the newest version this engine can use, with the newest it
+    cannot as `held`; when it can use none, the newest (D-087). Between two
+    entries of the same version the later wins, as it always did."""
+    by_name: dict[str, list[tuple[int, Entry]]] = {}
+    for i, e in enumerate(entries):
+        by_name.setdefault(e.name, []).append((i, e))
+
+    def newest(found: list[tuple[int, Entry]]) -> Entry | None:
+        return max(found, key=lambda x: (engine.numbers(x[1].version), x[0]))[1] if found else None
+
+    out = {}
+    for name, found in by_name.items():
+        usable = [x for x in found if not x[1].too_new()]
+        best = newest(usable) or newest(found)
+        held = newest([x for x in found if x[1].too_new()
+                       and engine.numbers(x[1].version) > engine.numbers(best.version)])
+        out[name] = replace(best, held=held) if held is not None else best
+    return out
 
 
 def index_url(override: str | None = None) -> str:
@@ -74,13 +133,18 @@ def read_index(url: str, timeout: float = TIMEOUT_SECONDS) -> dict[str, Entry]:
     """Every pack the index names, by name."""
     try:
         data = json.loads(fetch(url, timeout).decode("utf-8"))
-        entries = [Entry(**{f: str(raw[f]) for f in FIELDS}) for raw in data["packs"]]
+        entries = [Entry.from_raw(raw) for raw in data["packs"]]
     except (ValueError, KeyError, TypeError) as error:
         raise RegistryError(f"{url} is not a packs index: {error}") from None
     bad = [e.name for e in entries if not NAME.match(e.name)]
     if bad:
         raise RegistryError(f"{url}: not a pack name: {', '.join(bad)}")
-    return {e.name: e for e in entries}
+    return choose(entries)
+
+
+def installable(entries: dict[str, Entry]) -> dict[str, Entry]:
+    """The entries this engine can use: none whose min_engine is newer (D-087)."""
+    return {name: e for name, e in entries.items() if not e.too_new()}
 
 
 def sha256(data: bytes) -> str:
@@ -143,6 +207,8 @@ def write_installed(record: dict[str, dict], root: Path | None = None) -> None:
 
 
 def install(entry: Entry, url: str, root: Path | None = None) -> Path:
+    if entry.too_new():  # D-087: every way in comes through here
+        raise RegistryError(f"{entry.needs()}; nothing was written")
     data = download(entry, url)
     target = pack_path(entry.name, root)
     write_atomic(target, data)
@@ -167,6 +233,13 @@ def status(name: str) -> str:
     return ""
 
 
+def held_line(entry: Entry) -> str:
+    """D-087: what the index has of this pack that this engine cannot use."""
+    if entry.too_new():
+        return f"{entry.needs()}; it cannot be installed with this version"
+    return f"{entry.held.needs()}; {entry.version} is the newest for this version"
+
+
 def run_list(args) -> int:
     if args.installed:  # D-064: what this machine has, not the repository
         from .packfiles import run_installed
@@ -181,10 +254,21 @@ def run_list(args) -> int:
     if not entries:
         print(f"the index at {url} lists no packs")
         return 0
-    rows = [(e.name, e.version, e.language, status(e.name), e.description) for e in entries.values()]
+    rows = [
+        (e.name, e.version, e.language,
+         ", ".join(filter(None, [status(e.name), f"needs {e.min_engine}+" if e.too_new() else ""])),
+         e.description)
+        for e in entries.values()
+    ]
     widths = [max(len(row[i]) for row in rows) for i in range(4)]
     for row in rows:
         print("  ".join(cell.ljust(w) for cell, w in zip(row, widths)) + "  " + row[4])
+    held = [e for e in entries.values() if e.blocked is not None]
+    if held:
+        print()
+        for e in held:
+            print(held_line(e))
+        print(f"newer versions of transcript-normalizer: {RELEASES}")
     print(f"\n`transcript-normalizer pack install <name>` puts one in {packs_root()}{os.sep}")
     return 0
 
@@ -196,6 +280,10 @@ def run_install(args) -> int:
         entry = entries.get(args.name)
         if entry is None:
             print(f"no pack called {args.name} in the index; `pack list` shows them", file=sys.stderr)
+            return 1
+        if entry.too_new():
+            print(entry.needs(), file=sys.stderr)
+            print(f"nothing was installed; newer versions of transcript-normalizer: {RELEASES}", file=sys.stderr)
             return 1
         target = pack_path(entry.name)
         if edited(entry.name) and not args.force:
@@ -214,6 +302,8 @@ def run_install(args) -> int:
         print(error, file=sys.stderr)
         return 1
     print(f"installed {entry.name} {entry.version} in {target} (sha256 checked)")
+    if entry.held is not None:
+        print(f"({held_line(entry)})")
     return 0
 
 
@@ -246,7 +336,7 @@ def run_update(args) -> int:
     if not names:
         print("no packs installed with `pack install`; nothing to update")
         return 0
-    code = 0
+    code, held = 0, False
     for name in names:
         entry, current = entries.get(name), installed()[name].get("version")
         if entry is None:
@@ -254,7 +344,14 @@ def run_update(args) -> int:
         elif edited(name):
             print(f"{name}: {pack_path(name)} was edited here; left as it is (pack install --force replaces it)")
         elif entry.version == current:
-            print(f"{name}: {current} is the latest")
+            if entry.held is not None:
+                print(f"{name}: {current} is the latest for this version; {entry.held.needs()}")
+                held = True
+            else:
+                print(f"{name}: {current} is the latest")
+        elif entry.too_new():
+            print(f"{name}: {entry.needs()}; {current} is kept")
+            held = True
         else:
             try:
                 install(entry, url)
@@ -263,6 +360,11 @@ def run_update(args) -> int:
                 code = 1
                 continue
             print(f"{name}: {current} → {entry.version}")
+            if entry.held is not None:
+                print(f"  ({held_line(entry)})")
+                held = True
+    if held:
+        print(f"newer versions of transcript-normalizer: {RELEASES}")
     return code
 
 

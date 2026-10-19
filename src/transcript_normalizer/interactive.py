@@ -1357,8 +1357,13 @@ def get_pack() -> None:
     if not index:
         say(mark("the packs repository lists no packs yet", "need"))
         return
+    if all(e.too_new() for e in index.values()):  # D-087: nothing this version can install
+        for e in index.values():
+            say(mark(e.needs(), "need"))
+        return
     picked = prompts.select("Which pack?", [
-        Option(e.name, " · ".join(filter(None, [e.version, e.description, status(e.name)])), value=e.name)
+        Option(e.name, " · ".join(filter(None, [e.version, e.description, status(e.name)])), value=e.name,
+               disabled=e.needs() if e.too_new() else "")
         for e in index.values()
     ], hint="installed into your packs/ folder, checked against the index's sha256")
     if picked is not None:

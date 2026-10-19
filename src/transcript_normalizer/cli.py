@@ -26,7 +26,7 @@ from pathlib import Path
 
 from .core.fit import MIN_FIT_TERMS, fits, fitting_terms
 from .core.matcher import find_annotations, resolve_overlaps
-from .core.pack import Learned, Pack, load_pack, save_learned
+from .core.pack import EngineTooOld, Learned, Pack, load_pack, save_learned
 from .core.render import render_normalized
 from .core.standoff import (
     BAND_ASK,
@@ -537,7 +537,7 @@ def run_normalize(args: argparse.Namespace) -> int:
     learned_at = learned_file(args.pack, args.learned)
     try:
         pack = load_pack(args.pack, learned_from=learned_at, allow_generic=args.allow_generic)
-    except LanguageNotFound as error:
+    except (LanguageNotFound, EngineTooOld) as error:
         print(error, file=sys.stderr)
         return 2
     transcript = read_caption(args.caption)

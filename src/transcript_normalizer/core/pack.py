@@ -13,7 +13,7 @@ from types import ModuleType
 
 import yaml
 
-from .. import languages
+from .. import engine, languages
 from ..runs import learned_file
 
 
@@ -384,6 +384,24 @@ def pack_phonetic_classes(data: dict, path: Path, classes: tuple[str, ...]) -> t
     return found
 
 
+class EngineTooOld(ValueError):
+    """D-087: the pack says `min_engine:` and this engine is older than that."""
+
+
+def check_engine(path: Path, data: dict) -> None:
+    """A pack that needs a newer engine is refused, never half-understood (D-087)."""
+    required = data.get("min_engine")
+    if engine.too_old_for(required):
+        have = engine.version()
+        version = data.get("version")
+        this = f" (this is {have})" if have else ""
+        raise EngineTooOld(
+            f"{path}: this pack{f' ({version})' if version is not None else ''} needs "
+            f"transcript-normalizer {str(required).strip()} or later{this}; it uses what an older "
+            "version would ignore. Install a newer transcript-normalizer, or use an older version of the pack."
+        )
+
+
 def load_pack(
     path: str | Path,
     learned: Learned | None = None,
@@ -399,6 +417,7 @@ def load_pack(
     """
     path = Path(path)
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    check_engine(path, data)
     code = str(data["language"]) if data.get("language") else None
     try:
         language = languages.for_code(code, allow_generic=allow_generic)
