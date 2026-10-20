@@ -4,7 +4,7 @@ For three readers at once: you want cleaner transcripts and nothing else; you st
 
 **Start here** (section 2 has the details):
 - *I just want to use it:* download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it.
-- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.5"`.
+- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.7.0"`.
 - *I want to contribute:* `git clone https://github.com/Tatiwel/transcript-normalizer`, then [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 1. What it does, and what it does not
@@ -20,7 +20,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 **I use Python.**
 
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.6.5"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.7.0"
 ```
 
 Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory, unless the menu's Settings chose a folder. The package is not on PyPI yet; the wheel is also attached to each Release.
@@ -47,7 +47,7 @@ The Windows full build also comes as a portable zip (`-portable.zip`). Unzip it 
 **The menu.** Double-click the program, or type `transcript-normalizer` with nothing after it in a terminal. With the `[menu]` extra (every executable has it) you move with the arrow keys:
 
 ```
-transcript-normalizer 0.6.5
+transcript-normalizer 0.7.0
 full build: captions and local transcription
 Your files: /home/ana/Documents/transcript-normalizer
 Typical flow: 1 fetch → 2 normalize → 3 review

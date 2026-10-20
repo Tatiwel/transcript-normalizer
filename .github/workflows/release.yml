@@ -245,6 +245,8 @@ jobs:
             done
           fi
           if [ "$MODE" = onedir ]; then built=transcript-normalizer; else built="$NAME"; fi
+          # $full_args is split into words on purpose: one --collect-all per package.
+          # shellcheck disable=SC2086
           uv run --no-sync pyinstaller "--$MODE" --console --name "$built" \
             --collect-submodules transcript_normalizer \
             --collect-data transcript_normalizer \
@@ -474,7 +476,7 @@ jobs:
             echo "### SHA-256"
             echo
             echo '```'
-            (cd assets && sha256sum *)
+            (cd assets && sha256sum -- *)
             echo '```'
           } >> notes.md
           cat notes.md
