@@ -220,8 +220,11 @@ __marimo__/
 # transcript-normalizer run outputs (D-015)
 runs/
 
-# the learned layer is personal and unreviewed (D-013, D-017); the packs are not
-packs/*.learned.yaml
+# packs/ holds the installed packs (D-088), the learned layer (D-013, D-017) and
+# merge snapshots (D-069): all user data. The bundled pack's source is
+# src/transcript_normalizer/packs/.
+packs/*.yaml
+packs/.bases/
 
 # what `pack install` wrote (D-055) and what `pack propose` wrote (D-056)
 packs/installed.json
