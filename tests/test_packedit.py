@@ -23,6 +23,14 @@ def home(tmp_path, monkeypatch):
 
 
 @pytest.fixture
+def financas(home, capsys):
+    """The included financas-ptbr, installed (D-088)."""
+    assert main(["pack", "install", "financas-ptbr", "--included"]) == 0
+    capsys.readouterr()
+    return home / "packs" / "financas-ptbr.yaml"
+
+
+@pytest.fixture
 def med(home, capsys):
     """A pack of the user's own, from the medicina template."""
     assert main(["pack", "create", "--template", "medicina", "--name", "med", "--lang", "pt-BR"]) == 0
@@ -91,9 +99,12 @@ def test_a_form_of_another_term_is_refused(med, capsys):
     assert "dipirona" not in terms(med)
 
 
-def test_bundled_and_repository_packs_are_read_only(home, capsys):
+def test_included_and_repository_packs_are_read_only(home, capsys):
     assert main(["pack", "add-term", "financas-ptbr", "X", "--class", "conceito"]) == 1
-    assert "is a bundled pack, read-only; `transcript-normalizer pack copy financas-ptbr`" in capsys.readouterr().err
+    assert "no pack called financas-ptbr" in capsys.readouterr().err  # D-088: not installed yet
+    main(["pack", "install", "financas-ptbr", "--included"])
+    assert main(["pack", "add-term", "financas-ptbr", "X", "--class", "conceito"]) == 1
+    assert "is an included pack, read-only; `transcript-normalizer pack copy financas-ptbr`" in capsys.readouterr().err
 
 
 # ------------------------------------------------------------------ copy
@@ -153,7 +164,7 @@ def test_remove_term(med, capsys):
     assert "no term called 'metformina'" in capsys.readouterr().err
 
 
-def test_show_pages_and_searches(home, capsys):
+def test_show_pages_and_searches(financas, capsys):
     assert main(["pack", "show", "financas-ptbr", "--page", "1"]) == 0
     out = capsys.readouterr().out.splitlines()
     total = len(data(BUNDLED)["terms"])
@@ -168,7 +179,7 @@ def test_show_pages_and_searches(home, capsys):
 # ------------------------------------------------------------------ export
 
 
-def test_export_writes_name_and_version(med, home, capsys):
+def test_export_writes_name_and_version(med, financas, home, capsys):
     assert main(["pack", "export", "med"]) == 0
     assert (home / "med-0.1.0.yaml").read_bytes() == med.read_bytes()
     assert main(["pack", "export", "financas-ptbr", "--to", str(home / "out")]) == 0
@@ -184,23 +195,23 @@ def test_export_writes_name_and_version(med, home, capsys):
 EDIT = ["6", "4"]  # Packs, Edit a pack
 
 
-def test_menu_edit_offers_a_copy_of_a_bundled_pack(home, monkeypatch, capsys):
+def test_menu_edit_offers_a_copy_of_an_included_pack(financas, home, monkeypatch, capsys):
     _, out, _ = menu(home, monkeypatch, capsys, [*EDIT, "1", "n", "b", "q"])
-    assert "financas-ptbr is a bundled pack, read-only." in out
+    assert "financas-ptbr is an included pack, read-only." in out
     assert "Make your own copy of financas-ptbr to edit it?" in out
-    assert not (home / "packs" / "financas-ptbr.yaml").exists()
+    assert "based_on" not in financas.read_text(encoding="utf-8")
     _, out, _ = menu(home, monkeypatch, capsys, [*EDIT, "1", "y", "b", "b", "q"])
-    assert (home / "packs" / "financas-ptbr.yaml").exists() and "Edit financas-ptbr" in out
+    assert "based_on" in financas.read_text(encoding="utf-8") and "Edit financas-ptbr" in out
 
 
 def test_menu_add_a_term_with_aliases_and_variants(med, home, monkeypatch, capsys):
-    # Edit a pack -> med (2nd: after the bundled one) -> Add a term
-    lines = [*EDIT, "2", "1", "metformina", "6", "Glifage", "", "metiformina", "mt", "", "b", "b", "q"]
+    # Edit a pack -> med (the only one installed, D-088) -> Add a term
+    lines = [*EDIT, "1", "1", "metformina", "6", "Glifage", "", "metiformina", "mt", "", "b", "b", "q"]
     _, out, _ = menu(home, monkeypatch, capsys, lines)
     assert "Which class?" in out and "Other correct names" in out and "What the recognizer wrote instead" in out
     assert "variant 'mt' refused" in out  # all or nothing: nothing saved
     assert "metformina" not in terms(med)
-    lines = [*EDIT, "2", "1", "metformina", "6", "Glifage", "", "metiformina", "", "b", "b", "q"]
+    lines = [*EDIT, "1", "1", "metformina", "6", "Glifage", "", "metiformina", "", "b", "b", "q"]
     menu(home, monkeypatch, capsys, lines)
     assert terms(med)["metformina"] == {
         "term": "metformina", "class": "farmaco", "aliases": ["Glifage"], "variants": ["metiformina"],
@@ -211,15 +222,15 @@ def test_menu_edit_remove_and_show_terms(med, home, monkeypatch, capsys):
     main(["pack", "add-term", "med", "metformina", "--class", "farmaco"])
     capsys.readouterr()
     # Edit a term: search "metf", pick 1, Add variants, one, end.
-    lines = [*EDIT, "2", "2", "metf", "1", "2", "metiformina", "", "b", "b", "q"]
+    lines = [*EDIT, "1", "2", "metf", "1", "2", "metiformina", "", "b", "b", "q"]
     _, out, _ = menu(home, monkeypatch, capsys, lines)
     assert "What would you like to change in metformina?" in out
     assert terms(med)["metformina"]["variants"] == ["metiformina"]
     # Show terms, then Search…
-    _, out, _ = menu(home, monkeypatch, capsys, [*EDIT, "2", "4", "1", "metif", "b", "b", "b", "q"])
+    _, out, _ = menu(home, monkeypatch, capsys, [*EDIT, "1", "4", "1", "metif", "b", "b", "b", "q"])
     assert "med: 1 terms, 1-1" in out and "med: 1 matching 'metif'" in out
     # Remove a term asks once
-    _, out, _ = menu(home, monkeypatch, capsys, [*EDIT, "2", "3", "metf", "1", "y", "b", "b", "q"])
+    _, out, _ = menu(home, monkeypatch, capsys, [*EDIT, "1", "3", "metf", "1", "y", "b", "b", "q"])
     assert "Remove metformina from med? [y/N]" in out and terms(med) == {}
 
 
@@ -230,5 +241,5 @@ def test_menu_show_terms_pages(home, monkeypatch, capsys):
 
 
 def test_menu_export(med, home, monkeypatch, capsys):
-    _, out, _ = menu(home, monkeypatch, capsys, ["6", "6", "2", str(home / "out"), "b", "q"])
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "6", "1", str(home / "out"), "b", "q"])
     assert "no folder dialog here" in out and (home / "out" / "med-0.1.0.yaml").exists()

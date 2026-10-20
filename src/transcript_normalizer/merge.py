@@ -1,6 +1,6 @@
 """Three-way pack merge (D-069): `pack merge <name>`.
 
-A copy of a bundled or repository pack (`pack copy`, D-066) records where it
+A copy of an included or repository pack (`pack copy`, D-066) records where it
 came from, `based_on: <name>@<version>`, and how many edits were saved since,
 `local_edits`; `pack copy` keeps the upstream file it copied in
 `packs/.bases/<name>@<version>.yaml`, the base a three-way merge needs. When
@@ -91,17 +91,17 @@ def with_provenance(text: str, name: str, version: str, edits: int = 0) -> str:
 @dataclass
 class Upstream:
     version: str
-    origin: str  # bundled | repository
+    origin: str  # included | repository
     read: Callable[[], str]
 
 
 def upstream_of(name: str, index: dict | None) -> Upstream | None:
-    """The newest of the bundled pack and the repository's, by version."""
+    """The newest of the included pack and the repository's, by version."""
     found = []
     bundled = BUNDLED_PACKS / f"{name}.yaml"
     if bundled.exists():
         data = yaml.safe_load(bundled.read_text(encoding="utf-8")) or {}
-        found.append(Upstream(str(data.get("version") or ""), packfiles.BUNDLED,
+        found.append(Upstream(str(data.get("version") or ""), packfiles.INCLUDED,
                               lambda: bundled.read_text(encoding="utf-8")))
     entry = (index or {}).get(name)
     if entry is not None and not entry.too_new():  # D-087: never merged into an engine too old for it
@@ -721,7 +721,7 @@ def run_merge(args) -> int:
         print(f"  the packs repository has {entry.blocked.needs()}; it is left out of this merge")
     upstream = upstream_of(name, index)
     if upstream is None:
-        print(f"no upstream for {name}: neither bundled nor in the packs repository", file=sys.stderr)
+        print(f"no upstream for {name}: neither included in the program nor in the packs repository", file=sys.stderr)
         return 1
     base_ref = based_on(mine)
     if base_ref and not packfiles.newer(upstream.version, base_ref[1]) and not args.force:

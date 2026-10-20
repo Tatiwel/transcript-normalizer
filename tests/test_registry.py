@@ -30,6 +30,13 @@ def publish(repo, version="0.3.4", sha=None, text=None):
     return (repo / "index.json").as_uri()
 
 
+@pytest.fixture(autouse=True)
+def nothing_included(monkeypatch):
+    """The repository's behaviour, with no pack included in the program (D-088,
+    tested in test_included.py): the index's financas-ptbr is its own."""
+    monkeypatch.setattr(registry, "included_packs", lambda: {})
+
+
 @pytest.fixture
 def index(tmp_path, monkeypatch):
     (tmp_path / "work").mkdir()
@@ -42,7 +49,7 @@ def index(tmp_path, monkeypatch):
 def test_list_shows_the_index_and_what_is_here(index, capsys):
     assert main(["pack", "list"]) == 0
     out = capsys.readouterr().out
-    assert out.splitlines()[0] == "financas-ptbr  0.3.4  pt-BR  bundled  Brazilian stock-market videos"
+    assert out.splitlines()[0] == "financas-ptbr  0.3.4  pt-BR  (from the packs repository)  Brazilian stock-market videos"
 
 
 def test_install_writes_into_packs_and_becomes_the_default(index, tmp_path, capsys):
@@ -52,7 +59,8 @@ def test_install_writes_into_packs_and_becomes_the_default(index, tmp_path, caps
     assert "installed financas-ptbr 0.3.4" in capsys.readouterr().out
     assert default_pack() == target and installed_packs()["financas-ptbr"] == target
     assert main(["pack", "list"]) == 0
-    assert "installed 0.3.4" in capsys.readouterr().out
+    first = capsys.readouterr().out.splitlines()[0]  # the file's own version, beside its mark
+    assert first.startswith("financas-ptbr  ") and first.endswith("  installed  Brazilian stock-market videos")
     assert main(["pack", "install", "financas-ptbr"]) == 0
     assert "already installed" in capsys.readouterr().out
 
@@ -73,10 +81,10 @@ def test_an_unknown_pack_is_an_error(index, capsys):
 def test_an_unreachable_index_is_a_message(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     url = (tmp_path / "nowhere" / "index.json").as_uri()
-    assert main(["pack", "list", "--index", url]) == 1
-    err = capsys.readouterr().err
-    assert err.startswith(f"could not read the packs index: could not reach {url}")
-    assert "Traceback" not in err
+    assert main(["pack", "list", "--index", url]) == 0  # D-088: what is here is still listed
+    out = capsys.readouterr().out
+    assert f"(the packs repository was not reached, so its packs are not listed: could not reach {url}" in out
+    assert "Traceback" not in out
 
 
 def test_update_installs_a_newer_version(index, tmp_path, capsys):
@@ -118,5 +126,6 @@ def test_a_name_that_would_leave_packs_is_refused(tmp_path, monkeypatch, capsys)
     data = json.loads((repo / "index.json").read_text())
     data["packs"][0]["name"] = "../evil"
     (repo / "index.json").write_text(json.dumps(data))
-    assert main(["pack", "list", "--index", url]) == 1
-    assert "not a pack name: ../evil" in capsys.readouterr().err
+    assert main(["pack", "list", "--index", url]) == 0
+    assert "not a pack name: ../evil" in capsys.readouterr().out
+    assert main(["pack", "install", "../evil", "--index", url]) == 1

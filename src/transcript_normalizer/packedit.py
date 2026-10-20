@@ -1,7 +1,7 @@
 """Editing a pack (D-066): `pack copy`, `add-term`, `edit-term`, `remove-term`,
 `show` and `export`.
 
-Only a pack of the user's own (`mine`, D-065) is edited; a bundled pack or
+Only a pack of the user's own (`mine`, D-065) is edited; an included pack or
 one from the repository is read-only, and `pack copy` makes it the user's.
 Every write is checked as normalize loads the pack (D-064, D-068) before it
 replaces the file, the forms it adds are checked against D-005 (no variant
@@ -23,7 +23,7 @@ import yaml
 
 from . import languages, packfiles, registry
 from .core.pack import pack_classes
-from .runs import base_dir, installed_packs
+from .runs import base_dir, included_packs, installed_packs
 
 #: D-005: a variant this short matches too much, even by exact equality.
 MIN_VARIANT_LETTERS = 3
@@ -101,7 +101,8 @@ def own_pack(name: str) -> Path:
     source = packfiles.source_of(name, path)
     if source != packfiles.MINE:
         raise EditError(
-            f"{name} is a {source} pack, read-only; `transcript-normalizer pack copy {name}` "
+            f"{name} is {'an' if source[0] in 'aeiou' else 'a'} {source} pack, read-only; "
+            f"`transcript-normalizer pack copy {name}` "
             "makes it your own to edit"
         )
     return path
@@ -252,8 +253,9 @@ def check_class(data: dict, klass: str | None) -> None:
 
 
 def run_copy(args) -> int:
-    """Make a bundled or repository pack the user's own, under the same name."""
-    path = installed_packs().get(args.name)
+    """Make an included or repository pack the user's own, under the same name;
+    an included one need not be installed first (D-088)."""
+    path = installed_packs().get(args.name) or included_packs().get(args.name)
     if path is None:
         print(f"no pack called {args.name}", file=sys.stderr)
         return 1
@@ -268,9 +270,9 @@ def run_copy(args) -> int:
     version = str((yaml.safe_load(text) or {}).get("version") or "0.0.0")
     keep_base(args.name, version, text)  # D-069: the base a later merge needs
     registry.write_atomic(target, with_provenance(text, args.name, version).encode("utf-8"))
-    if source == packfiles.BUNDLED:
-        print(f"copied the bundled {args.name} to {target}; that copy is used from now on")
-    else:  # from the repository: stop tracking it, so pack update leaves it alone
+    if path.parent != target.parent:
+        print(f"copied the included {args.name} to {target}; that copy is used from now on")
+    else:  # installed: stop tracking it, so pack update leaves it alone
         record = registry.installed()
         record.pop(args.name, None)
         registry.write_installed(record)
@@ -446,7 +448,7 @@ def run_export(args) -> int:
 
 
 def add_arguments(commands) -> None:
-    copying = commands.add_parser("copy", help="make a bundled or repository pack your own, to edit")
+    copying = commands.add_parser("copy", help="make an included or repository pack your own, to edit")
     copying.add_argument("name")
     copying.set_defaults(run=run_copy)
 

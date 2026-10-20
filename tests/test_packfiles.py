@@ -127,7 +127,7 @@ def test_create_refuses_what_it_should(home, capsys):
     assert main([*args, "Medicina"]) == 1
     assert "lowercase letters, digits and hyphens" in capsys.readouterr().err
     assert main([*args, "financas-ptbr"]) == 1
-    assert "bundled pack" in capsys.readouterr().err
+    assert "the name of a pack included in the program" in capsys.readouterr().err
     assert main([*args, "med"]) == 0
     assert main([*args, "med"]) == 1
     assert "already there" in capsys.readouterr().err
@@ -177,9 +177,9 @@ def test_import_refuses_a_name_that_is_not_a_pack_name(home, capsys):
 # ------------------------------------------------------------------ remove
 
 
-def test_remove_refuses_the_bundled_pack(home, capsys):
+def test_remove_of_an_included_pack_not_installed_removes_nothing(home, capsys):
     assert main(["pack", "remove", "financas-ptbr"]) == 1
-    assert "bundled with the program and cannot be removed" in capsys.readouterr().err
+    assert "financas-ptbr is included in the program and not installed: nothing to remove" in capsys.readouterr().err
     assert BUNDLED.exists()
 
 
@@ -195,13 +195,14 @@ def test_remove_deletes_from_packs_and_keeps_the_learned_layer(home, capsys):
     assert "no pack called med" in capsys.readouterr().err
 
 
-def test_removing_a_copy_of_the_bundled_pack_brings_the_bundled_one_back(home, capsys):
+def test_removing_an_installed_included_pack_leaves_it_included(home, capsys):
     (home / "packs").mkdir()
     (home / "packs" / "financas-ptbr.yaml").write_bytes(BUNDLED.read_bytes())
     registry.write_installed({"financas-ptbr": {"version": "0.3.6", "sha256": "x"}})
     assert main(["pack", "remove", "financas-ptbr"]) == 0
-    assert "the bundled financas-ptbr is used again" in capsys.readouterr().out
-    assert runs.installed_packs()["financas-ptbr"] == BUNDLED
+    assert "financas-ptbr stays included in the program; `pack install financas-ptbr` installs it again" \
+        in capsys.readouterr().out
+    assert "financas-ptbr" not in runs.installed_packs() and BUNDLED.exists()  # D-088
     assert registry.installed() == {}
 
 
@@ -213,6 +214,9 @@ def table(out):
 
 
 def test_installed_table_offline(home, capsys):
+    assert main(["pack", "list", "--installed"]) == 0
+    assert capsys.readouterr().out.startswith("no pack installed yet in ")  # D-088: a fresh folder
+    main(["pack", "install", "financas-ptbr"])
     main(["pack", "create", "--template", "medicina", "--name", "med", "--lang", "pt-BR"])
     capsys.readouterr()
     assert main(["pack", "list", "--installed"]) == 0
@@ -220,7 +224,7 @@ def test_installed_table_offline(home, capsys):
     lines = out.splitlines()
     assert lines[0].split() == ["name", "version", "language", "terms", "size", "(KB)", "source"]
     assert lines[1].split()[:4] == ["financas-ptbr", load_pack(BUNDLED).version, "pt-BR", str(len(load_pack(BUNDLED).terms))]
-    assert lines[1].split()[-1] == "bundled"
+    assert lines[1].split()[-1] == "included"
     assert lines[2].split()[:4] == ["med", "0.1.0", "pt-BR", "0"] and lines[2].split()[-1] == "mine"
     assert "update" not in lines[0] and "↑" not in out
     assert "the packs repository was not reached" in out
@@ -263,6 +267,7 @@ def test_installed_table_with_an_index_marks_newer_versions(home, monkeypatch, c
     url = publish(home / "repo", {"med-ptbr": ("0.1.0", med)})
     monkeypatch.setenv(registry.INDEX_ENV, url)
     assert main(["pack", "install", "med-ptbr"]) == 0
+    assert main(["pack", "install", "financas-ptbr"]) == 0  # the included one: the index has no financas-ptbr
     main(["pack", "create", "--template", "geral", "--name", "mine", "--lang", "pt-BR"])
     publish(home / "repo", {
         "med-ptbr": ("0.2.0", med.replace("0.1.0", "0.2.0")),
@@ -274,16 +279,17 @@ def test_installed_table_with_an_index_marks_newer_versions(home, monkeypatch, c
     out = capsys.readouterr().out
     lines = {line.split()[0]: line for line in out.splitlines() if line}
     assert lines["name"].split()[-1] == "update"
-    assert lines["financas-ptbr"].endswith("bundled     ↑ update (9.9.9)")
+    assert lines["financas-ptbr"].endswith("included    ↑ update (9.9.9)")
     assert "repository  ↑ update (0.2.0)" in lines["med-ptbr"]
     assert lines["mine"].rstrip().endswith("mine")  # never marked: it is yours
-    assert "`transcript-normalizer pack install <name>` gets it" in out
+    assert "`transcript-normalizer pack update` installs it" in out
 
 
 # ------------------------------------------------------------------ the menu
 
 
 def test_the_menu_has_packs_and_settings_no_longer_has_the_pack(home, monkeypatch, capsys):
+    main(["pack", "create", "--template", "medicina", "--name", "med", "--lang", "pt-BR"])
     _, out, _ = menu(home, monkeypatch, capsys, ["6", "b", "q"])
     assert "   6. Packs                   installed, get, create, edit, share" in out
     for item in ("Installed packs", "Get a pack", "Create a pack", "Edit a pack", "Import a pack file",
@@ -293,6 +299,9 @@ def test_the_menu_has_packs_and_settings_no_longer_has_the_pack(home, monkeypatc
 
 
 def test_menu_installed_packs_is_the_command(home, monkeypatch, capsys):
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "1", "b", "q"])
+    assert "no pack installed yet in " in out  # D-088: only installed ones
+    main(["pack", "install", "financas-ptbr", "--included"])
     _, out, _ = menu(home, monkeypatch, capsys, ["6", "1", "b", "q"])
     assert "name           version  language  terms  size (KB)  source" in out
 
@@ -333,17 +342,19 @@ def test_menu_import_uses_the_file_dialog_on_yaml(home, monkeypatch, capsys):
 def test_menu_remove_asks_twice_and_shows_the_path(home, monkeypatch, capsys):
     main(["pack", "create", "--template", "agro", "--name", "agro-ptbr", "--lang", "pt-BR"])
     target = home / "packs" / "agro-ptbr.yaml"
-    _, out, _ = menu(home, monkeypatch, capsys, ["6", "7", "2", "y", "n", "b", "q"])
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "7", "1", "y", "n", "b", "q"])
     assert f"file: {target}" in out and "Remove agro-ptbr?" in out and "Really remove it?" in out
     assert target.exists()  # the second answer was no
-    menu(home, monkeypatch, capsys, ["6", "7", "2", "y", "y", "b", "q"])
+    menu(home, monkeypatch, capsys, ["6", "7", "1", "y", "y", "b", "q"])
     assert not target.exists()
 
 
-def test_menu_remove_refuses_the_bundled_pack_without_asking(home, monkeypatch, capsys):
-    _, out, _ = menu(home, monkeypatch, capsys, ["6", "7", "1", "b", "q"])
-    assert "bundled with the program and cannot be removed" in out
-    assert "Remove financas-ptbr?" not in out
+def test_menu_remove_lists_only_installed_packs(home, monkeypatch, capsys):
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "7", "b", "q"])
+    assert "no pack installed yet; Get a pack installs one" in out and "Remove which pack?" not in out
+    main(["pack", "install", "financas-ptbr", "--included"])
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "7", "1", "y", "y", "b", "q"])
+    assert "Remove financas-ptbr?" in out and "financas-ptbr stays included in the program" in out
 
 
 def test_menu_get_a_pack_offline_says_so(home, monkeypatch, capsys):
@@ -354,6 +365,8 @@ def test_menu_get_a_pack_offline_says_so(home, monkeypatch, capsys):
 def test_menu_get_a_pack_installs_the_pick(home, monkeypatch, capsys):
     med = pack_text("classes: [farmaco]\n", "farmaco")
     monkeypatch.setenv(registry.INDEX_ENV, publish(home / "repo", {"med-ptbr": ("0.1.0", med)}))
-    _, out, _ = menu(home, monkeypatch, capsys, ["6", "2", "1", "b", "q"])
-    assert "med-ptbr   0.1.0 · med-ptbr terms" in out
+    # D-088: the included financas-ptbr first, then the repository's
+    _, out, _ = menu(home, monkeypatch, capsys, ["6", "2", "2", "b", "q"])
+    assert "   1. financas-ptbr   " in out and "  (included, not installed)" in out
+    assert "   2. med-ptbr        0.1.0 · med-ptbr terms  (from the packs repository)" in out
     assert (home / "packs" / "med-ptbr.yaml").exists()

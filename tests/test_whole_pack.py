@@ -78,8 +78,9 @@ def test_a_pack_the_repository_has_is_an_update(tmp_path, monkeypatch, capsys):
     assert query(urls[0])["title"] == ["Update: med"]
 
 
-def test_offline_a_bundled_pack_is_an_update_and_too_long_for_a_link(tmp_path, monkeypatch, capsys):
+def test_offline_an_included_pack_is_an_update_and_too_long_for_a_link(tmp_path, monkeypatch, capsys):
     urls = setup(tmp_path, monkeypatch, opened=False)
+    main(["pack", "install", "financas-ptbr", "--included"])  # D-088
     assert propose(monkeypatch, "y", "financas-ptbr") == 0
     out = capsys.readouterr().out
     assert "  field     (not recorded)" in out and "open this link to submit it as an issue:" in out
@@ -91,5 +92,5 @@ def test_offline_a_bundled_pack_is_an_update_and_too_long_for_a_link(tmp_path, m
 def test_the_menu_contributes_a_pack(tmp_path, monkeypatch, capsys):
     urls = setup(tmp_path, monkeypatch)
     med(tmp_path)
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "8", "2", "y", "b", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "8", "1", "y", "b", "q"])  # med: the only one installed
     assert "Propose this pack? [y/N]" in out and len(urls) == 1

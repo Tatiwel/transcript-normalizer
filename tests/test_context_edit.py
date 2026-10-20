@@ -131,7 +131,7 @@ def test_menu_add_a_term_asks_whether_a_variant_is_an_ordinary_word(med, home, m
     assert main(["pack", "add-term", "med", "insulina", "--class", "farmaco"]) == 0
     # Edit a pack -> med -> Add a term: metformina, farmaco, no alias, one variant;
     # then the context question: `a`, insulina.
-    lines = [*EDIT, "2", "1", "metformina", "6", "", "metiformina", "", "a", "b", "b", "q"]
+    lines = [*EDIT, "1", "1", "metformina", "6", "", "metiformina", "", "a", "b", "b", "q"]  # med: the only one installed
     _, out, _ = menu(home, monkeypatch, capsys, lines)
     assert ("Is 'metiformina' also an ordinary word? If so, pick the pack terms that appear in a video "
             "when it means metformina") in out
@@ -140,7 +140,7 @@ def test_menu_add_a_term_asks_whether_a_variant_is_an_ordinary_word(med, home, m
 
 def test_menu_enter_skips_the_context(med, home, monkeypatch, capsys):  # noqa: F811
     assert main(["pack", "add-term", "med", "insulina", "--class", "farmaco"]) == 0
-    lines = [*EDIT, "2", "1", "metformina", "6", "", "metiformina", "", "", "b", "b", "q"]
+    lines = [*EDIT, "1", "1", "metformina", "6", "", "metiformina", "", "", "b", "b", "q"]
     menu(home, monkeypatch, capsys, lines)
     assert terms(med)["metformina"] == {"term": "metformina", "class": "farmaco", "variants": ["metiformina"]}
 

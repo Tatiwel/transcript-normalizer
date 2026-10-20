@@ -69,7 +69,8 @@ def test_first_screen(tmp_path, monkeypatch, capsys):
     assert first[1] in ("captions + local transcription", "captions only")
     assert first[2] == f"Working in: {tmp_path}"
     assert first[3] == "Typical flow: 1 fetch → 2 normalize → 3 review"
-    assert first[4].startswith("Keyboard: ")
+    assert first[4] == "No pack installed yet: you will be asked what the video is about."  # D-088
+    assert first[5].startswith("Keyboard: ")
     assert "What would you like to do?" in out
     assert "   1. Fetch a video or file   download a caption, or transcribe audio locally" in out
     assert "   8. Help                    what each action does and its command" in out
@@ -501,8 +502,24 @@ def test_settings_can_go_back_to_the_default(tmp_path, monkeypatch, capsys):
 
 
 def test_the_pack_offered_first_is_saved(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    cli.main(["pack", "install", "financas-ptbr", "--included"])
+    cli.main(["pack", "create", "--template", "medicina", "--name", "med-ptbr", "--lang", "pt-BR"])
     _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "9", "1", "b", "q"])
+    assert "Which pack should be offered first?" in out
     assert "Saved. Offered first: financas-ptbr" in out
+    assert runs.read_config() == {"pack": "financas-ptbr"}
+    assert "Pack offered first: financas-ptbr" in out.splitlines()  # the first screen
+
+
+def test_the_pack_offered_first_with_one_installed_is_that_one(tmp_path, monkeypatch, capsys):
+    # D-088: offered only with a pack installed; with one, it is that one, without asking.
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "b", "q"])
+    assert "The pack offered first" not in out
+    cli.main(["pack", "install", "financas-ptbr", "--included"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["6", "9", "b", "q"])
+    assert "Which pack should be offered first?" not in out
+    assert "Saved. Offered first: financas-ptbr  (the only pack installed)" in out
     assert runs.read_config() == {"pack": "financas-ptbr"}
 
 

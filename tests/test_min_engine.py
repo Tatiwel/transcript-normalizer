@@ -50,6 +50,12 @@ def financas(version):
     return BUNDLED.read_text(encoding="utf-8").replace("version: 0.3.8", f"version: {version}")
 
 
+@pytest.fixture(autouse=True)
+def nothing_included(monkeypatch):
+    """The index's financas-ptbr is the only one: none included in the program (D-088)."""
+    monkeypatch.setattr(registry, "included_packs", lambda: {})
+
+
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
     (tmp_path / "work").mkdir()
@@ -98,7 +104,7 @@ def test_an_entry_with_min_engine_is_read_and_held_back(repo):
 def test_list_explains_it(repo, capsys):
     assert main(["pack", "list"]) == 0
     out = capsys.readouterr().out
-    assert out.splitlines()[0].startswith("financas-ptbr  0.3.8  pt-BR  bundled, needs 0.7.0+  ")
+    assert out.splitlines()[0].startswith("financas-ptbr  0.3.8  pt-BR  (from the packs repository), needs 0.7.0+  ")
     assert f"{NEEDS}; it cannot be installed with this version" in out
     assert registry.RELEASES in out
 
@@ -207,7 +213,7 @@ def test_versions_sort_as_numbers(tmp_path):
 def test_install_and_update_take_the_older_one_and_say_why(both, tmp_path, capsys):
     assert main(["pack", "list"]) == 0
     out = capsys.readouterr().out
-    assert out.splitlines()[0].startswith("financas-ptbr  0.3.7  pt-BR  bundled  ")
+    assert out.splitlines()[0].startswith("financas-ptbr  0.3.7  pt-BR  (from the packs repository)  ")
     assert f"{NEEDS}; 0.3.7 is the newest for this version" in out
     assert main(["pack", "install", "financas-ptbr"]) == 0
     out = capsys.readouterr().out

@@ -85,8 +85,19 @@ def first_screen() -> None:
     if portable_dir() is not None and not os.environ.get(DATA_DIR_ENV):
         say(mark(f"portable mode: everything stays in {portable_dir()}", "hint"))
     say(TYPICAL_FLOW)
+    say(pack_line_of_first_screen())
     say(mark(f"Keyboard: {prompts.legend('select')}", "hint"))
     start_merge_check()
+
+
+#: D-088: what the first screen says when no pack is installed.
+NO_PACK_YET = "No pack installed yet: you will be asked what the video is about."
+
+
+def pack_line_of_first_screen() -> str:
+    """The pack offered first (D-065), or that there is none to offer (D-088)."""
+    first = next(iter(packs_in_order()), None)
+    return f"Pack offered first: {first}" if first else NO_PACK_YET
 
 
 #: D-069, amended: the look for merges the menu started, if any.
@@ -416,6 +427,10 @@ def after_fetch(code: int | str | None) -> str | None:
 
 #: The answer to "What is this video about?" that no installed pack covers.
 NO_PACK = "\0none"
+#: D-088: the answer that makes a pack from a field template.
+FROM_TEMPLATE = "\0template"
+#: D-088: an answer that installs a pack first; the pack's name follows.
+INSTALL = "\0install:"
 
 
 def pack_line(path: Path) -> str:
@@ -431,6 +446,16 @@ def pack_line(path: Path) -> str:
     return " · ".join(parts)
 
 
+def available_line(a) -> str:
+    """D-088: a pack there to install: `pt-BR · 0.3.8 · 70 terms  (included, not installed)`."""
+    from .registry import included_packs
+
+    included = included_packs().get(a.name)
+    what = pack_line(included) if included is not None and a.entry is None else \
+        " · ".join(filter(None, [a.language, a.version, a.description]))
+    return f"{what}  {a.mark}"
+
+
 #: D-061: config.toml's key for the pack offered first.
 FIRST_PACK = "pack"
 
@@ -444,22 +469,82 @@ def packs_in_order() -> dict[str, Path]:
     return packs
 
 
+#: D-088: how long "What is this video about?" waits for the packs repository
+#: when its index is not cached, and how long it then stops trying.
+ABOUT_WAIT_SECONDS = 3
+ABOUT_RETRY_SECONDS = 10 * 60
+#: index url -> when it was last not reached.
+_index_missed: dict[str, float] = {}
+
+
+def about_index() -> dict | None:
+    """The packs repository's index for "What is this video about?": the
+    day's cached one, else what it answers within a few seconds; None when it
+    was not reached (and, for a while, without asking again)."""
+    import time
+
+    from . import registry
+    from .packfiles import index_cached_within
+
+    url = registry.index_url()
+    if time.time() - _index_missed.get(url, float("-inf")) < ABOUT_RETRY_SECONDS:
+        return None
+    index = index_cached_within(ABOUT_WAIT_SECONDS, url)
+    if index is None:
+        _index_missed[url] = time.time()
+    return index
+
+
+def install_for_menu(a) -> Path | None:
+    """D-088: `pack install`, which says in one line what it installed; the
+    installed pack, or None when it was not."""
+    if run_command(a.install_argv()) != 0:
+        error(f"{a.name} was not installed")
+        return None
+    return installed_packs().get(a.name)
+
+
 def choose_pack(question: str, allow_none: bool) -> Path | str | None:
     """D-054: the pack for this video, NO_PACK for another area, None for back.
 
-    With `allow_none` false and one pack installed, that pack, without asking.
+    With `allow_none` (the question "What is this video about?", D-088): the
+    installed packs, then the included ones not installed, then the
+    repository's not installed (when it is reached), then a pack of your own
+    from a template (FROM_TEMPLATE), then none. Picking one that is not
+    installed installs it. Without `allow_none` only the installed packs, and
+    with one installed, that pack, without asking.
     """
+    from . import registry
+
     packs = packs_in_order()
-    if not allow_none and len(packs) == 1:
-        return next(iter(packs.values()))
+    if not allow_none:
+        if not packs:
+            error("no pack installed; Packs (6) → Get a pack installs one")
+            return None
+        if len(packs) == 1:
+            return next(iter(packs.values()))
     options = [Option(name, pack_line(path), value=path) for name, path in packs.items()]
+    to_install = {}
     if allow_none:
-        options.append(Option("none / another area", "skip normalization: no pack covers it", value=NO_PACK))
-    return prompts.select(
-        question,
-        options,
-        hint="the pack whose terms this video uses; a pack applied to another field only does harm",
-    )
+        for a in registry.available(about_index()):
+            if a.entry is not None and a.entry.too_new():
+                continue  # D-087: not for this engine; Get a pack says why
+            to_install[a.name] = a
+            options.append(Option(a.name, available_line(a), value=INSTALL + a.name))
+        options.append(Option("Create your own from a template…", "a new pack for your field; you add its terms",
+                              value=FROM_TEMPLATE))
+        options.append(Option("None / another area", "skip normalization: no pack covers it", value=NO_PACK))
+    while True:
+        picked = prompts.select(
+            question,
+            options,
+            hint="the pack whose terms this video uses; a pack applied to another field only does harm",
+        )
+        if not (isinstance(picked, str) and picked.startswith(INSTALL)):
+            return picked
+        installed = install_for_menu(to_install[picked.removeprefix(INSTALL)])
+        if installed is not None:
+            return installed
 
 
 #: The option of "Normalize which run?" that asks for a path instead.
@@ -550,6 +635,10 @@ def normalize_run(
     if pack == NO_PACK:
         say(mark("No pack for this area, so nothing was normalized.", "need"))
         say(mark("  Packs (6) gets a pack from the repository, or creates one for your field.", "hint"))
+        return None
+    if pack == FROM_TEMPLATE:  # D-088: a new pack has no terms, so nothing to normalize yet
+        if create_pack():
+            say(mark("  Add its terms (Packs → Edit a pack), then normalize this run again.", "hint"))
         return None
     say(mark(f"Normalizing {run.name}", "title"))
     code = run_command(["normalize", str(caption), "--summary", "--menu", "--pack", str(pack), *generic(pack)])
@@ -732,13 +821,14 @@ def lines_with(caption: Path, form: str) -> list[str]:
 
 
 def own_copy(name: str, path: Path, doing: str) -> bool:
-    """D-066: a bundled or repository pack is read-only; offer the user's own copy."""
+    """D-066: an included or repository pack is read-only; offer the user's own copy."""
     from .packfiles import MINE, source_of
 
     source = source_of(name, path)
     if source == MINE:
         return True
-    say(mark(f"  {name} is a {source} pack, read-only.", "need"))
+    article = "an" if source[0] in "aeiou" else "a"
+    say(mark(f"  {name} is {article} {source} pack, read-only.", "need"))
     if not prompts.confirm(f"Make your own copy of {name} to {doing}?", default=True):
         return False
     return run_command(["pack", "copy", name]) == 0
@@ -832,10 +922,20 @@ def add_noticed(run: Path, pack: Path | None) -> bool:
 # ------------------------------------------------------------------ editing a pack (D-066)
 
 
+def none_installed() -> bool:
+    """D-088: says so when no pack is installed: a fresh data directory."""
+    if installed_packs():
+        return False
+    say(mark("no pack installed yet; Get a pack installs one", "need"))
+    return True
+
+
 def choose_own_pack(question: str, doing: str) -> str | None:
     """A pack from the installed ones; a read-only one is copied first."""
     from .packfiles import source_of
 
+    if none_installed():
+        return None
     packs_ = installed_packs()
     picked = prompts.select(question, [
         Option(name, f"{source_of(name, path)} · {pack_line(path)}", value=name) for name, path in packs_.items()
@@ -1022,6 +1122,8 @@ def edit_pack() -> None:
 
 
 def export_pack() -> None:
+    if none_installed():
+        return
     picked = prompts.select("Export which pack?", [
         Option(name, pack_line(path), value=name) for name, path in installed_packs().items()
     ], hint="written as <name>-<version>.yaml in the folder you choose")
@@ -1037,6 +1139,8 @@ def export_pack() -> None:
 
 
 def contribute_pack() -> None:
+    if none_installed():
+        return
     picked = prompts.select("Contribute which pack?", [
         Option(name, pack_line(path), value=name) for name, path in installed_packs().items()
     ], hint="shows what would be sent, and asks, before anything is written")
@@ -1173,8 +1277,14 @@ def choose_folder() -> None:
 
 
 def choose_first_pack() -> None:
-    """The pack the menu offers first, when it asks what a video is about."""
+    """The pack the menu offers first, when it asks what a video is about;
+    with one installed, that one, without asking (D-088)."""
     packs = installed_packs()
+    if len(packs) == 1:
+        picked = next(iter(packs))
+        save_setting(FIRST_PACK, picked)
+        say(mark("Saved. ", "ok"), "Offered first: ", mark(picked, "path"), mark("  (the only pack installed)", "hint"))
+        return
     picked = prompts.select(
         "Which pack should be offered first?",
         [Option(name, pack_line(path), value=name) for name, path in packs.items()],
@@ -1345,33 +1455,38 @@ def installed_table() -> None:
 
 
 def get_pack() -> None:
-    """The repository's index as a list; the pick is `pack install <name>`."""
+    """D-088: the included packs not installed, then the repository's; the
+    pick is `pack install <name>`. Offline, the included ones still."""
+    from . import registry
     from .packfiles import index_within
-    from .registry import status
 
     say(mark("  reading the packs repository…", "hint"))
     index = index_within(GET_WAIT_SECONDS)
+    found = registry.available(index)
     if index is None:
-        error("the packs repository could not be reached; try again when online")
+        say(mark("the packs repository could not be reached; "
+                 + ("only the packs included in the program are listed" if found else "try again when online"),
+                 "need"))
+    if not found:
+        if index is not None:
+            say(mark("every pack there is is installed already" if installed_packs()
+                     else "the packs repository lists no packs yet", "need"))
         return
-    if not index:
-        say(mark("the packs repository lists no packs yet", "need"))
-        return
-    if all(e.too_new() for e in index.values()):  # D-087: nothing this version can install
-        for e in index.values():
-            say(mark(e.needs(), "need"))
+    if all(a.entry is not None and a.entry.too_new() for a in found):  # D-087: nothing this version can install
+        for a in found:
+            say(mark(a.entry.needs(), "need"))
         return
     picked = prompts.select("Which pack?", [
-        Option(e.name, " · ".join(filter(None, [e.version, e.description, status(e.name)])), value=e.name,
-               disabled=e.needs() if e.too_new() else "")
-        for e in index.values()
-    ], hint="installed into your packs/ folder, checked against the index's sha256")
+        Option(a.name, " · ".join(filter(None, [a.version, a.description])) + f"  {a.mark}", value=a.name,
+               disabled=a.entry.needs() if a.entry is not None and a.entry.too_new() else "")
+        for a in found
+    ], hint="installed into your packs/ folder; from the repository, checked against the index's sha256")
     if picked is not None:
-        run_command(["pack", "install", picked])
+        run_command(next(a for a in found if a.name == picked).install_argv())
 
 
-def create_pack() -> None:
-    """A field template, then a name and a language; `pack create`."""
+def create_pack() -> bool:
+    """A field template, then a name and a language; `pack create`. True when created."""
     from .packfiles import templates
 
     known = templates()
@@ -1379,18 +1494,19 @@ def create_pack() -> None:
         Option(t.field, t.description.get("en", ""), value=t.field) for t in known.values()
     ], hint="the template gives the pack its classes; the terms are yours to add")
     if field is None:
-        return
+        return False
     name = prompts.text("The pack's name", hint="lowercase letters, digits and hyphens, e.g. medicina-ptbr", kind="type")
     if not name:
-        return
+        return False
     lang = prompts.text("Its language", hint="a code such as pt-BR or en", kind="type")
     if not lang:
-        return
+        return False
     if run_command(["pack", "create", "--template", field, "--name", name, "--lang", lang]) != 0:
-        return
+        return False
     if prompts.confirm(f"Offer {name} first when the menu asks what a video is about?", default=True):
         save_setting(FIRST_PACK, name)
         say(mark("Saved. ", "ok"), "Offered first: ", mark(name, "path"))
+    return True
 
 
 def pick_pack_file(initial: Path):
@@ -1413,19 +1529,18 @@ def import_pack() -> None:
 
 
 def remove_pack() -> None:
-    """Asks twice and shows the path; a bundled pack is refused by `pack remove`."""
-    from .packfiles import BUNDLED, source_of
+    """Asks twice and shows the path."""
+    from .packfiles import source_of
 
+    if none_installed():
+        return
     packs = installed_packs()
     picked = prompts.select("Remove which pack?", [
         Option(name, source_of(name, path), value=name) for name, path in packs.items()
-    ], hint="only packs in your packs/ folder can be removed")
+    ], hint="an included pack stays in the program, to install again")
     if picked is None:
         return
     path = packs[picked]
-    if source_of(picked, path) == BUNDLED:
-        run_command(["pack", "remove", picked])  # says why not
-        return
     detail("file", path, "path")
     if not prompts.confirm(f"Remove {picked}?", default=False):
         return
@@ -1463,20 +1578,21 @@ def packs() -> None:
     while True:
         first = next(iter(packs_in_order()), "")
         offered = merge_offers()
+        # D-088: offered only with a pack installed to offer
+        first_option = [Option("The pack offered first", first, value="first")] if first else []
         merge_option = [Option(
             "Merge an update", ", ".join(f"{o.name} {o.upstream.version}" for o in offered), value="merge",
         )] if offered else []
         choice = prompts.select("What would you like to do with packs?", merge_option + [
             Option("Installed packs", "name, version, language, terms, size, source", value="installed"),
-            Option("Get a pack", "from the packs repository", value="get"),
+            Option("Get a pack", "included in the program, or from the packs repository", value="get"),
             Option("Create a pack", "from a field template, with no terms", value="create"),
             Option("Edit a pack", "add, edit, remove and show terms", value="edit"),
             Option("Import a pack file", "a .yaml pack, checked, copied into packs/", value="import"),
             Option("Export a pack file", "as <name>-<version>.yaml, into a folder", value="export"),
-            Option("Remove a pack", "from packs/; never a bundled one", value="remove"),
+            Option("Remove a pack", "an installed one, from packs/", value="remove"),
             Option("Contribute a pack", "propose it to the packs repository", value="contribute"),
-            Option("The pack offered first", first, value="first"),
-        ])
+        ] + first_option)
         if choice is None:
             return
         PACK_ACTIONS[choice]()

@@ -89,10 +89,10 @@ def test_a_pack_in_packs_wins_over_the_bundled_one(tmp_path, monkeypatch):
 
 
 def test_the_menu_asks_what_the_video_is_about(tmp_path, monkeypatch, capsys):
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "2", "q"])
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "3", "q"])
     assert "What is this video about?" in out
-    assert "   1. financas-ptbr         pt-BR · " in out
-    assert "   2. none / another area   skip normalization" in out
+    assert "   1. financas-ptbr                      pt-BR · " in out
+    assert "   3. None / another area                skip normalization" in out
     assert "No pack for this area, so nothing was normalized." in out
     assert not list((tmp_path / "runs").glob(f"*/{NORMALIZED_FILE}"))
 

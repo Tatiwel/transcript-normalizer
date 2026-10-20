@@ -34,7 +34,8 @@ INDEX_WAIT_SECONDS = 3
 #: A language code as packs write it: pt-BR, en, es-419.
 LANGUAGE = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
 
-BUNDLED, REPOSITORY, MINE = "bundled", "repository", "mine"
+#: D-088: `included` is a pack that ships inside the program, or one installed from there.
+INCLUDED, REPOSITORY, MINE = "included", "repository", "mine"
 
 
 class PackFileError(Exception):
@@ -124,10 +125,15 @@ class Row:
 
 
 def source_of(name: str, path: Path) -> str:
-    """bundled, repository (as `pack install` wrote it) or mine."""
+    """included (the program's copy, or installed from it, D-088), repository
+    (as `pack install` downloaded it) or mine."""
     if path.parent == BUNDLED_PACKS:
-        return BUNDLED
-    return MINE if registry.edited(name) or name not in registry.installed() else REPOSITORY
+        return INCLUDED
+    if registry.edited(name) or name not in registry.installed():
+        return MINE
+    included = registry.included_packs().get(name)
+    record = registry.installed()[name].get("sha256")
+    return INCLUDED if included is not None and registry.sha256(included.read_bytes()) == record else REPOSITORY
 
 
 def rows() -> list[Row]:
@@ -227,6 +233,10 @@ def newer(available: str, have: str) -> bool:
 
 def run_installed(args) -> int:
     table = rows()
+    if not table:  # D-088: a fresh data directory
+        print(f"no pack installed yet in {packs_root()}{os.sep}")
+        print("`transcript-normalizer pack list` shows the packs included in the program and the repository's")
+        return 0
     index = index_within(INDEX_WAIT_SECONDS, args.index)
     header = ["name", "version", "language", "terms", "size (KB)", "source"]
     lines = [[r.name, r.version, r.language, r.terms, r.size_kb, r.source] for r in table]
@@ -235,7 +245,10 @@ def run_installed(args) -> int:
     from .merge import copies, offer_for
 
     copied = copies()
-    if index is not None or copied:
+    newer_included = any(
+        r.source != MINE and r.name in registry.included_packs()
+        and newer(registry.pack_info(registry.included_packs()[r.name])[0], r.version) for r in table)
+    if index is not None or copied or newer_included:
         header.append("update")
         for line, r in zip(lines, table):
             if r.name in copied:  # D-069: a copy is merged, never replaced
@@ -244,6 +257,13 @@ def run_installed(args) -> int:
                 merges |= offer is not None
                 continue
             entry = (index or {}).get(r.name)
+            included = registry.included_packs().get(r.name) if r.source != MINE else None
+            mine = registry.pack_info(included)[0] if included is not None else ""
+            if mine and newer(mine, r.version) and not (entry is not None and not entry.too_new()
+                                                       and newer(entry.version, mine)):
+                line.append(f"↑ update ({mine}, included)")  # D-088: no download needed
+                marked = True
+                continue
             update = r.source != MINE and entry is not None and newer(entry.version, r.version)
             blocked = entry.blocked if entry is not None and r.source != MINE else None
             if blocked is not None and newer(blocked.version, r.version):  # D-087: not for this engine
@@ -261,7 +281,8 @@ def run_installed(args) -> int:
     if index is None:
         print("(the packs repository was not reached, so its updates are not shown)")
     if marked:
-        print("↑ update: the packs repository has a newer version; `transcript-normalizer pack install <name>` gets it")
+        print("↑ update: a newer version, in the packs repository or included in the program; "
+              "`transcript-normalizer pack update` installs it")
     for entry in held:
         print(f"{entry.needs()}; `pack update` leaves the one you have")
     if merges:
@@ -281,7 +302,7 @@ def run_create(args) -> int:
         return 1
     problem = pack_name_problem(args.name)
     if not problem and bundled_path(args.name).exists():
-        problem = f"{args.name} is the name of a bundled pack; pick another"
+        problem = f"{args.name} is the name of a pack included in the program; pick another"
     if not problem and not LANGUAGE.match(args.lang):
         problem = f"{args.lang!r}: a language code, e.g. pt-BR or en"
     if problem:
@@ -353,8 +374,6 @@ def run_import(args) -> int:
         return 1
     registry.write_atomic(target, source.read_bytes())
     print(f"imported {name} into {target}: {len(pack.terms)} terms, language {pack.language_code}")
-    if bundled_path(name).exists():
-        print(f"  it is used instead of the bundled {name}; `pack remove {name}` undoes that")
     note_language(pack.language_code)
     return 0
 
@@ -367,7 +386,7 @@ def run_remove(args) -> int:
     target = registry.pack_path(name)
     if pack_name_problem(name) or not target.is_file():
         if bundled_path(name).exists():
-            print(f"{name} is bundled with the program and cannot be removed", file=sys.stderr)
+            print(f"{name} is included in the program and not installed: nothing to remove", file=sys.stderr)
         else:
             print(f"no pack called {name} in {packs_root()}{os.sep}", file=sys.stderr)
         return 1
@@ -377,7 +396,7 @@ def run_remove(args) -> int:
         registry.write_installed(record)
     print(f"removed {target}")
     if bundled_path(name).exists():
-        print(f"  the bundled {name} is used again")
+        print(f"  {name} stays included in the program; `pack install {name}` installs it again")
     learned = learned_file(target)
     if learned.exists():
         print(f"  kept {learned}: what your reviews taught; delete it by hand to forget it")
@@ -402,6 +421,6 @@ def add_arguments(commands) -> None:
     importing.add_argument("--force", action="store_true", help="replace a pack of the same name in packs/")
     importing.set_defaults(run=run_import)
 
-    removing = commands.add_parser("remove", help="delete a pack from packs/ (never a bundled one)")
+    removing = commands.add_parser("remove", help="delete an installed pack from packs/")
     removing.add_argument("name", help="the pack's name, as `pack list --installed` shows it")
     removing.set_defaults(run=run_remove)

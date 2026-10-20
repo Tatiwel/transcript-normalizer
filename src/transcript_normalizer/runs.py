@@ -191,37 +191,43 @@ def packs_root() -> Path:
     return base_dir() / PACKS_DIR
 
 
-#: The packs that ship inside the package (D-043).
+#: The packs that ship inside the package (D-043). D-088: included, not
+#: installed: there to install offline, never used until installed.
 BUNDLED_PACKS = Path(__file__).resolve().parent / "packs"
 
 
 def default_pack() -> Path:
-    """The pack `--pack` falls back to (D-017).
+    """The pack `normalize --pack` falls back to (D-017).
 
     `packs/<default>` under `base_dir()` when there is one, so a pack the
     user edits wins; otherwise the copy that ships in the package, so the
-    default still resolves after `pip install`, from any directory.
+    default still resolves after `pip install`, from any directory. The menu
+    never falls back to it (D-088): it asks what the video is about.
     """
     local = packs_root() / DEFAULT_PACK
     return local if local.exists() else BUNDLED_PACKS / DEFAULT_PACK
 
 
-def installed_packs() -> dict[str, Path]:
-    """Every pack there is to choose from, by name (D-054, D-055).
+def included_packs() -> dict[str, Path]:
+    """D-088: the packs that ship inside the program, by name, installed or not."""
+    return {p.stem: p for p in sorted(BUNDLED_PACKS.glob("*.yaml"))}
 
-    The bundled packs, then the `.yaml` files in packs/ (installed with `pack
-    install` or written by the user), which win over a bundled one of the
-    same name, as in `default_pack`. Learned layers and a merge's pending
-    conflicts (D-069) are not packs.
+
+def installed_packs() -> dict[str, Path]:
+    """Every installed pack, by name (D-054, D-055, D-088).
+
+    The `.yaml` files in packs/: installed with `pack install` (from the packs
+    repository or from the packs included in the program) or written by the
+    user. An included pack is not one of them until it is installed. Learned
+    layers and a merge's pending conflicts (D-069) are not packs.
     """
-    found = {p.stem: p for p in sorted(BUNDLED_PACKS.glob("*.yaml"))}
     root = packs_root()
-    if root.is_dir():
-        found.update(
-            (p.stem, p) for p in sorted(root.glob("*.yaml"))
-            if not p.name.endswith((".learned.yaml", ".merge-pending.yaml"))
-        )
-    return found
+    if not root.is_dir():
+        return {}
+    return {
+        p.stem: p for p in sorted(root.glob("*.yaml"))
+        if not p.name.endswith((".learned.yaml", ".merge-pending.yaml"))
+    }
 
 
 def video_id_from_url(url: str) -> str:

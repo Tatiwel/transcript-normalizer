@@ -48,8 +48,8 @@ ACTIONS = (
            "id, publication date and title of every run",
            f"{PROG} list"),
     Action("6", "Packs", "installed, get, create, edit, share",
-           "the packs on this machine (with an update mark when the repository has a newer one); "
-           "get one from the packs repository; create one from a field template; edit one (add, "
+           "the installed packs (with an update mark when a newer one is included or in the repository); "
+           "get one, included in the program or from the packs repository; create one from a field template; edit one (add, "
            "edit, remove and show terms); import, export or remove a pack file; contribute a "
            "whole pack; and the pack the menu offers first",
            f"{PROG} pack list --installed"),
@@ -77,11 +77,11 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `--list` checks a link without downloading (site, captions, audio, login) and `--track <code>` takes one caption track; `--keep-audio` keeps the audio after transcribing; `fetch --check` lists the fetch tools installed; --cookies-from-browser <browser> or --cookies <file> signs in, on any site"),
             ("normalize <legenda.txt>", "fix domain terms (a .srt or .vtt is converted first); --review (one stop per form, in the order of the video) or --confirm (form by form, by term) to answer what it was unsure about; --pack for your own pack; --force when the pack does not seem to fit"),
             ("list", "every run under runs/, with its date and title"),
-            ("pack list | install <name> | update", "packs from the packs repository, installed into packs/"),
-            ("pack list --installed", "the packs on this machine: version, language, terms, size, source, and ↑ where the repository has a newer one"),
+            ("pack list | install <name> | update", "the packs installed, then those included in the program (installed offline) and in the packs repository, each marked; install one into packs/; update installed ones"),
+            ("pack list --installed", "only the installed packs: version, language, terms, size, source, and ↑ where a newer one is included or in the repository"),
             ("pack create --template <field> --name <n> --lang <l>", "a new pack in packs/, with the field's classes and no terms"),
-            ("pack import <file> | remove <name>", "check a pack file and copy it into packs/; delete one from packs/ (never a bundled one)"),
-            ("pack copy <name>", "make a bundled or repository pack your own, to edit"),
+            ("pack import <file> | remove <name>", "check a pack file and copy it into packs/; delete an installed one (an included pack stays in the program)"),
+            ("pack copy <name>", "make an included or repository pack your own, to edit"),
             ("pack add-term <pack> <term>", "add a term (--class, --alias, --variant), or forms to an existing one; --context <terms> for a variant that is also an ordinary word, matched only where those terms appear (--unless-near asks near others); checked, saved with the next patch version"),
             ("pack edit-term | remove-term", "change a term of a pack (--rename, --class, --add-variant, --remove-alias, …); remove one"),
             ("pack show <pack>", "a pack's terms with their forms; --search <text>, --page <n>"),

@@ -32,7 +32,7 @@ def test_a_new_term_from_a_run(tmp_path, monkeypatch, capsys):
     lines = [*NORMALIZED, "y", "y", "melhorou", "y", "Melhoria Energia", "5", "n", "n", "q"]
     _, out, _ = menu(tmp_path, monkeypatch, capsys, lines)
     after = out.split("Add a term you noticed? [y/N]")[1]
-    assert "financas-ptbr is a bundled pack, read-only." in after
+    assert "financas-ptbr is an included pack, read-only." in after
     assert "in 1 line(s) of abcdefghijk:\n    0:13 o EBITDA da Taesa melhorou" in after
     assert "+ term     Melhoria Energia (companhia)" in after
     assert "+ variant  melhorou -> Melhoria Energia" in after

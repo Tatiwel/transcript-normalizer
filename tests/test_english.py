@@ -93,12 +93,14 @@ def test_the_menu_passes_allow_generic_only_without_a_module(tmp_path, monkeypat
     monkeypatch.chdir(tmp_path)
     main(["pack", "create", "--template", "geral", "--name", "geral-de", "--lang", "de"])
     capsys.readouterr()
-    # Fetch, normalize with the German pack (second in the list): generic, said once.
-    # It has no terms, so it does not fit (D-054); then no term to add.
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "2", "n", "q"])
+    # Fetch, normalize with the German pack (the only one installed, first in
+    # the list): generic, said once. It has no terms, so it does not fit
+    # (D-054); then no term to add.
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "n", "q"])
     assert out.count("no language module for de: matching with the generic one") == 1
     assert "pass --allow-generic" not in out
-    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "1", "n", "n", "n", "q"])
+    # The included financas-ptbr, second: installed, then normalized (D-088).
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, [*LINK, "", "2", "n", "n", "n", "q"])
     assert "no language module" not in out
 
 

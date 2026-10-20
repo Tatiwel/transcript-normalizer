@@ -5,7 +5,10 @@ Domain content lives in its own repository, one directory per pack, with an
 This module reads that index and installs packs into the user's `packs/`, where
 `--pack`, the menu and `default_pack` already look (D-017, D-054). urllib only:
 no new dependency, and a `file://` index works the same, which is what the
-tests use. The bundled financas-ptbr stays the offline default (D-043).
+tests use. The packs that ship inside the program (financas-ptbr, D-043) are
+included, not installed (D-088): `pack install` copies one into packs/ as it
+would a download, offline, with the same record, so `pack update` and `pack
+merge` treat it the same.
 
 An entry may name the oldest engine that understands its pack, `min_engine`
 (D-087): an older engine lists it with the reason and never installs it. A
@@ -29,7 +32,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from . import engine
-from .runs import BUNDLED_PACKS, packs_root
+from .runs import included_packs, installed_packs, packs_root
 
 INDEX_URL = "https://raw.githubusercontent.com/Tatiwel/transcript-normalizer-packs/main/index.json"
 #: Moves the index: a fork, a mirror, or a `file://` index in the tests.
@@ -206,31 +209,109 @@ def write_installed(record: dict[str, dict], root: Path | None = None) -> None:
     write_atomic((root or packs_root()) / INSTALLED_FILE, (json.dumps(record, indent=2, sort_keys=True) + "\n").encode())
 
 
+def write_pack(name: str, version: str, data: bytes, root: Path | None = None) -> Path:
+    """packs/<name>.yaml and its record in installed.json: what `pack update`
+    compares, and what tells a pack edited by hand."""
+    target = pack_path(name, root)
+    write_atomic(target, data)
+    record = installed(root)
+    record[name] = {"version": version, "sha256": sha256(data)}
+    write_installed(record, root)
+    return target
+
+
 def install(entry: Entry, url: str, root: Path | None = None) -> Path:
     if entry.too_new():  # D-087: every way in comes through here
         raise RegistryError(f"{entry.needs()}; nothing was written")
-    data = download(entry, url)
-    target = pack_path(entry.name, root)
-    write_atomic(target, data)
-    record = installed(root)
-    record[entry.name] = {"version": entry.version, "sha256": entry.sha256.lower()}
-    write_installed(record, root)
-    return target
+    return write_pack(entry.name, entry.version, download(entry, url), root)
+
+
+# ------------------------------------------------------------------ included (D-088)
+
+#: D-088: where a pack there to install comes from, and how every list marks it.
+FROM_INCLUDED, FROM_REPOSITORY = "included", "repository"
+MARKS = {FROM_INCLUDED: "(included, not installed)", FROM_REPOSITORY: "(from the packs repository)"}
+
+
+def pack_info(path: Path) -> tuple[str, str, str]:
+    """A pack file's version, language and one-line description ("?" when unreadable)."""
+    import yaml
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        data = {}
+    description = data.get("description") or ""
+    if isinstance(description, dict):  # the field templates' {en, pt-BR} (D-065)
+        description = description.get("en") or next(iter(description.values()), "")
+    return str(data.get("version") or "?"), str(data.get("language") or "?"), str(description)
+
+
+def install_included(name: str, root: Path | None = None) -> Path:
+    """D-088: the included pack, copied into packs/ as `pack install` writes a download."""
+    path = included_packs()[name]
+    return write_pack(name, pack_info(path)[0], path.read_bytes(), root)
+
+
+def newer(available: str, have: str) -> bool:
+    return engine.numbers(available) > engine.numbers(have)
+
+
+@dataclass(frozen=True)
+class Available:
+    """D-088: a pack there to install, not installed."""
+
+    name: str
+    version: str  # the one `pack install` would install
+    language: str
+    description: str
+    origin: str  # FROM_INCLUDED | FROM_REPOSITORY: its mark
+    entry: Entry | None  # the repository's, when installing downloads it
+
+    @property
+    def mark(self) -> str:
+        return MARKS[self.origin]
+
+    def install_argv(self) -> list[str]:
+        """The command that installs it; an included pack without the
+        repository when the repository has nothing newer."""
+        return ["pack", "install", self.name] + (["--included"] if self.entry is None else [])
+
+
+def from_repository(entry: Entry | None, version: str) -> Entry | None:
+    """The repository's entry when this engine can use it and it is newer than `version`."""
+    return entry if entry is not None and not entry.too_new() and newer(entry.version, version) else None
+
+
+def available(index: dict[str, Entry] | None) -> list[Available]:
+    """D-088: what can be installed and is not: the included packs first, then
+    the repository's (none when `index` is None: it was not reached). A pack
+    in both is listed once, as included, with the newer of the two versions.
+    A repository pack this engine cannot use is listed; its entry says why."""
+    have = installed_packs()
+    out = []
+    for name, path in included_packs().items():
+        if name in have:
+            continue
+        version, language, description = pack_info(path)
+        entry = (index or {}).get(name)
+        upgrade = from_repository(entry, version)
+        if entry is not None:
+            description = entry.description or description
+        out.append(Available(name, upgrade.version if upgrade else version, language, description, FROM_INCLUDED, upgrade))
+    for name, entry in (index or {}).items():
+        if name in have or name in included_packs():
+            continue
+        out.append(Available(name, entry.version, entry.language, entry.description, FROM_REPOSITORY, entry))
+    return out
 
 
 # ------------------------------------------------------------------ commands
 
 
-def status(name: str) -> str:
-    """What this machine has of a pack: installed, bundled, or nothing."""
-    record = installed().get(name)
-    if pack_path(name).exists():
-        if record and not edited(name):
-            return f"installed {record['version']}"
-        return "in packs/ (yours)"
-    if (BUNDLED_PACKS / f"{name}.yaml").exists():
-        return "bundled"
-    return ""
+def installed_mark(name: str) -> str:
+    """D-088: how `pack list` marks an installed pack: from `pack install`, or yours."""
+    return "installed" if name in installed() and not edited(name) else "installed (yours)"
 
 
 def held_line(entry: Entry) -> str:
@@ -241,68 +322,98 @@ def held_line(entry: Entry) -> str:
 
 
 def run_list(args) -> int:
+    """D-088: the installed packs, then the included ones not installed, then
+    the repository's not installed, each with its mark."""
     if args.installed:  # D-064: what this machine has, not the repository
         from .packfiles import run_installed
 
         return run_installed(args)
     url = index_url(args.index)
     try:
-        entries = read_index(url)
+        entries, problem = read_index(url), None
     except RegistryError as error:
-        print(f"could not read the packs index: {error}", file=sys.stderr)
-        return 1
-    if not entries:
-        print(f"the index at {url} lists no packs")
-        return 0
-    rows = [
-        (e.name, e.version, e.language,
-         ", ".join(filter(None, [status(e.name), f"needs {e.min_engine}+" if e.too_new() else ""])),
-         e.description)
-        for e in entries.values()
-    ]
-    widths = [max(len(row[i]) for row in rows) for i in range(4)]
+        entries, problem = None, error
+    rows = []
+    for name, path in installed_packs().items():
+        version, language, description = pack_info(path)
+        entry = (entries or {}).get(name)
+        mark = installed_mark(name)
+        upgrade = from_repository(entry, version) if mark == "installed" else None
+        if upgrade is not None:
+            mark += f", ↑ {upgrade.version}"
+        rows.append((name, version, language, mark, (entry.description if entry else "") or description))
+    for a in available(entries):
+        too_new = a.entry is not None and a.entry.too_new()
+        rows.append((a.name, a.version, a.language,
+                     a.mark + (f", needs {a.entry.min_engine}+" if too_new else ""), a.description))
+    if not rows:
+        print(f"no packs: none installed, none included, and the index at {url} lists none")
+    widths = [max(len(row[i]) for row in rows) for i in range(4)] if rows else []
     for row in rows:
         print("  ".join(cell.ljust(w) for cell, w in zip(row, widths)) + "  " + row[4])
-    held = [e for e in entries.values() if e.blocked is not None]
+    if problem is not None:
+        print(f"\n(the packs repository was not reached, so its packs are not listed: {problem})")
+    held = [e for e in (entries or {}).values() if e.blocked is not None]
     if held:
         print()
         for e in held:
             print(held_line(e))
         print(f"newer versions of transcript-normalizer: {RELEASES}")
+    if any(r[3].startswith("↑") or ", ↑" in r[3] for r in rows):
+        print("\n↑: the packs repository has a newer version; `transcript-normalizer pack update` installs it")
     print(f"\n`transcript-normalizer pack install <name>` puts one in {packs_root()}{os.sep}")
     return 0
 
 
 def run_install(args) -> int:
+    """From the repository; an included pack (D-088) from the program itself,
+    unless the repository has a newer version this engine can use."""
+    name = args.name
+    included = included_packs().get(name)
+    if args.included and included is None:
+        print(f"no pack called {name} is included in this program; `pack list` shows them", file=sys.stderr)
+        return 1
     url = index_url(args.index)
+    entry = None
     try:
-        entries = read_index(url)
-        entry = entries.get(args.name)
-        if entry is None:
-            print(f"no pack called {args.name} in the index; `pack list` shows them", file=sys.stderr)
-            return 1
-        if entry.too_new():
-            print(entry.needs(), file=sys.stderr)
-            print(f"nothing was installed; newer versions of transcript-normalizer: {RELEASES}", file=sys.stderr)
-            return 1
-        target = pack_path(entry.name)
-        if edited(entry.name) and not args.force:
+        if included is not None:
+            if not args.included:  # offline, or slow: the included one, without waiting long
+                from .packfiles import INDEX_WAIT_SECONDS, index_within
+
+                entry = from_repository((index_within(INDEX_WAIT_SECONDS, args.index) or {}).get(name),
+                                        pack_info(included)[0])
+        else:
+            entry = read_index(url).get(name)
+            if entry is None:
+                print(f"no pack called {name} in the index; `pack list` shows them", file=sys.stderr)
+                return 1
+            if entry.too_new():
+                print(entry.needs(), file=sys.stderr)
+                print(f"nothing was installed; newer versions of transcript-normalizer: {RELEASES}", file=sys.stderr)
+                return 1
+        version = entry.version if entry is not None else pack_info(included)[0]
+        target = pack_path(name)
+        if edited(name) and not args.force:
             print(
                 f"{target} is there and is not a file pack install wrote; "
                 "pass --force to replace it",
                 file=sys.stderr,
             )
             return 1
-        record = installed().get(entry.name)
-        if record and record.get("version") == entry.version and target.exists() and not args.force:
-            print(f"{entry.name} {entry.version} is already installed in {target}")
+        record = installed().get(name)
+        if record and record.get("version") == version and target.exists() and not args.force:
+            print(f"{name} {version} is already installed in {target}")
             return 0
-        install(entry, url)
+        if entry is not None:
+            install(entry, url)
+        else:
+            install_included(name)
     except RegistryError as error:
         print(error, file=sys.stderr)
         return 1
-    print(f"installed {entry.name} {entry.version} in {target} (sha256 checked)")
-    if entry.held is not None:
+    how = "sha256 checked" if entry is not None else "included in the program"
+    print(f"installed {name} {version} in {target} ({how})")
+    if entry is not None and entry.held is not None:
         print(f"({held_line(entry)})")
     return 0
 
@@ -321,8 +432,11 @@ def offer_merges(entries: dict | None) -> None:
 
 
 def run_update(args) -> int:
+    """Newer versions from the repository, and (D-088) from the packs included
+    in the program, which need no connection."""
     url = index_url(args.index)
     names = sorted(installed())
+    code = 0
     try:
         entries = read_index(url)
     except RegistryError as error:
@@ -331,38 +445,52 @@ def run_update(args) -> int:
             print("no packs installed with `pack install`; nothing to update")
             return 0
         print(f"could not read the packs index: {error}", file=sys.stderr)
-        return 1
+        if not set(names) & set(included_packs()):
+            return 1
+        entries, code = None, 1
     offer_merges(entries)
     if not names:
         print("no packs installed with `pack install`; nothing to update")
-        return 0
-    code, held = 0, False
+        return code
+    held = False
     for name in names:
-        entry, current = entries.get(name), installed()[name].get("version")
-        if entry is None:
+        entry, current = (entries or {}).get(name), installed()[name].get("version")
+        included = included_packs().get(name)
+        mine = pack_info(included)[0] if included is not None else None
+        if entries is None and included is None:
+            continue  # not checked: said above
+        upgrade = from_repository(entry, current)
+        if mine is not None and newer(mine, current) and (upgrade is None or not newer(upgrade.version, mine)):
+            upgrade = None  # D-088: the included one, no download
+        else:
+            mine = None
+        blocked = entry.blocked if entry is not None else None
+        if entry is None and included is None:
             print(f"{name}: no longer in the index; left as it is")
         elif edited(name):
             print(f"{name}: {pack_path(name)} was edited here; left as it is (pack install --force replaces it)")
-        elif entry.version == current:
-            if entry.held is not None:
-                print(f"{name}: {current} is the latest for this version; {entry.held.needs()}")
-                held = True
-            else:
-                print(f"{name}: {current} is the latest")
-        elif entry.too_new():
-            print(f"{name}: {entry.needs()}; {current} is kept")
-            held = True
-        else:
+        elif mine is not None:
+            install_included(name)
+            print(f"{name}: {current} → {mine} (included in the program)")
+        elif upgrade is not None:
             try:
-                install(entry, url)
+                install(upgrade, url)
             except RegistryError as error:
                 print(f"{name}: {error}", file=sys.stderr)
                 code = 1
                 continue
-            print(f"{name}: {current} → {entry.version}")
-            if entry.held is not None:
-                print(f"  ({held_line(entry)})")
+            print(f"{name}: {current} → {upgrade.version}")
+            if upgrade.held is not None:
+                print(f"  ({held_line(upgrade)})")
                 held = True
+        elif blocked is not None and newer(blocked.version, current):
+            if entry.too_new():
+                print(f"{name}: {entry.needs()}; {current} is kept")
+            else:
+                print(f"{name}: {current} is the latest for this version; {blocked.needs()}")
+            held = True
+        else:
+            print(f"{name}: {current} is the latest")
     if held:
         print(f"newer versions of transcript-normalizer: {RELEASES}")
     return code
@@ -379,15 +507,21 @@ def add_arguments(parser) -> None:
         )
         return sub
 
-    listing = with_index(commands.add_parser("list", help="the packs in the packs repository"))
+    listing = with_index(commands.add_parser(
+        "list", help="the packs installed, then those included in the program and in the packs repository"))
     listing.add_argument(
         "--installed", action="store_true",
-        help="the packs on this machine instead: bundled, from the repository, and yours",
+        help="only the packs installed in packs/, with their source, terms and size",
     )
     listing.set_defaults(run=run_list)
 
-    installing = with_index(commands.add_parser("install", help="download a pack into packs/"))
+    installing = with_index(commands.add_parser(
+        "install", help="put a pack in packs/: from the packs repository, or one included in the program"))
     installing.add_argument("name", help="the pack's name, as `pack list` shows it")
+    installing.add_argument(
+        "--included", action="store_true",
+        help="the copy included in the program, without reading the packs repository (offline)",
+    )
     installing.add_argument(
         "--force", action="store_true", help="replace packs/<name>.yaml even if it was edited here"
     )
