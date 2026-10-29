@@ -17,7 +17,7 @@ from itertools import accumulate
 
 from rapidfuzz import fuzz
 
-from .pack import SOURCE_LEARNED, Candidate, Pack
+from .pack import SOURCE_LEARNED, Candidate, Pack, exact_fold, nfc
 from .rules import find_unit_hits
 from .standoff import (
     BAND_HIGH,
@@ -136,11 +136,14 @@ def fuzzy_allowed(candidate: Candidate, unit_terms: frozenset[str] = frozenset()
     D-028: nothing of a `unidade` term is fuzzy, not even its canonical name.
     `milhão` and `bilhão` are both real words one letter apart, and no threshold
     separates them; units are matched by the rules of D-006 and exactly.
+
+    D-090: nor of a term that says `match: exact`.
     """
     return (
         candidate.origin != "alias"
         and candidate.source != SOURCE_LEARNED
         and candidate.term not in unit_terms
+        and not candidate.exact
     )
 
 
@@ -208,7 +211,8 @@ def find_annotations(
     explicit = {c.folded for c in pack.candidates}
     base_owner: dict[str, tuple[int, str]] = {}
     for index, c in enumerate(pack.candidates):
-        if c.origin in ("term", "alias") and " " not in c.folded:
+        # D-090: a term that matches only exactly has no inflections.
+        if c.origin in ("term", "alias") and " " not in c.folded and not c.exact:
             base_owner.setdefault(c.folded, (index, c.term))
 
     def inflection_base(word: str) -> tuple[str, str] | None:
@@ -241,9 +245,13 @@ def find_annotations(
     # scored against its exact equals (a dict) and the fuzzy candidates within
     # MAX_LEN_DIFF of its length (buckets), and the best of those is the best of
     # all whenever it reaches the threshold, which is all that is used below.
+    # D-090: a term that matches only exactly is not among them; its forms are
+    # found per window, below, in the language's `fold`.
     exact_equals: dict[str, list[tuple[Candidate, bool]]] = {}
     fuzzy_by_length: dict[int, list[tuple[Candidate, bool]]] = {}
     for c, fuzzy in scored:
+        if c.exact:
+            continue
         exact_equals.setdefault(c.folded, []).append((c, fuzzy))
         if fuzzy and len(c.folded) >= MIN_FUZZY_LEN:
             fuzzy_by_length.setdefault(len(c.folded), []).append((c, fuzzy))
@@ -260,21 +268,28 @@ def find_annotations(
     # D-031 (b): folded text -> the terms it is an exact form of.
     exact_forms: dict[str, set[str]] = {}
     for c in candidates:
-        exact_forms.setdefault(" ".join(c.folded.split()), set()).add(c.term)
+        if not c.exact:
+            exact_forms.setdefault(" ".join(c.folded.split()), set()).add(c.term)
 
     # D-040: the same, for the term's own names only (canonical and aliases).
     name_forms: dict[str, set[str]] = {}
     for c in candidates:
-        if c.origin in ("term", "alias"):
+        if c.origin in ("term", "alias") and not c.exact:
             name_forms.setdefault(" ".join(c.folded.split()), set()).add(c.term)
 
-    def exact_terms(run: str) -> set[str]:
+    # D-090: (first token, length) -> the forms of terms that match only
+    # exactly found there, filled once the windows are known.
+    exact_hits: dict[tuple[int, int], list[Candidate]] = {}
+    exact_only = frozenset(c.term for c in candidates if c.exact)
+
+    def exact_terms(run: str, at: tuple[int, int]) -> set[str]:
         """The terms a run of words is exactly a form of, inflections included."""
         found = set(exact_forms.get(run, ()))
         if " " not in run:
             owner = inflection_of(run)
             if owner is not None:
                 found.add(owner)
+        found |= {c.term for c in exact_hits.get(at, ())}
         return found
 
 
@@ -304,13 +319,36 @@ def find_annotations(
     # Folded once; the three passes below each walk them.
     every_window = list(windows())
 
+    # D-090: a form of a term that matches only exactly is found where the
+    # window equals it in the language's `fold` (case and accents, no number
+    # words), and a case-sensitive form only where the words are its own.
+    if exact_only:
+        fold = exact_fold(language)
+        by_fold: dict[str, list[Candidate]] = {}
+        for c in candidates:
+            if c.exact:
+                by_fold.setdefault(" ".join(c.folded.split()), []).append(c)
+        cased = {
+            c: nfc(" ".join(t.text for t in tokenize(c.display, language.sentence_boundaries)))
+            for c in candidates
+            if c.case_sensitive
+        }
+        for i, window, _ in every_window:
+            raw = " ".join(t.text for t in window)
+            found = [
+                c for c in by_fold.get(" ".join(fold(raw).split()), ())
+                if c not in cased or cased[c] == nfc(raw)
+            ]
+            if found:
+                exact_hits[(i, len(window))] = found
+
     # D-034: every stretch of text that is exactly a form of some term, found
     # before any fuzzy guess, as the terms each token takes part in. Whether that
     # stretch produces an annotation does not matter: `market cap` spelled out
     # produces none, and still rules `market` out as a guess at market share.
     exact_at: list[set[str]] = [set() for _ in tokens]
     for i, window, folded_span in every_window:
-        terms = exact_terms(" ".join(folded_span.split()))
+        terms = exact_terms(" ".join(folded_span.split()), (i, len(window)))
         if terms:
             for k in range(i, i + len(window)):
                 exact_at[k] |= terms
@@ -324,6 +362,7 @@ def find_annotations(
         names = set(name_forms.get(run, ()))
         if " " not in run and (owner := inflection_of(run)) is not None:
             names.add(owner)
+        names |= {c.term for c in exact_hits.get((i, len(window)), ()) if c.origin in ("term", "alias")}
         if names:
             exact_names.append((i, i + len(window), names))
 
@@ -364,8 +403,12 @@ def find_annotations(
                 )
             continue
 
+        hits = exact_hits.get((i, len(window)), [])
+
         def ranked(c, fuzzy):
             """D-047: a variant's fuzzy match under its threshold ranks as a mark."""
+            if c.exact:  # D-090: found above, or not at all
+                return (100, 100, c.term, c.folded) if c in hits else (0, 0, c.term, c.folded)
             score = _score(folded_span, c.folded, fuzzy)
             rank = score
             if (
@@ -377,11 +420,17 @@ def find_annotations(
             return rank, score, c.term, c.folded
 
         rank, score, term, candidate = max(
-            (ranked(c, fuzzy) for c, fuzzy in reachable(folded_span)),
+            (ranked(c, fuzzy) for c, fuzzy in [*reachable(folded_span), *((c, False) for c in hits)]),
             default=(0, 0, None, None),
         )
         if rank < threshold:
             continue
+        if term in exact_only:
+            if not any(c.term == term and c.folded == candidate for c in hits):
+                continue
+            matched = True
+        else:
+            matched = folded_span == candidate
         # D-013: a pair the user has turned down is never proposed again.
         if pack.is_rejected(folded_span, term):
             continue
@@ -390,7 +439,7 @@ def find_annotations(
 
         # D-020: exactly another name of the term. Recognized, never substituted.
         # D-041: so is the term's own name, as `term:exact`.
-        if origin in ("alias", "term") and folded_span == candidate:
+        if origin in ("alias", "term") and matched:
             conditioned[len(annotations)] = (i, conditions.get((term, candidate)))
             annotations.append(
                 Annotation(
@@ -415,7 +464,7 @@ def find_annotations(
         # overlap resolution (`dividend y` over the alias `dividend`).
         if covered_by_its_own_name(i, i + len(window), term):
             continue
-        rule = term_rule(origin if folded_span == candidate else "fuzzy")
+        rule = term_rule(origin if matched else "fuzzy")
         # D-031 (b), as D-034 amends it: a fuzzy span that overlaps, either
         # way, an exact form of another term is not a guess at this one
         # (`dividendos e` is not dividend yield; `market` in `market cap` is
@@ -470,7 +519,7 @@ def in_context(annotations, conditioned, conditions, pack, transcript, tokens, e
         if term not in spans:
             found = sorted(
                 ((i, i + len(window)) for i, window, folded in every_window
-                 if term in exact_terms(" ".join(folded.split()))),
+                 if term in exact_terms(" ".join(folded.split()), (i, len(window)))),
                 key=lambda s: (s[0] - s[1], s[0]),  # longest first
             )
             kept: list[tuple[int, int]] = []
@@ -541,6 +590,7 @@ def phonetic_proposals(
         (c.term, skeleton(c.folded))
         for c in pack.candidates
         if c.origin in ("term", "alias") and klass.get(c.term) in pack.phonetic_classes
+        and not c.exact  # D-090
     ]
     names = [(term, code) for term, code in names if len(code) >= MIN_SKELETON_LEN]
     if not names:

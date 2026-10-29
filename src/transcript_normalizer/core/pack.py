@@ -76,6 +76,11 @@ class Candidate:
     #: and terms whose nearness makes an occurrence a question. Empty: as before.
     context: tuple[str, ...] = ()
     unless_near: tuple[str, ...] = ()
+    #: D-090: the term matches only exactly; `folded` is then the language's
+    #: `fold`, without number words. `case_sensitive`: this form only with its
+    #: own case and accents.
+    exact: bool = False
+    case_sensitive: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,6 +92,8 @@ class Term:
     collocations: tuple[str, ...] = ()
     learned_variants: tuple[str, ...] = ()  # the subset of `variants` that came from D-013
     learned_aliases: tuple[str, ...] = ()  # the subset of `aliases` that came from D-020
+    exact: bool = False  # D-090: `match: exact`
+    case_sensitive: tuple[str, ...] = ()  # D-090: forms matched with their own case and accents
 
 
 @dataclass(frozen=True)
@@ -332,6 +339,50 @@ def form_conditions(raw: dict, key: str, norm, path: Path) -> dict[str, tuple[st
     return out
 
 
+#: D-090: the one value `match:` takes.
+MATCH_EXACT = "exact"
+
+
+def exact_fold(language):
+    """D-090: what a term that matches only exactly is compared in: the
+    language's `fold` (case, accents, no number words), else `normalize`."""
+    return getattr(language, "fold", language.normalize)
+
+
+def _spaced(s: str) -> str:
+    return " ".join(nfc(s).split())
+
+
+def term_match(raw: dict, path: Path) -> tuple[bool, tuple[str, ...]]:
+    """D-090: a term's `match:` and `case_sensitive:`, checked.
+
+    `match: exact` is the only value. `case_sensitive:` goes only with it, and
+    lists forms of this term (its name, an alias or a variant) written exactly
+    as the pack writes them.
+    """
+    name = nfc(str(raw.get("term")))
+    where = f"{path}: term {name!r}"
+    match = raw.get("match")
+    if match is not None and match != MATCH_EXACT:
+        raise ValueError(f"{where}: `match:` can only be `{MATCH_EXACT}` (got {match!r})")
+    exact = match == MATCH_EXACT
+    cased = raw.get("case_sensitive")
+    if cased is None:
+        return exact, ()
+    if not exact:
+        raise ValueError(f"{where}: `case_sensitive:` needs `match: {MATCH_EXACT}` on the same term")
+    if not (isinstance(cased, list) and all(isinstance(f, str) and f.strip() for f in cased)):
+        raise ValueError(f"{where}: `case_sensitive:` must be a list of the term's forms, e.g. `case_sensitive: [{name}]`")
+    own = {_spaced(f) for f in (name, *_strings(raw, "aliases"), *_strings(raw, "variants"))}
+    for form in cased:
+        if _spaced(form) not in own:
+            raise ValueError(
+                f"{where}: `case_sensitive:` names {form!r}, which is not its name, one of its aliases "
+                "or one of its variants, written as the pack writes it"
+            )
+    return exact, tuple(dict.fromkeys(_spaced(f) for f in cased))
+
+
 def check_conditions(path: Path, terms_raw, language) -> None:
     """D-086: every `context` and `unless_near` entry is the canonical name of a
     term of this pack, and not an ordinary word of the language."""
@@ -436,16 +487,18 @@ def load_pack(
         name = nfc(str(raw["term"]))
         pack_variants = _strings(raw, "variants")
         pack_aliases = _strings(raw, "aliases")
-        known = {norm(v) for v in pack_variants} | {norm(a) for a in pack_aliases}
+        exact, cased = term_match(raw, path)
+        fold = exact_fold(language) if exact else norm
+        known = {fold(v) for v in pack_variants} | {fold(a) for a in pack_aliases}
         learned_variants = tuple(
             c.variant
             for c in learned.confirmed.get(name, ())
-            if norm(c.variant) not in known
+            if fold(c.variant) not in known
         )
         learned_aliases = tuple(
             a.alias
             for a in learned.aliases.get(name, ())
-            if norm(a.alias) not in known
+            if fold(a.alias) not in known
         )
         klass = nfc(str(raw["class"])) if raw.get("class") else None
         if klass is not None and klass not in classes:
@@ -461,13 +514,15 @@ def load_pack(
             collocations=_strings(raw, "collocations"),
             learned_variants=learned_variants,
             learned_aliases=learned_aliases,
+            exact=exact,
+            case_sensitive=cased,
         )
         terms.append(term)
-        context = form_conditions(raw, "context", norm, path)
-        unless_near = form_conditions(raw, "unless_near", norm, path)
+        context = form_conditions(raw, "context", fold, path)
+        unless_near = form_conditions(raw, "unless_near", fold, path)
         for c in learned.confirmed.get(name, ()):  # D-086: learned with a context
             if c.context and c.variant in learned_variants:
-                context.setdefault(norm(c.variant), c.context)
+                context.setdefault(fold(c.variant), c.context)
         # Order matters: it is the order the matcher scans candidates in.
         for display, origin, source in (
             [(term.term, "term", SOURCE_PACK)]
@@ -476,12 +531,14 @@ def load_pack(
             + [(v, "variant", SOURCE_LEARNED) for v in learned_variants]
             + [(a, "alias", SOURCE_LEARNED) for a in learned_aliases]
         ):
-            folded = norm(display)
+            folded = fold(display)
             conditioned = origin in ("term", "variant") and folded in context
             candidates.append(Candidate(
                 display, folded, term.term, origin, source,
                 context=context[folded] if conditioned else (),
                 unless_near=unless_near.get(folded, ()) if conditioned else (),
+                exact=exact,
+                case_sensitive=source == SOURCE_PACK and _spaced(display) in cased,
             ))
 
     unit_rules = tuple(

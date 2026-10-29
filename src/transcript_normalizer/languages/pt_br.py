@@ -25,12 +25,17 @@ NUMBER_WORDS = {
 }
 
 
-def normalize(text: str) -> str:
-    """Lowercase, accents stripped, anything else flattened to a space; then
-    D-084's number words as digits."""
+def fold(text: str) -> str:
+    """Lowercase, accents stripped, anything else flattened to a space.
+    D-090: what a term that matches only exactly is compared in."""
     s = unicodedata.normalize("NFD", unicodedata.normalize("NFC", text).lower())
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    return fold_numbers(_KEEP.sub(" ", s).strip(), NUMBER_WORDS, common_words)
+    return _KEEP.sub(" ", s).strip()
+
+
+def normalize(text: str) -> str:
+    """`fold`, then D-084's number words as digits."""
+    return fold_numbers(fold(text), NUMBER_WORDS, common_words)
 
 
 # ------------------------------------------------------------------ inflections

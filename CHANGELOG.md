@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A pack term can match only exactly (D-090): `match: exact` turns off fuzzy, phonetic, inflection and number-word matching for that term, and `case_sensitive: [forms]` makes the listed forms match only in their own case and accents (`Vale` the company, not `vale a pena`). Packs without the field behave as before; a pack that uses it should declare `min_engine`.
 - `TRANSCRIPT_NORMALIZER_HOME` now moves config.toml too (D-089): with the variable set, the settings are read from and written to `<folder>/config.toml`, beside runs/ and packs/, as in the portable folder, and the user settings folder is not touched. Without it nothing changes.
 - The test that packs/ holds no curated pack checks only the files git tracks there, so a pack installed locally (user data, D-088) no longer fails it; without git it is skipped, with the reason.
 

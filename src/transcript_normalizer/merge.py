@@ -28,7 +28,7 @@ import yaml
 from rapidfuzz import fuzz
 
 from . import packedit, packfiles, registry
-from .core.pack import load_learned
+from .core.pack import MATCH_EXACT, load_learned, nfc
 from .runs import BUNDLED_PACKS, installed_packs, learned_file, packs_root, runs_root
 
 #: Where `pack copy` keeps the upstream file a copy is based on.
@@ -43,6 +43,8 @@ CONTEXT_LINES = 3
 MERGE_WAIT_SECONDS = 10
 
 LISTS = ("aliases", "variants", "collocations")
+#: D-090: lists of forms whose case is their meaning, merged by exact spelling.
+CASED_LISTS = ("case_sensitive",)
 PACK_LISTS = ("classes", "phonetic_classes")
 #: Keys of a copy that are its own, never taken from upstream.
 OWN_KEYS = ("name", "field", "based_on", "local_edits")
@@ -51,6 +53,11 @@ MINE, THEIRS, BOTH, LATER = "mine", "theirs", "both", "later"
 ANSWERS = {MINE: "Keep mine", THEIRS: "Take theirs", BOTH: "Keep both", LATER: "Decide later"}
 #: What to type for each, in plain text: the same letter in every conflict.
 KEYS = {MINE: "m", THEIRS: "t", BOTH: "k", LATER: "l"}
+
+
+def _spelled(form) -> str:
+    """A form as written: NFC, single spaces; case and accents kept (D-090)."""
+    return " ".join(nfc(str(form)).split())
 
 
 # ------------------------------------------------------------------ provenance
@@ -283,6 +290,9 @@ class Merge:
             if k in LISTS:
                 if self.folds(a.get(k)) != self.folds(b.get(k)):
                     return False
+            elif k in CASED_LISTS:
+                if set(map(_spelled, a.get(k) or ())) != set(map(_spelled, b.get(k) or ())):
+                    return False
             elif k == "term":
                 if str(a.get(k)) != str(b.get(k)):
                     return False
@@ -309,6 +319,13 @@ class Merge:
                     self.summary.notices.append(f"{term}: upstream removed the {what} {x!r}")
         return out
 
+    def merge_cased(self, b, u, m) -> list:
+        """D-090: a CASED_LISTS list, as `merge_list` merges, but by exact
+        spelling: its forms differ from the term's others only in case."""
+        nb, nu, nm = (set(map(_spelled, x or ())) for x in (b, u, m))
+        removed = {k for k in nb if k not in nu or k not in nm}
+        return [x for x in dict.fromkeys(map(_spelled, [*(b or ()), *(u or ()), *(m or ())])) if x not in removed]
+
     def describe(self, label: str, term: dict | None) -> str:
         return f"  {label:8s}  {packedit.term_line(term) if term else '(not there)'}"
 
@@ -323,6 +340,8 @@ class Merge:
         for k, v in u.items():
             if k in LISTS:
                 out[k] = self.merge_list([], u.get(k), m.get(k))
+            elif k in CASED_LISTS:
+                out[k] = self.merge_cased([], u.get(k), m.get(k))
             elif k not in out:
                 out[k] = v
         out = {k: v for k, v in out.items() if v not in ([], None)}
@@ -340,6 +359,9 @@ class Merge:
             if k in LISTS:
                 merged = self.merge_list(b.get(k), u.get(k), m.get(k), term=str(m["term"]), what=k[:-1] if k != "aliases" else "alias")
                 if merged:
+                    out[k] = merged
+            elif k in CASED_LISTS:
+                if merged := self.merge_cased(b.get(k), u.get(k), m.get(k)):
                     out[k] = merged
             elif k == "term":
                 out[k] = m[k] if str(m[k]) != str(b[k]) and str(u[k]) == str(b[k]) else u[k]
@@ -614,6 +636,29 @@ class Merge:
                          [self.describe("mine", M.get(key)), self.describe("theirs", u)], [r.text],
                          {MINE: drop(), THEIRS: lambda: None, LATER: drop()}, form=r.text)
 
+    def case_sensitive_forms(self):
+        """D-090: `case_sensitive` lists forms of a term with `match: exact`.
+        A form the merge took away, or the whole list on a term no longer
+        exact, is dropped with a notice, so the result still loads."""
+        for t in self.result.values():
+            listed = t.get("case_sensitive")
+            if not listed:
+                continue
+            if t.get("match") != MATCH_EXACT:
+                del t["case_sensitive"]
+                self.summary.notices.append(
+                    f"{t['term']}: no longer `match: {MATCH_EXACT}`; case_sensitive {', '.join(map(repr, listed))} dropped")
+                continue
+            own = set(map(_spelled, [t["term"], *(t.get("aliases") or []), *(t.get("variants") or [])]))
+            kept = [f for f in listed if _spelled(f) in own]
+            for f in listed:
+                if _spelled(f) not in own:
+                    self.summary.notices.append(f"{t['term']}: case_sensitive {f!r} dropped, the form is gone")
+            if kept:
+                t["case_sensitive"] = kept
+            else:
+                del t["case_sensitive"]
+
     # -------------------------------------------------------------- the pack
 
     def pack_data(self) -> dict:
@@ -767,6 +812,7 @@ def run_merge(args) -> int:
     merge.collisions()
     merge.learned_conflicts()
     resolve(merge.conflicts, after)
+    merge.case_sensitive_forms()
     merge.learned_report()
     present = {str(term["term"]) for term in merge.result.values()}
     s.added = [x for x in s.added if x in present]
