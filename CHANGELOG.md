@@ -3,6 +3,7 @@
 ## Unreleased
 
 - `TRANSCRIPT_NORMALIZER_HOME` now moves config.toml too (D-089): with the variable set, the settings are read from and written to `<folder>/config.toml`, beside runs/ and packs/, as in the portable folder, and the user settings folder is not touched. Without it nothing changes.
+- The test that packs/ holds no curated pack checks only the files git tracks there, so a pack installed locally (user data, D-088) no longer fails it; without git it is skipped, with the reason.
 
 ## 0.7.0
 

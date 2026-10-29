@@ -1,6 +1,7 @@
 """D-017: packs/ is the user's knowledge directory; fixtures/ packs are frozen."""
 
 import shutil
+import subprocess
 
 import pytest
 
@@ -41,10 +42,22 @@ def test_pack_defaults_to_the_packs_directory(tmp_path, monkeypatch):
 
 
 def test_the_repo_s_packs_directory_holds_no_curated_pack():
-    """D-043: the curated pack ships in the package; packs/ is the user's."""
-    root_packs = FIXTURE.parents[1] / "packs"
-    assert not (root_packs / DEFAULT_PACK).exists()
-    assert not any(p.is_symlink() for p in root_packs.iterdir())
+    """D-043: the curated pack ships in the package; packs/ is the user's.
+
+    Only what git tracks there: a pack installed locally is user data, ignored
+    by git (D-088), and does not belong to the repository."""
+    root = FIXTURE.parents[1]
+    git = shutil.which("git")
+    if git is None:
+        pytest.skip("git is not installed: the tracked files in packs/ cannot be listed")
+    listed = subprocess.run([git, "ls-files", "--stage", "--", "packs"], cwd=root,
+                            capture_output=True, text=True)
+    if listed.returncode != 0:
+        pytest.skip(f"not a git checkout, so packs/ has no tracked files to check: {listed.stderr.strip()}")
+    # Each line: "<mode> <object> <stage>\t<path>"; mode 120000 is a symlink.
+    tracked = [line.split("\t", 1) for line in listed.stdout.splitlines()]
+    assert f"packs/{DEFAULT_PACK}" not in {path for _, path in tracked}
+    assert not any(meta.startswith("120000 ") for meta, _ in tracked)
 
 
 def test_with_no_packs_directory_the_default_is_the_bundled_pack(tmp_path, monkeypatch):
