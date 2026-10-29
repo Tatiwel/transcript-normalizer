@@ -934,6 +934,24 @@ With the variable set, `runs.config_file()` is `<variable's folder>/config.toml`
 
 Tested in tests/test_home_config.py, with the platform's configuration directory redirected to a temporary folder: a write with the variable set lands only in the variable's folder, and the other stays empty.
 
+## D-090 A term may match only exactly
+
+Some terms are short codes or names that every similarity source reaches by accident: a ticker one letter from a word, a name whose plural or number word is something else. A term may now say that it matches only by equality with its own forms.
+
+**Schema.** A term may have `match: exact`, the only value; anything else is refused on load. Without the key a term matches exactly as before. A term with `match: exact` may also have `case_sensitive: [..]`, forms of its own (its canonical name, an alias or a curated variant), written exactly as the pack writes them; each listed form matches only with that case and those accents. A `case_sensitive:` without `match: exact` on the same term, one that is not a list, or one that names something not among the term's forms (`vale` when the term is `Vale`) is refused, with the file, the term and the reason.
+
+**What it turns off, for that term only.** Fuzzy matching (D-011, D-025, with D-005's length rule and D-047's variant threshold): the canonical name and the curated variants are no longer compared by similarity. The phonetic source (D-050, D-060, D-068), even when the term's class is phonetic. D-031a's inflection: a plural of the term or of an alias is not the term spelled out. D-084's number words: the term's forms and the text are compared in the language module's new optional `fold`, which is `normalize` without number words (pt-BR and English; a module without it uses `normalize`, as the generic one does, which folds no numbers). So `BOVA onze` is not `BOVA11` for such a term, while `BOVA11` is.
+
+**What stays.** The name, the aliases and the variants, curated and learned (D-013, D-020), match by equality after that fold: case and accents ignored, and whatever else the language flattens (`P/VP` is `P VP`), unless the form is listed in `case_sensitive`. A case-sensitive form is compared as written, word by word, so `Vale` is the company and `vale a pena` is not; this restricts D-041's folded comparison for the forms listed, and is not a case-only correction (D-008): it decides whether a form is found, never rewrites case. The guards that read exact forms keep reading the term's: D-030 as D-049 amends it, D-031b as D-034 amends it, and D-040; for this term they see its exact forms only, with no inflection and with its case-sensitive forms only where they match. Rejections (D-027), local decisions (D-073) and the unit rules (D-006) are unchanged.
+
+**Pack fit and context.** Nothing changes in D-054: a recognized exact term is a high-band annotation and counts like any other, and a form with `context:` and none in the run is not proposed, so it does not count. As a context term (D-086) an exact term is found only by its exact forms, with no inflection, no number words, and its case-sensitive forms only in their case. An exact term may itself declare a `context:`.
+
+**Merging (D-069).** `match` is a scalar and merges as one. `case_sensitive` is a list merged like aliases and variants (both sides' additions, minus what either side removed), but by exact spelling, since its forms differ from the term's others only in case. After the conflicts are answered, a case-sensitive form whose form the merge took away is dropped, and so is the whole list on a term that is no longer `match: exact`, each with a notice, so the result still loads.
+
+**Older engines.** An engine without this decision ignores both keys and matches the term fuzzily, by inflection and by sound, which is what the pack meant to stop. A pack that uses `match:` therefore declares `min_engine:` (D-087) equal to the first released engine that has this decision, in the file and in its index entry, and bumps its minor version (CONTRIBUTING 2.7: a new key). As D-087 decided, the loader does not check this for the pack author: the engine that would run such a check already knows the key.
+
+Gate: with no `match:` in any pack, annotations.json is byte-identical before and after for thirteen runs: the four fixtures against their frozen pack and against the bundled 0.3.8, wxgFO_fyfXg with tests/data/wxgFO_fyfXg.learned.yaml, R2Qgz8tFWVI and 4wCtn8BWR4o with a learned layer of confirmed variants, an alias and a context-conditioned variant, tests/data/context-mixed.txt with context-ia.yaml, and tests/data/xx with the generic module. Tested in tests/test_match_exact.py and tests/test_context.py.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
