@@ -120,7 +120,10 @@ CONFIG_FILE = "config.toml"
 
 def config_file() -> Path:
     """`config.toml` in the platform's user configuration directory, or in the
-    portable folder (D-070)."""
+    portable folder (D-070). TRANSCRIPT_NORMALIZER_HOME moves it too, beside
+    runs/ and packs/, as the portable folder does (D-089)."""
+    if os.environ.get(DATA_DIR_ENV):
+        return data_dir() / CONFIG_FILE
     portable = portable_dir()
     if portable is not None:
         return portable / CONFIG_FILE

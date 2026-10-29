@@ -57,7 +57,7 @@ ACTIONS = (
            "a folder dialog for where runs/ and packs/ go; the sign-in, your browser's login (a browser, or a "
            "cookies.txt file) for sites that ask you to sign in and YouTube's bot check; whether to "
            "keep the audio after transcribing. Kept in "
-           "config.toml in your user settings. In a script, the variable and the flags win",
+           "config.toml in your user settings, or in the variable's folder. In a script, the variable and the flags win",
            f"TRANSCRIPT_NORMALIZER_HOME=<folder> {PROG}"),
     Action("8", "Help", "what each action does and its command",
            "this help; `?` on any question explains its options",

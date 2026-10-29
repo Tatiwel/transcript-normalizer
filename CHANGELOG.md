@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `TRANSCRIPT_NORMALIZER_HOME` now moves config.toml too (D-089): with the variable set, the settings are read from and written to `<folder>/config.toml`, beside runs/ and packs/, as in the portable folder, and the user settings folder is not touched. Without it nothing changes.
+
 ## 0.7.0
 
 Context-conditioned variants: a form that counts only where other terms of the pack appear (D-086); packs that say which engine they need, `min_engine` (D-087); no pack installed by default: the bundled one is included, installed when chosen, offline (D-088).

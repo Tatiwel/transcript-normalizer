@@ -926,6 +926,14 @@ Until now financas-ptbr, shipped inside the package (D-043), was every user's pa
 
 Tested in tests/test_included.py; the tests of the repository's behaviour (test_registry.py, test_min_engine.py) run with nothing included.
 
+## D-089 `TRANSCRIPT_NORMALIZER_HOME` moves config.toml too (amends D-061)
+
+D-061 put config.toml in `platformdirs.user_config_dir("transcript-normalizer")` whatever else was set, and made `TRANSCRIPT_NORMALIZER_HOME` move only runs/ and packs/. So a script, or a measurement run with its own folder, still read and wrote the user's real settings: the sign-in, the pack offered first, keep_audio, all from `~/.config`, shared with every other run on the computer. The variable exists to put a run somewhere of its own (D-052: "for the tests and for a portable copy"); half of it stayed behind.
+
+With the variable set, `runs.config_file()` is `<variable's folder>/config.toml`, and every read and write of the settings happens there; the user configuration directory is neither read nor written. The file sits at the folder's root, beside runs/ and packs/, the same place the portable folder keeps it (`data/config.toml`, D-070), so the two ways of keeping everything in one folder lay it out the same. The order is base_dir's: the variable, then portable, then the user configuration directory. A `data_dir` key in that file is read but changes nothing, since the variable already wins over Settings (D-061). Without the variable nothing changes.
+
+Tested in tests/test_home_config.py, with the platform's configuration directory redirected to a temporary folder: a write with the variable set lands only in the variable's folder, and the other stays empty.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
