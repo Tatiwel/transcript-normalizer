@@ -115,6 +115,18 @@ def test_a_canonical_name_that_is_an_ordinary_word(tmp_path):
     assert [(o, b) for _, o, t, b in found(path, caption) if t == "Vale"] == [("Vale", BAND_HIGH)]
 
 
+def test_a_context_term_that_matches_only_exactly(tmp_path):
+    """D-090: a context term with `match: exact` is found by its own forms
+    only: its plural is CAPEX's inflection otherwise, and counts no more."""
+    caption = "0:01 os capexs subiram\n0:10 os capexs caíram\n0:20 o Ox subiu\n"
+    path = tmp_path / "pack.yaml"
+    path.write_text(PACK, encoding="utf-8")
+    assert ox(found(path, caption)) == [("0:20", BAND_HIGH)]
+    path.write_text(PACK.replace("  - term: CAPEX\n", "  - term: CAPEX\n    match: exact\n"), encoding="utf-8")
+    assert ox(found(path, caption)) == []
+    assert ox(found(path, "0:01 o capex subiu\n0:10 o Capex caiu\n0:20 o Ox subiu\n")) == [("0:20", BAND_HIGH)]
+
+
 # ------------------------------------------------------------------ the mixed caption
 
 DATA = __import__("pathlib").Path(__file__).resolve().parent / "data"
