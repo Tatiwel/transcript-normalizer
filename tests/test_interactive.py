@@ -29,6 +29,8 @@ ANSI = re.compile(r"\x1b\[")
 
 #: fetch's own check for an extra, before the fakes replace it.
 REAL_MISSING_EXTRA = fetch.missing_extra
+#: The real one, taken at import, before conftest's isolated_settings replaces it for every test.
+REAL_CONFIG_FILE = runs.config_file
 
 
 def menu(tmp_path, monkeypatch, capsys, lines, ytdlp=None, vtt="menu.vtt", whisper=True):
@@ -764,8 +766,7 @@ def test_settings_hint_is_printed_once(tmp_path, monkeypatch, capsys):
 
 def test_settings_hint_names_the_folder_of_transcript_normalizer_home(tmp_path, monkeypatch, capsys):
     # D-089: with the variable set, config.toml is beside runs/ and packs/, not in the user settings.
-    from .test_home_config import REAL_CONFIG_FILE
-
+    assert REAL_CONFIG_FILE.__qualname__ == "config_file"  # runs' own, not isolated_settings' lambda
     monkeypatch.setattr(runs, "config_file", REAL_CONFIG_FILE)
     monkeypatch.setattr(runs, "portable_dir", lambda: None)
     monkeypatch.setenv(runs.DATA_DIR_ENV, str(tmp_path / "home"))
