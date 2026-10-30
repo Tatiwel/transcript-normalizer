@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The tests run from a non-editable install (`pip install .`) too: the id of the included pack's test case no longer assumes the pack is inside the checkout, which stopped collection with a `ValueError`.
+
 ## 0.8.0
 
 2026-10-30. Terms that match only exactly, `match: exact` and `case_sensitive` (D-090); `TRANSCRIPT_NORMALIZER_HOME` moves config.toml too (D-089); financas-ptbr 0.4.0 included.

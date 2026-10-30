@@ -17,6 +17,12 @@ PACKS = [
 GOLDS = sorted((ROOT / "fixtures").glob("*/gold.csv"))
 
 
+def _path_id(p):
+    # The included pack is under site-packages, not ROOT, when installed with `pip install .`.
+    base = ROOT if p.is_relative_to(ROOT) else BUNDLED_PACKS.parents[1]
+    return str(p.relative_to(base))
+
+
 def test_the_list_is_the_eight_of_d021():
     assert CLASSES == (
         "companhia", "indicador", "conceito", "unidade",
@@ -24,13 +30,13 @@ def test_the_list_is_the_eight_of_d021():
     )
 
 
-@pytest.mark.parametrize("path", PACKS, ids=lambda p: str(p.relative_to(ROOT)))
+@pytest.mark.parametrize("path", PACKS, ids=_path_id)
 def test_every_pack_term_uses_a_listed_class(path):
     pack = load_pack(path, learned=Learned())
     assert {t.klass for t in pack.terms} <= set(CLASSES) | {None}
 
 
-@pytest.mark.parametrize("path", GOLDS, ids=lambda p: str(p.relative_to(ROOT)))
+@pytest.mark.parametrize("path", GOLDS, ids=_path_id)
 def test_every_in_scope_gold_row_uses_a_listed_class(path):
     with path.open(encoding="utf-8-sig", newline="") as fh:
         rows = [r for r in csv.DictReader(fh) if r["term"]]
