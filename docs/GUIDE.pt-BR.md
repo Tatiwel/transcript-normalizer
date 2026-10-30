@@ -75,7 +75,7 @@ applied, please confirm 6  (the tool was unsure; your answer is remembered)
 result: runs/4wCtn8BWR4o/normalized.txt
 ```
 
-`transcript-normalizer help` (ou `--help`, ou o item 8 do menu) imprime a referência inteira, em seções: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE.
+`transcript-normalizer help` (ou `--help`, ou o item 8 do menu) imprime a referência inteira, em seções: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE. `transcript-normalizer --version` imprime só a versão instalada, a mesma que o menu mostra.
 
 **Os três comandos.**
 

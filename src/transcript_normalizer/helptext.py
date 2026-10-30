@@ -72,6 +72,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             (PROG, "on a terminal: the interactive menu"),
             (f"{PROG} <command> [options]", ""),
             (f"{PROG} <legenda.txt>", "same as `normalize <legenda.txt>`"),
+            (f"{PROG} --version", "the installed version, on one line"),
         ]),
         ("COMMANDS", [
             ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `--list` checks a link without downloading (site, captions, audio, login) and `--track <code>` takes one caption track; `--keep-audio` keeps the audio after transcribing; `fetch --check` lists the fetch tools installed; --cookies-from-browser <browser> or --cookies <file> signs in, on any site"),

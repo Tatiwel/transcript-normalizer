@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `transcript-normalizer --version` prints the installed version, on one line, and exits 0: the one the menu's first screen shows, from the package metadata, which the executables carry. It is in the help's USAGE and in both guides.
 - The tests run from a non-editable install (`pip install .`) too: the id of the included pack's test case no longer assumes the pack is inside the checkout, which stopped collection with a `ValueError`.
 
 ## 0.8.0

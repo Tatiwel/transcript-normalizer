@@ -804,6 +804,12 @@ def main(argv: list[str] | None = None) -> int:
     # The top-level --help is the sectioned help; `<command> --help` stays argparse's.
     if argv[:1] in (["-h"], ["--help"]):
         return run_help()
+    # The menu's version, from the package metadata; the executable carries it (--copy-metadata).
+    if argv == ["--version"]:
+        from .helptext import version
+
+        print(version())
+        return 0
     # `normalize` is the default: a bare caption file still works.
     if argv and argv[0] not in COMMANDS and not argv[0].startswith("-"):
         argv.insert(0, "normalize")

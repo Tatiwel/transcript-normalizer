@@ -75,7 +75,7 @@ applied, please confirm 6  (the tool was unsure; your answer is remembered)
 result: runs/4wCtn8BWR4o/normalized.txt
 ```
 
-`transcript-normalizer help` (or `--help`, or menu item 8) prints the whole reference in sections: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE.
+`transcript-normalizer help` (or `--help`, or menu item 8) prints the whole reference in sections: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE. `transcript-normalizer --version` prints only the installed version, the one the menu shows.
 
 **The three commands.**
 

@@ -286,6 +286,17 @@ def test_help_and_top_level_help_are_the_same_text(argv, monkeypatch, capsys):
     assert max(len(line) for line in out.splitlines()) <= 80
 
 
+def test_version_prints_only_the_installed_version(capsys):
+    from importlib.metadata import version
+
+    from transcript_normalizer import helptext
+
+    assert cli.main(["--version"]) == 0
+    out = capsys.readouterr().out
+    assert out == f"{version('transcript-normalizer')}\n"
+    assert out.strip() == helptext.version()  # the one the menu's first screen shows
+
+
 def test_a_command_s_own_help_is_still_argparse(capsys):
     with pytest.raises(SystemExit) as stop:
         cli.main(["fetch", "--help"])
