@@ -83,7 +83,7 @@ Measured on the first fixture with its frozen pack (RapidFuzz plus a hand-curate
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md) has the three procedures for adding a language, building a domain pack, and building a fixture that measures them. This repository is the engine; domain content (the packs) lives in [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), where each pack's maintainers review its changes.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the three procedures for adding a language, building a domain pack, and building a fixture that measures them. This repository is the engine; domain content (the packs) lives in [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), where each pack's maintainers review its changes. To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Test content
 

@@ -1,5 +1,9 @@
 # Contributing
 
+Everyone here follows the account's [code of conduct](https://github.com/Tatiwel/.github/blob/main/CODE_OF_CONDUCT.md).
+
+A vulnerability is reported privately, never in an issue: see [SECURITY.md](SECURITY.md).
+
 Three things people outside the project add: a language, a domain pack, and a fixture that measures them. Each has a procedure below that you can follow without reading the code.
 
 **This repository is the engine; domain content lives in the packs repository.** Packs are proposed, reviewed and versioned in [transcript-normalizer-packs](https://github.com/Tatiwel/transcript-normalizer-packs), one directory per pack, each with a `MAINTAINERS` file naming who reviews its changes (D-055). A change to a pack's terms goes there, not here; this repository never edits pack content. It keeps two kinds of copies: `src/transcript_normalizer/packs/financas-ptbr.yaml`, the offline default, taken from the packs repository at a released version, and the frozen `pack.yaml` of each fixture, which only a measurement changes. Section 2 below is how to build and curate a pack wherever it will live; the packs repository's README says how to propose one. A user's reviews reach the packs repository through `transcript-normalizer pack propose` (D-056). `docs/DECISIONS.md` is the reason behind every rule here; decision numbers (D-0xx) point into it.
