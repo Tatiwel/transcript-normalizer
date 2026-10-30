@@ -244,15 +244,15 @@ fetch resolves its source in a fixed chain and records which step produced the c
 
 "Up to 3" is three attempts in all, the first and two retries, waiting 2s and then 4s: three 429s in a row fall through to step 2. Any failure of step 1 falls through, but only a 429 is retried. Reading the video's metadata comes before both steps and is retried the same way; if it fails, there is nothing to fall through to. The header gains a line `# Etapa: 1, legenda da plataforma` (with the retries, when there were any) or `# Etapa: 2, reconhecimento de fala local (<why>)`, in the header's Portuguese; meta.yaml gains `step`, `step_name`, `retries` and, for step 2, `fallback_reason`. With curl_cffi installed (the ingest extra), yt-dlp is asked to impersonate a browser (`--impersonate chrome`), which is what avoids most 429s; without it yt-dlp runs as before. On a terminal the stages, the transcription progress (by seconds of audio) and the retry countdown are drawn with rich; anywhere else they are plain lines. The model download shows faster-whisper's own progress, announced by a line before it starts.
 
-## D-038 fetch takes a local audio or video file
-
-`transcript-normalizer fetch <path>` accepts a local audio or video file as well as a url. A file has no platform caption, so the D-036 chain starts at step 2: it is transcribed locally with faster-whisper, where it sits, without being copied, and needs faster-whisper but not yt-dlp. The run directory is `runs/<file-stem>/`, D-018's third rule. meta.yaml records `source: file` and the file's absolute path, with `url: null`, and a url run now records `source: url`. The legenda.txt header has `# Arquivo: <file name>` where a video's has `# URL:`, and `# Etapa: 2, reconhecimento de fala local (arquivo local)`. `--caption-only` with a file is an error, since there is no caption to take; so is a path that is neither an existing file nor a url, rather than handing it to yt-dlp.
-
 ## D-037 The confirm loop saves as it goes
 
 The confirmation loop writes the learned layer after every answer (atomic write: temp file then rename), so an interrupted session keeps its answers and a rerun only asks what is still pending. Measured: a Ctrl+C during the third fixture's first --confirm run lost every answer given.
 
 Every `y`, `n` and `l` is written before the next question; a skip changes nothing and writes nothing. The temporary file sits beside the learned file, so the rename stays on one filesystem; a failed write removes it and leaves the previous file whole. Ctrl+C ends the loop, pending.txt is rewritten from the answers so far (a variant the loop never reached is `[never asked]`, one skipped is `[skipped]`), the run prints how many answers it kept, and it exits with 130. A finished session still ends with "learned layer written to". A rerun asks nothing already answered, because a confirmed variant now matches exactly, a rejected pair is never proposed, and an alias is recognized.
+
+## D-038 fetch takes a local audio or video file
+
+`transcript-normalizer fetch <path>` accepts a local audio or video file as well as a url. A file has no platform caption, so the D-036 chain starts at step 2: it is transcribed locally with faster-whisper, where it sits, without being copied, and needs faster-whisper but not yt-dlp. The run directory is `runs/<file-stem>/`, D-018's third rule. meta.yaml records `source: file` and the file's absolute path, with `url: null`, and a url run now records `source: url`. The legenda.txt header has `# Arquivo: <file name>` where a video's has `# URL:`, and `# Etapa: 2, reconhecimento de fala local (arquivo local)`. `--caption-only` with a file is an error, since there is no caption to take; so is a path that is neither an existing file nor a url, rather than handing it to yt-dlp.
 
 ## D-039 The design is stable for pt-BR finance
 
@@ -292,12 +292,6 @@ The curated pack ships inside the package at transcript_normalizer/packs/ and is
 
 The root `packs/financas-ptbr.yaml` is no longer a link to the bundled copy. It is gone, so the sdist carries no symlink. Run in the repo, the default is therefore the bundled pack, while the learned layer still sits at `./packs/<pack-name>.learned.yaml`. Tests and `scripts/measure.py` read the bundled path. `packs/README.md` says what the directory is for.
 
-## D-045 fetch prefers the original automatic caption
-
-YouTube publishes the original automatic caption as `<lang>-orig` and an auto-translated track as `<lang>`. fetch must prefer `<lang>-orig`, then a manual `<lang>`, then automatic `<lang>`, and record which track it took in the header and meta.yaml. Measured: for 4tTmY8Buask the `pt` track was a translation (`BTG Pacific`, `Portfólio de canais`, `Ofertas públicas iniciais (IPOs)`), useless as a normalization source.
-
-Within each of the three, an exact code comes before a regional variant (`pt-BR-orig` for `--lang pt`), with the existing warning when there are several. Another language's `-orig` (`en-orig`) says nothing about `pt`, so an automatic `pt` is still taken. It is a translation then, but the chain has no better caption to offer, and the header names the track. The header keeps its line `# Origem da legenda: <source> (<track>)`. The source is `manual`, `automatica` or the new `automatica original`, so a caption from `pt-orig` reads `automatica original (pt-orig)`. meta.yaml gains `caption_track` and `caption_source` when step 1 produced the text. Tested with a fake track list shaped like 4tTmY8Buask's (`pt-orig` alongside translations into `de`, `en`, `es`, `fr`, `pt`, `zh-Hans`). Existing headers are unchanged, since a video without `-orig` takes the same track as before.
-
 ## D-044 pt-BR n-grams stop at a comma
 
 Add comma to the pt-BR sentence boundaries (D-024). Measured: the proposals `preço, valor`, `preço, não` and `isso, Amigo` crossed a comma in 4tTmY8Buask.
@@ -305,6 +299,12 @@ Add comma to the pt-BR sentence boundaries (D-024). Measured: the proposals `pre
 This supersedes D-024's "a comma does not count" for pt-BR only. The generic language module keeps `. ? ! ;`. A comma inside a token is still part of it, so a decimal comma (`11,5%`) and a decimal point (`6.7`) are both unaffected. A caption break is still not punctuation (D-007). No term, alias or variant in any pack contains a comma.
 
 Measured on the 4tTmY8Buask run with the bundled pack 0.2.4, no learned layer: eight proposals crossed a comma. Three were medium band and applied (`preço, valor` and `preço, não` → preço alvo at 85 and 84, `isso, Amigo` → CEMIG at 80), and five were low marks. None is left. Applied annotations go from 46 to 43 and corrections from 7 to 4. That run's caption is the translated `pt` track (`automatica (pt)`) D-045 is about, fetched before D-045. The fixtures do not move against their frozen packs, so no bound changes. Against 0.2.4, 4wCtn8BWR4o goes from 4 to 3 false positives (`preço, você` → preço alvo is gone), and R2Qgz8tFWVI and wxgFO_fyfXg do not move. No hit is lost anywhere.
+
+## D-045 fetch prefers the original automatic caption
+
+YouTube publishes the original automatic caption as `<lang>-orig` and an auto-translated track as `<lang>`. fetch must prefer `<lang>-orig`, then a manual `<lang>`, then automatic `<lang>`, and record which track it took in the header and meta.yaml. Measured: for 4tTmY8Buask the `pt` track was a translation (`BTG Pacific`, `Portfólio de canais`, `Ofertas públicas iniciais (IPOs)`), useless as a normalization source.
+
+Within each of the three, an exact code comes before a regional variant (`pt-BR-orig` for `--lang pt`), with the existing warning when there are several. Another language's `-orig` (`en-orig`) says nothing about `pt`, so an automatic `pt` is still taken. It is a translation then, but the chain has no better caption to offer, and the header names the track. The header keeps its line `# Origem da legenda: <source> (<track>)`. The source is `manual`, `automatica` or the new `automatica original`, so a caption from `pt-orig` reads `automatica original (pt-orig)`. meta.yaml gains `caption_track` and `caption_source` when step 1 produced the text. Tested with a fake track list shaped like 4tTmY8Buask's (`pt-orig` alongside translations into `de`, `en`, `es`, `fr`, `pt`, `zh-Hans`). Existing headers are unchanged, since a video without `-orig` takes the same track as before.
 
 ## D-046 Fourth fixture: a new sector, and one misrecognition with two meanings
 
