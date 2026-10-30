@@ -912,6 +912,8 @@ D-086 gave packs something an older engine does not know. An engine up to 0.6.5 
 
 **Not done.** Packs are not refused for unknown keys: user packs written by hand may carry their own, and a strict schema is a larger change than this. The bundled financas-ptbr does not carry `min_engine`: it ships with the engine that understands it, and the version in pyproject (0.6.5 until the release) would make the engine refuse its own default.
 
+Amended in 0.8.0: the included financas-ptbr now carries `min_engine`. It is a byte-for-byte copy of the packs repository's file, and 0.4.0 uses `match: exact`, so it says `min_engine: "0.8.0"` (D-090). The engine accepts its own included pack because it ships with the version the pack asks for: 0.8.0 includes 0.4.0. The check is the same as for any other pack file, so the included pack's `min_engine` must not be newer than the version in pyproject. A commit that brings in such a pack before the version bump fails its own tests: the engine refuses its default (it happened in 4ed1ce0, the pack commit of 0.8.0, at 0.7.0).
+
 **Publishing financas-ptbr 0.3.8.** Once an engine with D-086 and this decision is released as 0.7.0: keep 0.3.7's file at a path of its own (e.g. `financas-ptbr/0.3.7/pack.yaml`, its sha256 unchanged), put 0.3.8 at `financas-ptbr/pack.yaml` with `min_engine: "0.7.0"` in the file, and list both in `index.json`, 0.3.8 first with `"min_engine": "0.7.0"`, 0.3.7 last. Engines up to 0.6.5 then keep 0.3.7; 0.7.0 and later get 0.3.8. Tested in tests/test_min_engine.py, with the running engine pinned at 0.6.5 and 0.7.0.
 
 ## D-088 The bundled pack is included, not installed
