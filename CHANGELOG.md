@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Security: filelock 4.0.1 → 4.2.1 and certifi 2026.7.22 → 2026.10.23 in uv.lock, so the executables are built with them. filelock (14 advisories, the worst high) comes with faster-whisper, in the full build only; certifi (one critical advisory, emSign root CAs with compromised intermediate keys) comes with curl_cffi, in the lite and full builds. The engine uses neither directly, and `pip install` resolves its own versions.
 - `transcript-normalizer --version` prints the installed version, on one line, and exits 0: the one the menu's first screen shows, from the package metadata, which the executables carry. It is in the help's USAGE and in both guides.
 - The tests run from a non-editable install (`pip install .`) too: the id of the included pack's test case no longer assumes the pack is inside the checkout, which stopped collection with a `ValueError`.
 
