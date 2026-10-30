@@ -4,7 +4,7 @@ For three readers at once: you want cleaner transcripts and nothing else; you st
 
 **Start here** (section 2 has the details):
 - *I just want to use it:* download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it.
-- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.0"`.
+- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.1"`.
 - *I want to contribute:* `git clone https://github.com/Tatiwel/transcript-normalizer`, then [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 1. What it does, and what it does not
@@ -20,7 +20,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 **I use Python.**
 
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.0"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.1"
 ```
 
 Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory, unless the menu's Settings chose a folder. The package is not on PyPI yet; the wheel is also attached to each Release.
