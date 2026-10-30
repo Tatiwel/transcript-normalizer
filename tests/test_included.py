@@ -19,7 +19,7 @@ from .fetch_fakes import LINK, VIDEO_ID
 from .test_interactive import menu
 
 BUNDLED = BUNDLED_PACKS / "financas-ptbr.yaml"
-VERSION = "0.3.8"
+VERSION = "0.4.0"
 MED = "language: pt-BR\nversion: 0.1.0\nclasses: [farmaco]\nterms:\n  - term: Dipirona\n    class: farmaco\n"
 
 
@@ -65,7 +65,7 @@ def test_the_question_shows_the_included_pack_as_not_installed(home, monkeypatch
     assert "No pack installed yet: you will be asked what the video is about." in out.splitlines()
     options = about(out)
     assert options[0].startswith("1. financas-ptbr")
-    assert options[0].endswith(f"pt-BR · {VERSION} · 70 terms  (included, not installed)")
+    assert options[0].endswith(f"pt-BR · {VERSION} · 352 terms  (included, not installed)")
     assert options[1].startswith("2. Create your own from a template…")
     assert options[2].startswith("3. None / another area")
     assert options[3] == "b. <- Back"
@@ -86,7 +86,7 @@ def test_choosing_it_installs_it_and_normalizes(home, monkeypatch, capsys):
     _, out, _ = menu(home, monkeypatch, capsys, [*LINK, "", "b", "q"])
     assert "Pack offered first: financas-ptbr" in out.splitlines()
     options = about(out)
-    assert options[0].startswith("1. financas-ptbr") and options[0].endswith(f"pt-BR · {VERSION} · 70 terms")
+    assert options[0].startswith("1. financas-ptbr") and options[0].endswith(f"pt-BR · {VERSION} · 352 terms")
     assert options[1].startswith("2. Create your own")
 
 

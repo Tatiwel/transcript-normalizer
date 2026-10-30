@@ -1,5 +1,7 @@
 """D-030: "the term is already spelled out here" means as whole words."""
 
+from pathlib import Path
+
 from transcript_normalizer import find_annotations, load_pack, parse_caption, resolve_overlaps
 from transcript_normalizer.core.pack import Learned
 
@@ -11,8 +13,10 @@ def applied(pack, line):
     return [(a.original, a.term, a.rule) for a in found if a.applied]
 
 
-def test_deck_is_a_variant_of_dec_not_dec_spelled_out(v2):
-    assert ("deck", "DEC", "term:variant") in applied(v2, "o índice deck subiu")
+def test_deck_is_a_variant_of_dec_not_dec_spelled_out():
+    # financas-ptbr 0.3.9 dropped `deck` (D-032); the frozen 4tTmY8Buask pack still has it.
+    frozen = load_pack(Path(__file__).resolve().parents[1] / "fixtures" / "4tTmY8Buask" / "pack.yaml", learned=Learned())
+    assert ("deck", "DEC", "term:variant") in applied(frozen, "o índice deck subiu")
 
 
 def test_enterprise_valuey_is_a_variant_not_the_term_spelled_out(v2):

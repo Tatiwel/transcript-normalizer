@@ -88,7 +88,7 @@ transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
 O `fetch` pega a legenda da plataforma (no idioma original, a faixa do próprio canal, senão a automática do áudio original; nunca uma tradução automática, D-045, D-081) e, se não houver, transcreve o áudio localmente (D-036). Também aceita um arquivo de áudio ou vídeo: `transcript-normalizer fetch aula.mp4`. O `.vtt` ou `.srt` baixado é apagado depois de convertido em `legenda.txt`; `--keep-raw` o mantém. O segundo comando normaliza, e aceita também um `.srt` ou `.vtt`, que antes converte em `runs/<nome-do-arquivo>/legenda.txt`; o terceiro faz o mesmo e depois pergunta o que ficou em dúvida. `fetch --list <url>` confere um link sem baixar nada: o site, título e duração, as faixas de legenda (ou nenhuma), se há áudio para transcrever e se o site pede login (D-078); e `fetch --track <código>` escolhe uma exatamente (`pt-orig`, `pt`, `en`), no lugar da escolha do `--lang` (D-062). Sem `--lang`, a legenda é no idioma do próprio vídeo, como o site informa; quando o site não diz, a única faixa de áudio original do vídeo, senão a única manual, senão português, com uma linha avisando (D-080). `transcript-normalizer list` mostra o que você já tem. Parte do que o segundo imprime para o vídeo acima:
 
 ```
-runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.3.8
+runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.4.0
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
@@ -157,7 +157,7 @@ O `annotations.json` tem um registro por mudança, apontando posições de carac
 ```json
 {"start": 9141, "end": 9156, "original": "dívida alíquida", "replacement": "dívida líquida",
  "term": "dívida líquida", "rule": "term:variant", "kind": "correction", "band": "high",
- "score": 100, "applied": true, "pack_version": "0.3.8"}
+ "score": 100, "applied": true, "pack_version": "0.4.0"}
 ```
 
 `kind` é `correction` ou `alias`. `band` é o grau de certeza: **high** (uma forma já listada: aplicada), **medium** (um palpite próximo: aplicado e listado em `pending.txt` para você confirmar), **ask** (um nome que soa como um nome do pacote: nunca aplicado, só listado em `pending.txt` e perguntado, D-050, D-060), **low** (uma semelhança fraca: só registrada, nunca aplicada) (D-011).
@@ -238,7 +238,7 @@ O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote
 
 ```
 name           version  language  terms  size (KB)  source   update
-financas-ptbr  0.3.8    pt-BR        70        8.1  included
+financas-ptbr  0.4.0    pt-BR       352       48.6  included
 medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
@@ -357,7 +357,7 @@ transcript-normalizer pack propose --pack financas-ptbr
 ```
 
 ```
-What would be contributed to financas-ptbr 0.3.8 (3), from packs/financas-ptbr.learned.yaml:
+What would be contributed to financas-ptbr 0.4.0 (3), from packs/financas-ptbr.learned.yaml:
   + variant   esse mig -> CEMIG
   + alias     Klabinha -> Klabin
   - rejected  saber se  (not Sabesp)
@@ -375,14 +375,14 @@ O pacote declara o idioma (`language: pt-BR`), e um módulo de idioma fornece o 
 
 ## 8. Quão bom é
 
-Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são medidos de novo a cada mudança. Os números abaixo vêm de `uv run python scripts/measure.py`, que é a fonte: se discordarem, ele está certo. Com o pacote que vem junto (0.3.8):
+Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são medidos de novo a cada mudança. Os números abaixo vêm de `uv run python scripts/measure.py`, que é a fonte: se discordarem, ele está certo. Com o pacote que vem junto (0.4.0):
 
 | vídeo | linhas a acertar | acertos | faltas | mudanças erradas |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 145 | 22 | 13 |
-| wxgFO_fyfXg | 222 | 211 | 11 | 8 |
+| R2Qgz8tFWVI | 167 | 123 | 44 | 12 |
+| wxgFO_fyfXg | 222 | 168 | 54 | 3 |
 | 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
-| 4tTmY8Buask | 119 | 108 | 11 | 4 |
+| 4tTmY8Buask | 119 | 105 | 14 | 4 |
 
 - **R2Qgz8tFWVI**: um canal de finanças falando de uma elétrica (CEMIG), legenda da plataforma; o primeiro gabarito, de onde vem a maior parte das variantes.
 - **wxgFO_fyfXg**: o mesmo canal comparando duas elétricas; muitos aliases (tickers, plurais) que não podem ser alterados.

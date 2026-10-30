@@ -6,6 +6,7 @@
 - `TRANSCRIPT_NORMALIZER_HOME` now moves config.toml too (D-089): with the variable set, the settings are read from and written to `<folder>/config.toml`, beside runs/ and packs/, as in the portable folder, and the user settings folder is not touched. Without it nothing changes.
 - The test that packs/ holds no curated pack checks only the files git tracks there, so a pack installed locally (user data, D-088) no longer fails it; without git it is skipped, with the reason.
 - Settings now says where it saves: in `<folder>/config.toml` with `TRANSCRIPT_NORMALIZER_HOME` set, in the portable folder's config.toml in portable mode, and in your user settings otherwise. It said "saved in your user settings" in all three.
+- The included pack is now financas-ptbr 0.4.0, the packs repository's (it was 0.3.8): 0.3.9 took out 32 variants that are ordinary words or phrases, too short, or another term's (D-032), and 0.4.0 adds 282 listed companies with `match: exact` and takes out two aliases of more than 3 words, which never match. It declares `min_engine: "0.8.0"`. With it, against the fixtures' gold: R2Qgz8tFWVI 145 → 123 hits, false positives 13 → 12; wxgFO_fyfXg 211 → 168, 8 → 3; 4tTmY8Buask 108 → 105, 4 unchanged; 4wCtn8BWR4o unchanged (44, 2). All of the change comes from 0.3.9; 0.4.0 measures the same as 0.3.9. The fixtures' frozen packs, and so the regression bounds, are unchanged.
 
 ## 0.7.0
 

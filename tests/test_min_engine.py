@@ -7,6 +7,7 @@ the case that made it necessary (D-086).
 
 import hashlib
 import json
+import re
 
 import pytest
 import yaml
@@ -20,6 +21,10 @@ from .test_interactive import menu
 from .test_merge import UPSTREAM, pack_text, triple  # noqa: F401  (triple is a fixture)
 
 BUNDLED = BUNDLED_PACKS / "financas-ptbr.yaml"
+#: The bundled pack as these tests' 0.3.8, with no `min_engine`: the included one
+#: has moved on (0.4.0 needs 0.8.0, D-090), and what is tested here is the field.
+BASE = re.sub(r"(?m)^min_engine: .*\n", "", re.sub(r"(?m)^version: .*$", "version: 0.3.8",
+              BUNDLED.read_text(encoding="utf-8"), count=1), count=1)
 NEEDS = "financas-ptbr 0.3.8 needs transcript-normalizer 0.7.0 or later (this is 0.6.5)"
 
 
@@ -47,7 +52,7 @@ def publish(repo, packs):
 
 
 def financas(version):
-    return BUNDLED.read_text(encoding="utf-8").replace("version: 0.3.8", f"version: {version}")
+    return BASE.replace("version: 0.3.8", f"version: {version}")
 
 
 @pytest.fixture(autouse=True)
@@ -277,7 +282,7 @@ def test_a_copy_is_not_offered_an_upstream_it_cannot_use(triple, tmp_path, monke
 
 def hand_copied(tmp_path, min_engine="0.7.0", name="financas-ptbr"):
     path = tmp_path / f"{name}.yaml"
-    text = BUNDLED.read_text(encoding="utf-8").replace("version: 0.3.8\n", f"version: 0.3.8\nmin_engine: {min_engine}\n")
+    text = BASE.replace("version: 0.3.8\n", f"version: 0.3.8\nmin_engine: {min_engine}\n")
     path.write_text(text, encoding="utf-8")
     return path
 

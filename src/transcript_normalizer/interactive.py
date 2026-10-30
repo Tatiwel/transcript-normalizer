@@ -447,7 +447,7 @@ def pack_line(path: Path) -> str:
 
 
 def available_line(a) -> str:
-    """D-088: a pack there to install: `pt-BR · 0.3.8 · 70 terms  (included, not installed)`."""
+    """D-088: a pack there to install: `pt-BR · 0.4.0 · 352 terms  (included, not installed)`."""
     from .registry import included_packs
 
     included = included_packs().get(a.name)

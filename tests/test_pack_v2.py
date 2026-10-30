@@ -32,7 +32,7 @@ def applied(pack, line):
 
 
 def test_versions(v2):
-    assert v2.version == "0.3.8"
+    assert v2.version == "0.4.0"
     assert {p.parent.name for p in FROZEN} == set(FROZEN_VERSIONS)
     for path in FROZEN:
         assert load_pack(path, learned=Learned()).version == FROZEN_VERSIONS[path.parent.name], path
@@ -61,8 +61,9 @@ def test_bit_after_a_number_is_bilhao(v2):
     assert found == [("31 bit", "bilhão", RULE_UNIT, "correction")]
 
 
-def test_bit_on_its_own_stays_an_ebitda_variant(v2):
-    assert applied(v2, "o bit da empresa") == [("bit", "EBITDA", "term:variant", "correction")]
+def test_bit_on_its_own_is_no_longer_an_ebitda_variant(v2):
+    """0.3.9 dropped `bit` from EBITDA (D-032); after a number it is still bilhão, by the rule."""
+    assert applied(v2, "o bit da empresa") == []
 
 
 def test_the_units_other_words_are_not_matched_on_their_own(v2):
