@@ -1411,11 +1411,22 @@ def choose_cookies() -> bool:
     return True
 
 
+def settings_saved_where() -> str:
+    """Where Settings writes config.toml, in config_file()'s order (D-089, D-070)."""
+    from .runs import config_file, portable_dir
+
+    if os.environ.get(DATA_DIR_ENV):
+        return f"saved in {config_file()}, beside runs/ and packs/, for every run with {DATA_DIR_ENV} set there"
+    if portable_dir() is not None:
+        return f"saved in {config_file()}, in the portable folder, for every run of this copy"
+    return "saved in your user settings, for every run of the menu"
+
+
 def settings() -> None:
     """Where to save your files, and the sign-in (D-071, D-078); the pack
     offered first moved to Packs (D-065)."""
     stage("Settings")
-    say(mark("  saved in your user settings, for every run of the menu", "hint"))
+    say(mark(f"  {settings_saved_where()}", "hint"))
     from .ingest.fetch import KEEP_AUDIO
 
     keeping = read_config().get(KEEP_AUDIO) == "yes"

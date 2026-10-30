@@ -103,6 +103,8 @@ def test_settings_says_portable_and_offers_no_picker(portable, monkeypatch, caps
     data = app / runs.PORTABLE_DATA
     assert f"portable mode: everything stays in {data}" in out
     assert "Choose another folder" not in out and f"Your files: {data}" in out
+    assert f"saved in {data / runs.CONFIG_FILE}, in the portable folder, for every run of this copy" in out
+    assert "saved in your user settings" not in out
 
 
 def test_without_portable_txt_nothing_changes(tmp_path, monkeypatch):

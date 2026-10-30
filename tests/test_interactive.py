@@ -751,6 +751,19 @@ def test_settings_hint_is_printed_once(tmp_path, monkeypatch, capsys):
     assert "The pack offered first" not in out.split("* Settings")[1]  # in Packs now (D-065)
 
 
+def test_settings_hint_names_the_folder_of_transcript_normalizer_home(tmp_path, monkeypatch, capsys):
+    # D-089: with the variable set, config.toml is beside runs/ and packs/, not in the user settings.
+    from .test_home_config import REAL_CONFIG_FILE
+
+    monkeypatch.setattr(runs, "config_file", REAL_CONFIG_FILE)
+    monkeypatch.setattr(runs, "portable_dir", lambda: None)
+    monkeypatch.setenv(runs.DATA_DIR_ENV, str(tmp_path / "home"))
+    _, out, _ = menu(tmp_path, monkeypatch, capsys, ["7", "1", "", "q"])
+    config = tmp_path / "home" / runs.CONFIG_FILE
+    hint = f"saved in {config}, beside runs/ and packs/, for every run with {runs.DATA_DIR_ENV} set there"
+    assert out.count(hint) == 1 and "saved in your user settings" not in out
+
+
 def test_a_fresh_frozen_start_reads_the_saved_folder(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     chosen = tmp_path / "chosen"
