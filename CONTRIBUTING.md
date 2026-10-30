@@ -1,6 +1,6 @@
 # Contributing
 
-Everyone here follows the account's [code of conduct](https://github.com/Tatiwel/.github/blob/main/CODE_OF_CONDUCT.md).
+Everyone here follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 A vulnerability is reported privately, never in an issue: see [SECURITY.md](SECURITY.md).
 
