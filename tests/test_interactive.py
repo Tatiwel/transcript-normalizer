@@ -752,9 +752,10 @@ def test_track_on_the_command_line_takes_that_exact_track(tmp_path, monkeypatch,
     fake, _ = fetch_fakes.install(monkeypatch, fetch, FakeYtDlp(automatic=("en", "pt-orig")))
     assert cli.main(["fetch", URL, "--track", "en"]) == 0
     assert fake.downloads == [("writeautomaticsub", "en")]
-    assert cli.main(["fetch", URL, "--track", "fr", "--caption-only"]) == 1
+    # Each into a folder of its own: runs/<id>/ has the en caption now (D-091).
+    assert cli.main(["fetch", URL, "--track", "fr", "--caption-only", "--out", "fr"]) == 1
     assert "there is no caption track 'fr' for this video" in capsys.readouterr().err
-    assert cli.main(["fetch", URL]) == 0  # --lang's choice, as before
+    assert cli.main(["fetch", URL, "--out", "default"]) == 0  # --lang's choice, as before
     assert fake.downloads[-1] == ("writeautomaticsub", "pt-orig")
 
 

@@ -9,9 +9,11 @@
 # URL: https://example.invalid/synthetic
 # Baixado em: 2026-01-02
 #
-# Cada linha comeca com o timestamp mm:ss. O timestamp e a
-# procedencia de qualquer afirmacao extraida daqui, do mesmo modo
-# que documento e pagina sao a procedencia de um PDF.
+# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o
+# instante em que a legenda sai da tela. A fala comeca antes dele.
+# O timestamp e a procedencia de qualquer afirmacao extraida
+# daqui, do mesmo modo que documento e pagina sao a procedencia
+# de um PDF.
 #
 # Legenda automatica erra termo de dominio por semelhanca fonetica.
 # Confira nome proprio e sigla contra outra fonte antes de citar.

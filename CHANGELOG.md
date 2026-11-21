@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A run's `legenda.txt` is never replaced unasked (D-091). `fetch` of a link or a file, and `normalize` of a `.srt` or `.vtt`, look at the text already in the run folder before doing anything: from the same source (same video, model, track; a subtitle with the same lines), it is used as it is and nothing is downloaded or written; from another, the command stops, says what is there, and exits with 4. `--out <folder>` keeps both; the new `--replace-caption` replaces it, moving the old text and what was made from it into `replaced-<date and time>/` inside the run (nothing is deleted, and a failed replacement puts it back). The menu asks "Keep the one there" or "Replace it". A `.vtt` or `.srt` kept in a run folder belongs to that run.
+- Passages a local transcription wrote twice are found (D-092): 15 words or more repeating a passage from less than a minute before. fetch prints where, lists them in `needs-review/repeats.txt`, and the header of `legenda.txt` says so (or that none was found, which does not mean nothing is missing). The text is not changed.
+- The header of `legenda.txt` says which moment its timestamps are (D-093): the end of the cue for a platform caption or a converted subtitle, the start of the speech for a local transcription. The moments themselves are unchanged.
+
 ## 0.8.1
 
 2026-10-30. Security updates of filelock and certifi in the executables; `transcript-normalizer --version`.

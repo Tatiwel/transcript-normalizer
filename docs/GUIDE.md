@@ -129,19 +129,29 @@ Links from most video sites work too (Vimeo, TikTok, Instagram, Facebook, X, Twi
 - **Check a link first:** `transcript-normalizer fetch --list <url>` downloads nothing and prints the site, title, duration, caption tracks (or none), whether there is audio to transcribe, and whether the site asks for a login.
 - **The audio:** after transcribing, the downloaded audio is deleted once the text is written. To keep it, turn on Settings → "Keep the audio after transcribing", or use `fetch --keep-audio`; it stays in the run's folder as `<video id>.<ext>` (D-078).
 
+### Fetching or converting again
+
+A run's `legenda.txt` is what everything taken from it cites, by its timestamps, so no command writes over it unasked (D-091). Fetching the same link again, or the same file, with the same model or track, uses the text already there: nothing is downloaded, and the command says "already here, from the same source". Asking for something else there (local transcription where the platform's caption is, another model, another track, another link in the same `--out` folder, or a `.srt` or `.vtt` whose lines differ) stops before anything is downloaded, says what is there, and exits with status 4. Two ways on: `--out <folder>` writes the new text somewhere else and keeps both; `--replace-caption` replaces it, and the current `legenda.txt`, with its `meta.yaml` and everything normalize and the review made from it, moves to `replaced-<date and time>/` inside the run, where it stays. If the replacement fails, they are put back. The menu asks instead: "The run folder already has a text. What now?", with "Keep the one there" (the default) and "Replace it". A `.vtt` or `.srt` kept in a run's folder by `--keep-raw` belongs to that run: normalizing it uses that folder.
+
+### Passages written twice
+
+Transcribing a long file, the speech model sometimes writes a passage a second time, and what was said in its place is lost. Measured on a lesson of 2h40: around 44:29, 24 words said at 44:06 came out again, and the same model on a clip of that stretch had it right (D-092). The text cannot show what is missing, but it can show what came out twice, and that is where to listen. After transcribing, fetch looks for a passage of 15 words or more that repeats one from less than a minute before. When it finds one it prints "1 passage(s) came out twice, at 44:29: listen there before citing", lists each one in `needs-review/repeats.txt` with where its first copy was, and the header of `legenda.txt` says the same. When it finds none, the header says so, and that this does not guarantee nothing is missing. The text itself is never changed. A speaker who repeats a short phrase is not flagged; one who repeats 15 words within a minute is, and listening settles it.
+
 ## 4. Reading the outputs
 
 Everything goes under `runs/<video-id>/` in the current directory; nothing is written beside your input (D-015, D-022).
 
 | file | what it is |
 |---|---|
-| `legenda.txt` | the transcript as received, with a header saying where it came from |
+| `legenda.txt` | the transcript as received, with a header saying where it came from and which moment each timestamp is: the end of the caption (the platform's, or a `.srt`/`.vtt`), or the start of the speech (local transcription) (D-093) |
 | `meta.yaml` | title, channel, date, and which step of `fetch` produced the text |
 | `normalized.txt` | the transcript with corrections applied, same lines, same timestamps |
 | `annotations.json` | every change and recognition, as data |
 | `report.txt` | what the command printed |
 | `needs-review/pending.txt` | what still needs your answer |
 | `needs-review/corrections.csv` | with `--corrections`: the changes as a table to check by hand |
+| `needs-review/repeats.txt` | after a local transcription, the passages that came out twice, to listen to (D-092) |
+| `replaced-<date and time>/` | a text replaced with `--replace-caption`, and what was made from it (D-091) |
 
 `needs-review/` holds the files that need a person. If it is empty or missing, nothing is waiting for you.
 

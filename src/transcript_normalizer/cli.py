@@ -41,6 +41,7 @@ from .core.standoff import (
     write_json,
 )
 from .core.text import Transcript, read_caption
+from . import caption_guard
 from .review import apply_local, read_local, write_local
 from .catalog import list_runs
 from .languages import LanguageNotFound
@@ -56,6 +57,7 @@ from .runs import (
     learned_file,
     needs_review_dir,
     run_dir,
+    run_dir_containing,
     runs_root,
 )
 
@@ -461,29 +463,51 @@ def is_subtitle(path: Path) -> bool:
 def caption_run(caption: Path, out: Path | None = None) -> Path:
     """The run directory `normalize <caption>` writes into, without writing anything.
 
-    A .srt or .vtt goes to `runs/<stem>/`; a legenda.txt follows D-018.
+    A .srt or .vtt goes to `runs/<stem>/`, unless it is inside a run folder
+    already (fetch --keep-raw leaves one there): then it belongs to that run
+    (D-091). A legenda.txt follows D-018.
     """
     caption = Path(caption)
     if is_subtitle(caption):
-        return Path(out) if out is not None else runs_root() / caption.stem
+        if out is not None:
+            return Path(out)
+        return run_dir_containing(caption) or runs_root() / caption.stem
     return run_dir(caption, out, read_caption(caption).header_field("URL"))
 
 
-def convert_subtitle(subtitle: Path, out: Path | None = None) -> Path:
+class CaptionExists(Exception):
+    """D-091: converting would write over a legenda.txt with another text."""
+
+
+def convert_subtitle(subtitle: Path, out: Path | None = None, replace: bool = False) -> Path:
     """A .srt or .vtt the user already has, as `runs/<stem>/legenda.txt`.
 
     The same converter fetch uses, with a header that names the file. The
     subtitle itself is left where it is.
+
+    D-091: a legenda.txt already there with the same lines is used as it is,
+    and nothing is written; one with other lines raises CaptionExists, unless
+    `replace`, which moves it and what was made from it to replaced-<...>/.
     """
     from .ingest.header import file_header
     from .ingest.subtitles import subtitle_to_lines
 
     subtitle = Path(subtitle)
     target = caption_run(subtitle, out)
-    target.mkdir(parents=True, exist_ok=True)
     body = subtitle_to_lines(subtitle.read_text(encoding="utf-8-sig"), subtitle.suffix)
     caption = target / CAPTION_FILE
-    caption.write_text(file_header(subtitle.name, subtitle.stem) + body + "\n", encoding="utf-8")
+    text = file_header(subtitle.name, subtitle.stem) + body + "\n"
+    existing = caption_guard.read_existing(target)
+    if existing is not None:
+        if existing.body == caption_guard.split(text)[1]:
+            return caption
+        if not replace:
+            raise CaptionExists(caption_guard.refusal(
+                existing, f"it holds {existing.describe()}, and its lines differ from {subtitle.name}'s"
+            ))
+        print(f"replaced: the earlier text is kept in {caption_guard.archive(target)}")
+    target.mkdir(parents=True, exist_ok=True)
+    caption.write_text(text, encoding="utf-8")
     return caption
 
 
@@ -522,7 +546,11 @@ def run_normalize(args: argparse.Namespace) -> int:
         print(f"no caption at {args.caption}; run fetch first", file=sys.stderr)
         return 1
     if is_subtitle(args.caption):
-        args.caption = convert_subtitle(args.caption, args.out)
+        try:
+            args.caption = convert_subtitle(args.caption, args.out, args.replace_caption)
+        except CaptionExists as stop:
+            print(stop, file=sys.stderr)
+            return caption_guard.EXIT_CAPTION_EXISTS
         print(f"converted to {args.caption}")
     if not args.pack.exists():
         print(f"no pack at {args.pack}", file=sys.stderr)
@@ -707,6 +735,13 @@ def add_normalize_arguments(parser: argparse.ArgumentParser) -> None:
         "--summary",
         action="store_true",
         help="print the counters instead of the full report; report.txt is unchanged",
+    )
+    parser.add_argument(
+        "--replace-caption",
+        action="store_true",
+        help="for a .srt or .vtt: when the run folder already has a legenda.txt with other lines, replace "
+        "it; the current one and what was made from it move to replaced-<date and time>/ inside the folder. "
+        "Without this, normalize stops there and says so",
     )
     parser.add_argument(
         "--force",

@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 from . import helptext, prompts
+from .caption_guard import EXIT_CAPTION_EXISTS
 from .catalog import list_runs
 from .helptext import ACTIONS as ITEMS, QUIT
 from .prompts import Option, detail, mark, say, stage
@@ -205,7 +206,7 @@ def fetch_link() -> str | None:
     from .ingest.console import Output
     from .ingest.fetch import (
         FULL_CAN_TRANSCRIBE, CookiesUnreadable, FetchError, SignInRequired, UnsupportedSite, duration_text,
-        is_lite_build, missing_extra, no_captions, read_metadata, tracks,
+        fetch_dir, is_lite_build, missing_extra, no_captions, read_metadata, tracks,
     )
 
     source = prompts.text("The video's link", hint="YouTube, Vimeo, TikTok, Instagram and others")
@@ -251,7 +252,7 @@ def fetch_link() -> str | None:
             hint="downloads the audio and runs speech recognition; this can take minutes",
         ):
             return None
-        return after_fetch(transcribe_link(source))
+        return after_fetch(transcribe_link(source), fetch_dir(meta.id))
     while True:
         how = prompts.select(
             "Use the platform's caption, or transcribe the audio on this computer?",
@@ -265,7 +266,7 @@ def fetch_link() -> str | None:
         if how is None:
             return BACK
         if how == "speech":
-            return after_fetch(transcribe_link(source))
+            return after_fetch(transcribe_link(source), fetch_dir(meta.id))
         track = choose_track(meta, listed, translations)
         if track is None:
             continue
@@ -276,7 +277,7 @@ def fetch_link() -> str | None:
             hint="downloads the audio and runs speech recognition; this can take minutes",
         ):
             code = transcribe_link(source)
-        return after_fetch(code)
+        return after_fetch(code, fetch_dir(meta.id))
 
 
 def transcription_unavailable(short: bool = False) -> str:
@@ -332,12 +333,35 @@ def signed_in_fetch(argv: list[str]) -> int | str | None:
     from .ingest.fetch import EXIT_SIGN_IN
 
     code = run_command(argv)
-    while code == EXIT_SIGN_IN:
-        way = sign_in_way_out()
-        if way != SIGNED_IN:
-            return way
+    while code in (EXIT_SIGN_IN, EXIT_CAPTION_EXISTS):
+        if code == EXIT_CAPTION_EXISTS:  # D-091: fetch has said what is there
+            way = replace_or_keep()
+            if way != REPLACE:
+                return way
+            argv = [*argv, "--replace-caption"]
+        else:
+            way = sign_in_way_out()
+            if way != SIGNED_IN:
+                return way
         code = run_command(argv)
     return code
+
+
+#: What replace_or_keep returns when the text there is to be replaced.
+REPLACE = "replace"
+
+
+def replace_or_keep() -> int | str | None:
+    """D-091: a text from another source is in the run folder. REPLACE, or 0
+    to go on with the one there, or BACK."""
+    way = prompts.select("The run folder already has a text. What now?", [
+        Option("Keep the one there", "nothing is downloaded; it is the one normalized next", value="keep"),
+        Option("Replace it", "the current text and what was made from it are kept in a replaced-… folder",
+               value=REPLACE),
+    ], default="keep")
+    if way is None:
+        return BACK
+    return REPLACE if way == REPLACE else 0
 
 
 #: The track-list option that opens the automatic translations.
@@ -409,18 +433,20 @@ def fetch_file() -> str | None:
     if path.suffix.lower() in CAPTION_SUFFIXES:  # already a text: nothing to transcribe
         normalize_run(caption_run(path), path, chained=True)
         return None
-    return after_fetch(run_command(["fetch", str(path)]))
+    return after_fetch(signed_in_fetch(["fetch", str(path)]), runs_root() / path.stem)
 
 
-def after_fetch(code: int | str | None) -> str | None:
+def after_fetch(code: int | str | None, run: Path | None = None) -> str | None:
     """The step after a fetch: normalize, if the user wants. A code that is
-    not a number is where the sign-in's ways out led (D-071): passed on."""
+    not a number is where the sign-in's ways out led (D-071): passed on.
+    `run` is the folder fetch wrote into, when the menu knows it: a fetch that
+    used the text already there (D-091) wrote nothing, so the newest is not it."""
     if not isinstance(code, int):
         return code
     if code != 0:
         error("fetch did not finish")
         return
-    run = newest_run()
+    run = run if run is not None and (run / CAPTION_FILE).exists() else newest_run()
     if run and prompts.confirm("Next: normalize this run now?", default=True):
         normalize_run(run, chained=True)
 
@@ -641,7 +667,17 @@ def normalize_run(
             say(mark("  Add its terms (Packs → Edit a pack), then normalize this run again.", "hint"))
         return None
     say(mark(f"Normalizing {run.name}", "title"))
-    code = run_command(["normalize", str(caption), "--summary", "--menu", "--pack", str(pack), *generic(pack)])
+    argv = ["normalize", str(caption), "--summary", "--menu", "--pack", str(pack), *generic(pack)]
+    code = run_command(argv)
+    if code == EXIT_CAPTION_EXISTS:  # D-091: a .vtt or .srt whose lines differ from the run's text
+        way = replace_or_keep()
+        if way == REPLACE:
+            code = run_command([*argv, "--replace-caption"])
+        elif way == 0:
+            caption = run / CAPTION_FILE
+            code = run_command(["normalize", str(caption), *argv[2:]])
+        else:
+            return None
     if code != 0:
         error("normalize did not finish")
         return None
