@@ -13,7 +13,7 @@ Libraries installed ad hoc for this run: `epitran 1.35.2`, which pulled in `panp
 
 ## Design
 
-- **Hold-out.** `pack-holdout.yaml` is the bundled pack (0.3.2) with BR Partners reduced to its canonical name and the aliases `BRBI11` and `Partners`, with no variants. `exp3.py` regenerates it. Against `fixtures/fixture0003` the target is BR Partners' 50 gold rows: 18 distinct forms after folding.
+- **Hold-out.** `pack-holdout.yaml` is the bundled pack (0.3.2) with BR Partners reduced to its canonical name and the aliases `BRBI11` and `Partners`, with no variants. `exp3.py` regenerates it. It reads whichever pack is bundled when it runs, so the numbers below are 0.3.2's: run on a later version (0.4.1 makes BR Partners `match: exact`, D-098), it measures something else, and reproducing this run needs the program at a version that bundled 0.3.2. Against `fixtures/fixture0003` the target is BR Partners' 50 gold rows: 18 distinct forms after folding.
 - **Where a method runs.** Only on 1- and 2-word spans that no applied annotation of the current matcher covers. Spans do not cross pt-BR sentence boundaries, commas included (D-024, D-044).
 - **What it matches against.** Only the canonical names and aliases of terms of class `companhia` or `pessoa`. An encoded span or name shorter than 4 characters is skipped.
 - **Scoring.** A proposal is a medium-band correction. Proposals are scored with the matcher's own annotations after overlap resolution (D-048), with the same gold as the regression. "FP added" is a fixture's false positives minus the baseline's.
