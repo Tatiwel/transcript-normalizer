@@ -954,6 +954,46 @@ Some terms are short codes or names that every similarity source reaches by acci
 
 Gate: with no `match:` in any pack, annotations.json is byte-identical before and after for thirteen runs: the four fixtures against their frozen pack and against the bundled 0.3.8, wxgFO_fyfXg with tests/data/wxgFO_fyfXg.learned.yaml, R2Qgz8tFWVI and 4wCtn8BWR4o with a learned layer of confirmed variants, an alias and a context-conditioned variant, tests/data/context-mixed.txt with context-ia.yaml, and tests/data/xx with the generic module. Tested in tests/test_match_exact.py and tests/test_context.py.
 
+## D-091 A legenda.txt is never replaced unasked
+
+A run's `legenda.txt` is the provenance of everything taken from it: a project cites its lines by their timestamps, as D-022's header says. Three commands wrote it without looking at what was there: `fetch` of a link (D-059 takes back only a failed attempt), `fetch` of a local file, and `normalize` of a `.srt` or `.vtt` (D-038's conversion). Running any of them again, with another model, track or file, changed the text under every citation already made, and said nothing. A project that cites these files asked for this to stop.
+
+**Before any work.** Each of the three reads the `legenda.txt` already in the folder it would write to, if any, before downloading or transcribing anything. Its header says where it came from: the kind (platform caption, local transcription, converted file, by the header's first line), the link (`# URL:`), the file (`# Arquivo:`), the model (`# Modelo:`) and the track (`# Origem da legenda:`).
+
+**The same source: used as it is.** For a link, the same video (the same link, or one with the same video id), and nothing asked that the text there does not have: `--whisper` needs a local transcription, `--caption-only` or `--track` a platform caption (that track), and a local transcription counts only with the same `--model`. For a local file, a local transcription of a file with that name, with the same model. For a subtitle, a `legenda.txt` with the same lines, whatever its header says (another day's, or fetch's). Then nothing is written, the command says the text is already there, and it exits 0. Re-running the same command is therefore safe, and a script that fetches every time gets the same file back.
+
+**Another source: refused.** The command writes nothing, says what is there and why it stopped, and exits with 4 (`caption_guard.EXIT_CAPTION_EXISTS`; 1, 2 and 3 are taken). It names the two ways on: `--out <folder>`, to keep both, and `--replace-caption`.
+
+**Replacing.** `--replace-caption`, on `fetch` and `normalize`, moves the `legenda.txt`, its `meta.yaml`, and what was made from it (annotations.json, normalized.txt, normalized.speakers.txt, report.txt, local-decisions.yaml, needs-review/) into `replaced-<YYYY-MM-DDTHH-MM-SS>/` inside the run, `-2`, `-3` when the second is taken; nothing is deleted. The kept audio (D-078) and a kept subtitle (`--keep-raw`) are sources, not derived from the text, and stay. For a link, the move happens before the download, and a failure puts everything back where it was, after D-059 has taken back what the attempt wrote. For a local file and a subtitle, the move happens once the new text is ready.
+
+**The menu asks.** When fetch stops for this, the menu asks "The run folder already has a text. What now?": "Keep the one there" (the default: nothing is downloaded, and it is the one normalized next) or "Replace it" (the command again, with `--replace-caption`). A subtitle picked as "A file on this computer" is asked the same. After a fetch that used the text there, "normalize this run now?" is about that run, not the one written last.
+
+**A subtitle in a run folder belongs to that run.** `normalize runs/<id>/<file>.vtt` (a subtitle `--keep-raw` left there) converts into `runs/<id>/`, not `runs/<file>/`, so it meets the text fetch made from it, with the same lines.
+
+Tested in tests/test_caption_guard.py. One existing test changed: test_track_on_the_command_line_takes_that_exact_track fetched three times into the same folder, expecting each to write; it now writes each into a folder of its own with `--out`.
+
+## D-092 Passages a local transcription wrote twice are found and shown
+
+Measured on a 2h40 lesson transcribed whole with faster-whisper medium (D-036's step 2): around 44:29, a passage of 24 words said at 44:06 and 44:24 came out a second time, and what was said there was lost; the timestamps after it drifted by about 7 seconds. The same model, on a clip of 44:02 to 44:33 of the same file, had it right. With the VAD on or off, and the volume normal (mean -25.9 dB, peak -2.6 dB), so the cause is how the long file was cut into windows, not the model, the VAD or the audio. A larger model was not tried as a fix: nothing says it is cut differently.
+
+The text cannot show what is missing, but it can show what came out twice, which is where to listen. After a local transcription, fetch compares the transcription's words, folded (lowercase, accents off, punctuation out), six at a time. A run of them that repeats one whose first copy began less than 60 seconds earlier, without overlapping it, is a repeated passage; runs that touch are one passage. A passage counts from 15 words up. The threshold is that lesson's: its second longest repetition within a minute was 13 words, and was said; 15 keeps the one passage that was lost, and only it. It is calibrated on one case, and the decision says so: a speaker who repeats 15 words within a minute is flagged too, and listening settles it.
+
+What a passage gives: a line fetch prints ("1 passage(s) came out twice, at 44:29: listen there before citing"); `needs-review/repeats.txt` (D-023), each passage with the time of its first copy, its length and its lines as written; and lines in the header of `legenda.txt`, so the warning travels with the file: `# Trecho repetido: 1. Ouca o audio antes de citar estes trechos:` and `#   44:29 a 44:33 repete 44:06 a 44:29 (24 palavras); a fala real ali pode ter se perdido.` With none, the header says `# Trecho repetido: nenhum encontrado. Isto nao garante que nada faltou.` The header's limitations become three, the third being this one. The text is never changed: no line is removed, no timestamp moved.
+
+Only local transcription is searched. A platform caption rolls (subtitles.py) and is not cut into windows the same way, and nothing like this was measured on one; the four fixtures, which are platform captions, have no passage at 15 words.
+
+Not done: transcribing a second time with windows shifted by half, to recover what was lost. It doubles the time, and is left for later.
+
+Tested in tests/test_caption_guard.py.
+
+## D-093 The header says which moment of a line the timestamp is
+
+A line of a platform caption, or of a converted `.srt` or `.vtt`, is stamped with the end of its cue (subtitles.cues_to_lines); a line of a local transcription with the start of its segment (fetch.transcribe). The header said only "Cada linha comeca com o timestamp mm:ss", and a project reading these files wrote that every timestamp is the end, which for a transcription is wrong by the length of the segment.
+
+The three headers now say it. A caption and a converted file: `# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o` / `# instante em que a legenda sai da tela. A fala comeca antes dele.` A transcription: `# Cada linha comeca com o timestamp mm:ss do INICIO do trecho: o` / `# instante em que a fala comeca.` The rest of the paragraph is unchanged. The converter and the transcriber are not changed: the same moments as before, now named.
+
+A `legenda.txt` written before this decision keeps its header; its kind (the first line) still says which convention it has. The fixtures keep theirs, since they were fetched before it: test_header_writer_reproduces_the_fixture_header now checks that the writer gives the fixture's header with this one paragraph replaced, and tests/data/rolling.legenda.txt, the converter's expected output, has the new paragraph.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

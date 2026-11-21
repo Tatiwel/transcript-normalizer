@@ -129,19 +129,29 @@ Links da maioria dos sites de vídeo também funcionam (Vimeo, TikTok, Instagram
 - **Confira um link antes:** `transcript-normalizer fetch --list <url>` não baixa nada e mostra o site, título, duração, faixas de legenda (ou nenhuma), se há áudio para transcrever e se o site pede login.
 - **O áudio:** depois de transcrever, o áudio baixado é apagado assim que o texto é gravado. Para mantê-lo, ligue Settings → "Keep the audio after transcribing", ou use `fetch --keep-audio`; ele fica na pasta da run como `<id do vídeo>.<ext>` (D-078).
 
+### Baixar ou converter de novo
+
+O `legenda.txt` de uma run é o que tudo que se tira dele cita, pelos timestamps, então nenhum comando escreve por cima dele sem você pedir (D-091). Baixar de novo o mesmo link, ou o mesmo arquivo, com o mesmo modelo ou a mesma faixa, usa o texto que já está lá: nada é baixado, e o comando diz "already here, from the same source". Pedir outra coisa ali (transcrição local onde está a legenda da plataforma, outro modelo, outra faixa, outro link na mesma pasta de `--out`, ou um `.srt` ou `.vtt` com outras linhas) para antes de baixar qualquer coisa, diz o que está lá e sai com código 4. Dois caminhos: `--out <pasta>` grava o texto novo em outro lugar e mantém os dois; `--replace-caption` substitui, e o `legenda.txt` atual, com o `meta.yaml` e tudo o que a normalização e a revisão fizeram a partir dele, vai para `replaced-<data e hora>/` dentro da run, onde fica guardado. Se a substituição falhar, tudo volta para o lugar. O menu pergunta em vez disso: "The run folder already has a text. What now?", com "Keep the one there" (o padrão) e "Replace it". Um `.vtt` ou `.srt` guardado na pasta de uma run pelo `--keep-raw` pertence a ela: normalizá-lo usa aquela pasta.
+
+### Trechos escritos duas vezes
+
+Ao transcrever um arquivo longo, o modelo de fala às vezes escreve um trecho uma segunda vez, e o que foi dito no lugar dele se perde. Medido numa aula de 2h40: perto de 44:29, 24 palavras ditas em 44:06 saíram de novo, e o mesmo modelo num recorte daquele trecho acertou (D-092). O texto não mostra o que falta, mas mostra o que saiu duas vezes, e é ali que se deve ouvir. Depois de transcrever, o fetch procura um trecho de 15 palavras ou mais que repete outro de menos de um minuto antes. Quando acha, imprime "1 passage(s) came out twice, at 44:29: listen there before citing", lista cada um em `needs-review/repeats.txt` com o lugar da primeira cópia, e o cabeçalho do `legenda.txt` diz o mesmo. Quando não acha, o cabeçalho diz isso, e diz que isso não garante que nada faltou. O texto em si nunca é alterado. Quem fala e repete uma frase curta não é marcado; quem repete 15 palavras em menos de um minuto é, e ouvir resolve.
+
 ## 4. Lendo as saídas
 
 Tudo vai para `runs/<id-do-vídeo>/`, no diretório em que você está; nada é escrito ao lado do arquivo de entrada (D-015, D-022).
 
 | arquivo | o que é |
 |---|---|
-| `legenda.txt` | a transcrição como chegou, com um cabeçalho dizendo de onde veio |
+| `legenda.txt` | a transcrição como chegou, com um cabeçalho dizendo de onde veio e que instante é cada timestamp: o fim da legenda (a da plataforma, ou um `.srt`/`.vtt`), ou o início da fala (transcrição local) (D-093) |
 | `meta.yaml` | título, canal, data e qual etapa do `fetch` produziu o texto |
 | `normalized.txt` | a transcrição com as correções aplicadas, mesmas linhas, mesmos timestamps |
 | `annotations.json` | cada correção e cada reconhecimento, como dados |
 | `report.txt` | o que o comando imprimiu |
 | `needs-review/pending.txt` | o que ainda espera a sua resposta |
 | `needs-review/corrections.csv` | com `--corrections`: as mudanças numa tabela para conferir à mão |
+| `needs-review/repeats.txt` | depois de uma transcrição local, os trechos que saíram duas vezes, para ouvir (D-092) |
+| `replaced-<data e hora>/` | um texto substituído com `--replace-caption`, e o que foi feito a partir dele (D-091) |
 
 `needs-review/` guarda o que precisa de uma pessoa. Vazio ou ausente, não há nada esperando por você.
 

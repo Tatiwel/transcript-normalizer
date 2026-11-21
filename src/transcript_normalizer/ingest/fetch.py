@@ -34,9 +34,11 @@ import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from .. import caption_guard
 from ..catalog import write_meta
-from ..runs import is_frozen, runs_root
+from ..runs import NEEDS_REVIEW_DIR, is_frozen, runs_root
 from . import cookies as sign_in
+from . import repeats as repeated
 from .console import Output
 from .header import Metadata, caption_header, speech_header
 from .subtitles import subtitle_to_lines
@@ -842,6 +844,31 @@ def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) ->
     return "\n".join(lines), float(info.duration or 0)
 
 
+def look_for_repeats(body: str, target: Path, out: Output) -> list[repeated.Repeat]:
+    """D-092: passages the transcription wrote twice, said, and listed in
+    needs-review/ for a person to listen to. The text is not changed."""
+    found = repeated.find_repeats(body)
+    if found:
+        review = target / NEEDS_REVIEW_DIR
+        review.mkdir(parents=True, exist_ok=True)
+        (review / repeated.REPEATS_FILE).write_text(repeated.report(found), encoding="utf-8")
+        out.warn(repeated.summary(found))
+    return found
+
+
+def reuse(existing: caption_guard.Existing, out: Output) -> int:
+    """D-091: the text there comes from what was asked: used, nothing written."""
+    out.detail("text", existing.path, "path", note="(already here, from the same source: nothing downloaded)")
+    out.info("--replace-caption gets it again, keeping this one in replaced-<date and time>/")
+    return 0
+
+
+def refuse(existing: caption_guard.Existing, why: str) -> int:
+    """D-091: another origin's text is there: stop, and say the two ways on."""
+    print(caption_guard.refusal(existing, why), file=sys.stderr)
+    return caption_guard.EXIT_CAPTION_EXISTS
+
+
 def measured(meta: Metadata, seconds: float, out: Output) -> Metadata:
     """D-079: a site that gave no duration gets the audio's own, said and kept."""
     if meta.duration or not seconds:
@@ -892,6 +919,10 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     args.lang = args.lang or DEFAULT_LANG  # no site to say the language: as before D-080
     meta = Metadata(id=media.stem, title=media.stem)
     target = fetch_dir(media.stem, args.out)  # D-018 rule 3: the file's stem
+    existing = caption_guard.read_existing(target)  # D-091: before any work
+    if existing is not None and not args.replace_caption:
+        why = caption_guard.file_mismatch(existing, media.name, args.model)
+        return reuse(existing, out) if not why else refuse(existing, why)
     target.mkdir(parents=True, exist_ok=True)
     out.detail("file", media, "path")
     out.detail("directory", target, "path")
@@ -903,9 +934,13 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
         print(f"could not transcribe {media}: {error}", file=sys.stderr)
         return 1
     meta = measured(meta, seconds, out)
+    if existing is not None:  # D-091: the transcription is done; now the old one moves aside
+        out.detail("replaced", caption_guard.archive(target), "path", note="(kept there)")
+    found = look_for_repeats(body, target, out)
     caption = target / CAPTION_FILE
     caption.write_text(
-        speech_header(meta, "", args.lang, args.model, step=step.header(), file_name=media.name)
+        speech_header(meta, "", args.lang, args.model, step=step.header(), file_name=media.name,
+                      repeats=repeated.header_lines(found))
         + body
         + "\n",
         encoding="utf-8",
@@ -970,8 +1005,12 @@ def step_speech(
     body, seconds = transcribe(audio, args.lang, args.model, out)
     meta = measured(meta, seconds, out)  # D-079
     step = Step(STEP_SPEECH, reason=reason)
+    found = look_for_repeats(body, target, out)
     (target / CAPTION_FILE).write_text(
-        speech_header(meta, args.url, args.lang, args.model, step=step.header()) + body + "\n",
+        speech_header(meta, args.url, args.lang, args.model, step=step.header(),
+                      repeats=repeated.header_lines(found))
+        + body
+        + "\n",
         encoding="utf-8",
     )
     keep_or_delete(audio, meta, target, keeps_audio(args), out)
@@ -1076,6 +1115,13 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="after transcribing, keep the downloaded audio in the run folder as <id>.<ext>; "
         "by default it is deleted. Instead of Settings",
+    )
+    parser.add_argument(
+        "--replace-caption",
+        action="store_true",
+        help="when the run folder already has a legenda.txt from another source (another model, track "
+        "or file), replace it; the current one and what was made from it move to replaced-<date and time>/ "
+        "inside the folder. Without this, fetch stops there and says so",
     )
     parser.add_argument(
         "--keep-raw",
@@ -1252,6 +1298,18 @@ def run(args: argparse.Namespace) -> int:
             out.info(unknown_language_notice())
 
     target = fetch_dir(meta.id, args.out)
+    # D-091: a text already here is never written over unasked, and the check
+    # comes before anything is downloaded.
+    existing = caption_guard.read_existing(target)
+    archived = None
+    if existing is not None:
+        if not args.replace_caption:
+            why = caption_guard.fetch_mismatch(
+                existing, args.url, meta.id, whisper=args.whisper, caption_only=args.caption_only,
+                track=args.track, model=args.model,
+            )
+            return reuse(existing, out) if not why else refuse(existing, why)
+        archived = caption_guard.archive(target)
     # D-059: what was here before this attempt, so a failure can take back
     # exactly what it added and leave an earlier run as it was.
     existed = target.exists()
@@ -1263,6 +1321,9 @@ def run(args: argparse.Namespace) -> int:
         removed = undo_attempt(target, before, existed)
         if removed:
             out.info(f"removed {removed} file(s) this attempt had written")
+        if archived is not None:  # D-091: no new text, so the old one goes back
+            caption_guard.restore(target, archived)
+            out.info(f"{CAPTION_FILE} and what was made from it are back as they were")
 
     step = None
     failures: list[str] = []
@@ -1324,4 +1385,6 @@ def run(args: argparse.Namespace) -> int:
     out.detail("meta", save_meta(target, meta, args.url, step), "path")
     out.detail("text", caption, "path", note=f"(step {step.number}, {step.name})")
     out.detail("lines", len(caption.read_text(encoding="utf-8").splitlines()), "number")
+    if archived is not None:
+        out.detail("replaced", archived, "path", note="(the earlier text, kept there)")
     return 0

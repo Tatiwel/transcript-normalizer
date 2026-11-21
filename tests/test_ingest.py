@@ -33,6 +33,22 @@ def fixture_header() -> str:
     return "\n".join(lines) + "\n"
 
 
+#: The fixture was fetched before D-093, when the header did not say which
+#: moment of the line the timestamp is. Everything else is the same.
+BEFORE_D093 = (
+    "# Cada linha comeca com o timestamp mm:ss. O timestamp e a\n"
+    "# procedencia de qualquer afirmacao extraida daqui, do mesmo modo\n"
+    "# que documento e pagina sao a procedencia de um PDF.\n"
+)
+SINCE_D093 = (
+    "# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o\n"
+    "# instante em que a legenda sai da tela. A fala comeca antes dele.\n"
+    "# O timestamp e a procedencia de qualquer afirmacao extraida\n"
+    "# daqui, do mesmo modo que documento e pagina sao a procedencia\n"
+    "# de um PDF.\n"
+)
+
+
 def test_header_writer_reproduces_the_fixture_header():
     written = caption_header(
         FIXTURE_META,
@@ -41,7 +57,8 @@ def test_header_writer_reproduces_the_fixture_header():
         lang="pt",
         downloaded=FIXTURE_DOWNLOADED,
     )
-    assert written == fixture_header()
+    assert BEFORE_D093 in fixture_header()
+    assert written == fixture_header().replace(BEFORE_D093, SINCE_D093)
 
 
 def test_the_written_header_is_what_the_core_skips():

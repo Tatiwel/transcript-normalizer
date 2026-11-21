@@ -29,6 +29,19 @@ class Metadata:
     duration_from_audio: bool = False  # D-079: the site gave none; step 2 measured it
 
 
+#: D-093: which moment of a line the timestamp is. A caption cue (the
+#: platform's, or a .srt or .vtt) is stamped with its end, as the converter does
+#: (ingest/subtitles.py); a speech segment with its start (fetch.transcribe).
+END_OF_CUE = (
+    "# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o",
+    "# instante em que a legenda sai da tela. A fala comeca antes dele.",
+)
+START_OF_SEGMENT = (
+    "# Cada linha comeca com o timestamp mm:ss do INICIO do trecho: o",
+    "# instante em que a fala comeca.",
+)
+
+
 def _today() -> str:
     return date.today().isoformat()
 
@@ -65,9 +78,10 @@ def caption_header(
             f"# URL: {url}",
             f"# Baixado em: {downloaded or _today()}",
             "#",
-            "# Cada linha comeca com o timestamp mm:ss. O timestamp e a",
-            "# procedencia de qualquer afirmacao extraida daqui, do mesmo modo",
-            "# que documento e pagina sao a procedencia de um PDF.",
+            *END_OF_CUE,
+            "# O timestamp e a procedencia de qualquer afirmacao extraida",
+            "# daqui, do mesmo modo que documento e pagina sao a procedencia",
+            "# de um PDF.",
             "#",
             "# Legenda automatica erra termo de dominio por semelhanca fonetica.",
             "# Confira nome proprio e sigla contra outra fonte antes de citar.",
@@ -84,8 +98,11 @@ def speech_header(
     transcribed: str | None = None,
     step: str | None = None,
     file_name: str | None = None,
+    repeats: list[str] | None = None,
 ) -> str:
-    """The header of a transcript produced by local speech recognition."""
+    """The header of a transcript produced by local speech recognition.
+
+    `repeats` are the lines D-092's search wrote (ingest/repeats.py)."""
     return "\n".join(
         [
             "# Transcricao por reconhecimento de fala local, material bruto",
@@ -101,16 +118,19 @@ def speech_header(
             f"# Arquivo: {file_name}" if file_name else f"# URL: {url}",
             f"# Transcrito em: {transcribed or _today()}",
             "#",
-            "# Cada linha comeca com o timestamp mm:ss. O timestamp e a",
-            "# procedencia de qualquer afirmacao extraida daqui.",
+            *START_OF_SEGMENT,
+            "# O timestamp e a procedencia de qualquer afirmacao extraida daqui.",
             "#",
-            "# DUAS LIMITACOES MEDIDAS:",
+            "# TRES LIMITACOES MEDIDAS:",
             "# 1. Erro fonetico em termo de dominio. Sigla, nome de agencia,",
             "#    nome de norma e nome de companhia sao os mais afetados.",
             "#    Confira contra outra fonte antes de citar.",
             "# 2. Trecho sem fala pode gerar texto inventado. O vad_filter",
             "#    reduz isso e nao elimina. Frase curta e generica isolada,",
             "#    perto de vinheta ou musica, e suspeita.",
+            "# 3. Em arquivo longo, um trecho pode sair duas vezes, e o que foi",
+            "#    dito ali se perde. O trecho repetido e procurado e listado abaixo.",
+            *(repeats if repeats is not None else []),
             "",
         ]
     )
@@ -127,8 +147,8 @@ def file_header(file_name: str, title: str, converted: str | None = None) -> str
             f"# Arquivo: {file_name}",
             f"# Convertido em: {converted or _today()}",
             "#",
-            "# Cada linha comeca com o timestamp mm:ss. O timestamp e a",
-            "# procedencia de qualquer afirmacao extraida daqui.",
+            *END_OF_CUE,
+            "# O timestamp e a procedencia de qualquer afirmacao extraida daqui.",
             "",
         ]
     )
