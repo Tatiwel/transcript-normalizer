@@ -287,6 +287,8 @@ class Pack:
         """Text as this pack's language compares it (D-033)."""
         return self.language.normalize(text)
     learned: Learned = field(default_factory=Learned)
+    #: D-100: learned entries kept for a term the pack no longer has: (term, count).
+    orphaned_learned: tuple[tuple[str, int], ...] = ()
 
     def term_named(self, name: str) -> Term | None:
         """The pack term called `name`, by its own name or one of its aliases."""
@@ -551,6 +553,14 @@ def load_pack(
         digest = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
         version = f"sha256:{digest}"
 
+    present = {t.term for t in terms}
+    orphaned_learned = tuple(sorted(
+        (name, len(learned.confirmed.get(name, ())) + len(learned.aliases.get(name, ())))
+        for name in set(learned.confirmed) | set(learned.aliases)
+        if nfc(name) not in present
+        and learned.confirmed.get(name, ()) + learned.aliases.get(name, ())
+    ))
+
     return Pack(
         terms=tuple(terms),
         unit_rules=unit_rules,
@@ -562,4 +572,5 @@ def load_pack(
         language_code=code or language.CODE,
         classes=classes,
         phonetic_classes=phonetic_classes,
+        orphaned_learned=orphaned_learned,
     )

@@ -15,6 +15,7 @@ it, into `replaced-<date and time>/` inside the run: it is kept, never deleted.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -72,6 +73,7 @@ class Existing:
     model: str = ""
     track: str = ""
     lang: str = ""  # the base language: `pt` of `pt-orig`, or a transcription's `idioma pt`
+    fingerprint: str = ""  # D-099: `sha256 <hex>, <n> bytes` of the local file transcribed
     header: tuple[str, ...] = ()
     body: tuple[str, ...] = ()
 
@@ -134,7 +136,8 @@ def read_existing(run: Path) -> Existing | None:
         lang = base_lang(track)
     return Existing(
         path=path, kind=kind, url=_field(header, "URL"), file_name=_field(header, "Arquivo"),
-        model=model, track=track, lang=base_lang(lang), header=header, body=body,
+        model=model, track=track, lang=base_lang(lang), fingerprint=_field(header, "Impressao digital"),
+        header=header, body=body,
     )
 
 
@@ -177,9 +180,33 @@ def fetch_mismatch(
     return ""
 
 
-def file_mismatch(existing: Existing, file_name: str, model: str, lang: str | None = None) -> str:
-    """Why transcribing the local file `file_name` would not give the text there; "" when it would."""
-    if existing.kind != SPEECH or existing.file_name != file_name:
+def fingerprint(path: Path) -> str:
+    """D-099: `sha256 <hex>, <n> bytes` of a local file, read in blocks."""
+    digest = hashlib.sha256()
+    size = 0
+    with open(path, "rb") as fh:
+        for block in iter(lambda: fh.read(1 << 20), b""):
+            digest.update(block)
+            size += len(block)
+    return f"sha256 {digest.hexdigest()}, {size} bytes"
+
+
+def file_mismatch(
+    existing: Existing, file_name: str, model: str, lang: str | None = None, fingerprint: str = ""
+) -> str:
+    """Why transcribing the local file `file_name` would not give the text there; "" when it would.
+
+    D-099: when both the text there and this file have a fingerprint, the
+    content decides, not the name. A text written before 0.8.3 has none, and
+    the name decides, as it did.
+    """
+    if existing.kind != SPEECH:
+        return f"it holds {existing.describe()}, not of {file_name}"
+    if existing.fingerprint and fingerprint:
+        if existing.fingerprint != fingerprint:
+            return (f"it holds {existing.describe()}, and {file_name} has other content "
+                    f"({fingerprint.split(',')[0][:19]}…, not {existing.fingerprint.split(',')[0][:19]}…)")
+    elif existing.file_name != file_name:
         return f"it holds {existing.describe()}, not of {file_name}"
     if lang and existing.lang and base_lang(lang) != existing.lang:
         return f"it holds {existing.describe()} in '{existing.lang}', and you asked for '{lang}'"

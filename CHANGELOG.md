@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A local file transcribed again is told by its content, not its name (D-099). The header of its `legenda.txt` has a new line, `# Impressao digital: sha256 <hex>, <n> bytes`, and fetching a file with the same name and other content (another course's `aula1.mp4`) stops with exit 4 instead of reusing the first one's text. The same content in another folder is the same file. A text written before this version has no fingerprint and is compared by name, as before.
+- `normalize` says when your learned layer has entries for a term the pack no longer has (D-100): how many, for which terms, that they stay in the file unused, and how to use them again (`pack copy`, then `pack add-term`). Before, they were skipped without a word.
+
 ## 0.8.2
 
 2026-11-21. A run's text is never replaced unasked (D-091); passages a transcription wrote twice are shown (D-092); the header says which moment a timestamp is (D-093); fixtures without names (D-094); packs keep their generated part, import by name and update from the menu (D-095 to D-097); financas-ptbr 0.4.1 included (D-098).

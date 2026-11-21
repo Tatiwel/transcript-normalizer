@@ -920,8 +920,9 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     meta = Metadata(id=media.stem, title=media.stem)
     target = fetch_dir(media.stem, args.out)  # D-018 rule 3: the file's stem
     existing = caption_guard.read_existing(target)  # D-091: before any work
+    fingerprint = caption_guard.fingerprint(media)  # D-099: the same file is the same content
     if existing is not None and not args.replace_caption:
-        why = caption_guard.file_mismatch(existing, media.name, args.model, args.lang)
+        why = caption_guard.file_mismatch(existing, media.name, args.model, args.lang, fingerprint)
         return reuse(existing, out) if not why else refuse(existing, why)
     target.mkdir(parents=True, exist_ok=True)
     out.detail("file", media, "path")
@@ -938,7 +939,7 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     # the same file may have written its text meanwhile.
     existing = caption_guard.read_existing(target)
     if existing is not None and not args.replace_caption:
-        why = caption_guard.file_mismatch(existing, media.name, args.model, args.lang)
+        why = caption_guard.file_mismatch(existing, media.name, args.model, args.lang, fingerprint)
         return reuse(existing, out) if not why else refuse(existing, why)
     if existing is not None:  # the transcription is done; now the old one moves aside
         out.detail("replaced", caption_guard.archive(target), "path", note="(kept there)")
@@ -946,7 +947,7 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     caption = target / CAPTION_FILE
     caption.write_text(
         speech_header(meta, "", args.lang, args.model, step=step.header(), file_name=media.name,
-                      repeats=repeated.header_lines(found))
+                      repeats=repeated.header_lines(found), fingerprint=fingerprint)
         + body
         + "\n",
         encoding="utf-8",
