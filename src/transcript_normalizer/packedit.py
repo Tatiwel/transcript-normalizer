@@ -15,8 +15,10 @@ inside it are not, because the file is written again from its data.
 from __future__ import annotations
 
 import math
+import re
 import shutil
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -70,6 +72,61 @@ def header(text: str) -> str:
     return "".join(lines)
 
 
+#: D-095: a block a generator wrote into `terms:` (the packs repository's
+#: tools/gerar_termos.py) opens with a comment line starting `# >>>`, followed by
+#: more comment lines, and closes with one starting `# <<<`.
+OPEN_MARK = "# >>>"
+CLOSE_MARK = "# <<<"
+_TERM_ENTRY = re.compile(r"^(\s*)- term:\s*(.+?)\s*$")
+
+
+@dataclass(frozen=True)
+class Block:
+    """The generated part of a pack's terms: its marker lines, as written, and
+    the names of the terms between them, in order."""
+
+    opening: tuple[str, ...]
+    closing: str
+    names: tuple[str, ...]
+
+
+def generated_block(text: str) -> Block | None:
+    """The generated part of a pack file, or None when it has none."""
+    lines = text.splitlines(keepends=True)
+    start = next((i for i, line in enumerate(lines) if line.strip().startswith(OPEN_MARK)), None)
+    if start is None:
+        return None
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].strip().startswith(CLOSE_MARK)), None)
+    if end is None:
+        return None
+    first = start + 1
+    while first < end and lines[first].strip().startswith("#"):
+        first += 1
+    names = []
+    for line in lines[first:end]:
+        found = _TERM_ENTRY.match(line)
+        if found:
+            names.append(str(yaml.safe_load(found.group(2))))
+    closing = lines[end] if lines[end].endswith("\n") else lines[end] + "\n"
+    return Block(tuple(lines[start:first]), closing, tuple(names))
+
+
+def place_block(data: dict, body: str, block: Block) -> str:
+    """Put the generated part's markers back around its terms in a dumped
+    `body`. The terms the block had stay together, last in `terms:`, so a term
+    added by hand lands before the block, among the hand-written ones."""
+    lines = body.splitlines(keepends=True)
+    entries = [i for i, line in enumerate(lines) if _TERM_ENTRY.match(line)]
+    inside = set(block.names)
+    curated = sum(1 for term in data.get("terms") or () if str(term.get("term")) not in inside)
+    at_terms = next((i for i, line in enumerate(lines) if line.startswith("terms:")), None)
+    if at_terms is None:
+        return body
+    after = next((i for i in range(at_terms + 1, len(lines)) if lines[i][:1] not in (" ", "\n", "")), len(lines))
+    opening = entries[curated] if curated < len(entries) else after
+    return "".join(lines[:opening] + list(block.opening) + lines[opening:after] + [block.closing] + lines[after:])
+
+
 def ordered(data: dict) -> dict:
     first = {k: data[k] for k in KEY_ORDER if k in data}
     rest = {k: v for k, v in data.items() if k not in first and k not in ("terms", "unit_rules")}
@@ -77,8 +134,17 @@ def ordered(data: dict) -> dict:
     return {**first, **rest, **tail}
 
 
-def dump(head: str, data: dict) -> str:
+def dump(head: str, data: dict, block: Block | None = None) -> str:
+    """The pack's text: `head`, then its data. D-095: with `block`, its terms
+    go last in `terms:`, inside its markers."""
+    if block is not None and data.get("terms"):
+        inside = set(block.names)
+        terms = data["terms"]
+        data["terms"] = ([t for t in terms if str(t.get("term")) not in inside]
+                         + [t for t in terms if str(t.get("term")) in inside])
     body = yaml.dump(ordered(data), Dumper=_Dumper, sort_keys=False, allow_unicode=True, width=math.inf)
+    if block is not None:
+        body = place_block(data, body, block)
     return head + body
 
 
@@ -199,13 +265,13 @@ def add_forms(data: dict, term: dict, aliases, variants, language, conditioned: 
 # ------------------------------------------------------------------ saving
 
 
-def save(path: Path, head: str, data: dict) -> str:
+def save(path: Path, head: str, data: dict, block: Block | None = None) -> str:
     """Check the changed pack as normalize loads it, then write it with the
     next patch version. Returns that version."""
     data["version"] = bump(data.get("version"))
     if "based_on" in data:  # D-069: a copy counts its edits since its base
         data["local_edits"] = int(data.get("local_edits") or 0) + 1
-    text = dump(head, data)
+    text = dump(head, data, block)
     trial = path.with_name(f".{path.stem}.check.yaml")
     try:
         trial.write_text(text, encoding="utf-8")
@@ -223,14 +289,20 @@ def read(path: Path) -> tuple[str, dict]:
     return header(text), yaml.safe_load(text) or {}
 
 
+def block_of(path: Path) -> Block | None:
+    """D-095: the generated part of the pack at `path`, kept when it is saved."""
+    return generated_block(path.read_text(encoding="utf-8"))
+
+
 def edit(args, change) -> int:
     """Read the user's pack, apply `change(data, language) -> lines`, save."""
     try:
         path = own_pack(args.pack)
         head, data = read(path)
         data.setdefault("terms", [])
+        block = block_of(path)
         lines = change(data, language_of(data))
-        version = save(path, head, data)
+        version = save(path, head, data, block)
     except EditError as error:
         print(f"nothing saved: {error}", file=sys.stderr)
         return 1

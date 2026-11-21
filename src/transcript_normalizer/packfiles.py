@@ -353,15 +353,40 @@ def note_language(code: str) -> None:
 # ------------------------------------------------------------------ import
 
 
+#: A version directory of the packs repository: financas-ptbr/0.3.9/pack.yaml.
+_VERSION_DIR = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def import_name(source: Path) -> str:
+    """D-096: the pack's name for a file, as the files that hold packs are
+    named. `pack export` writes `<name>-<version>.yaml`, so a version that is
+    the file's own is not part of the name; the packs repository keeps a pack
+    as `<name>/pack.yaml` (and old versions as `<name>/<version>/pack.yaml`).
+    Anything else: the file's name, as before."""
+    if source.stem == "pack":
+        folder = source.parent
+        if _VERSION_DIR.match(folder.name):
+            folder = folder.parent
+        return folder.name
+    version = ""
+    try:
+        version = str((yaml.safe_load(source.read_text(encoding="utf-8")) or {}).get("version") or "")
+    except (OSError, UnicodeDecodeError, yaml.YAMLError, AttributeError):
+        pass  # check() says what is wrong with the file
+    if version and source.stem.endswith(f"-{version}"):
+        return source.stem[: -len(version) - 1]
+    return source.stem
+
+
 def run_import(args) -> int:
     source = Path(args.file).expanduser()
     if not source.is_file():
         print(f"no file at {source}", file=sys.stderr)
         return 1
-    name = source.stem
+    name = args.name or import_name(source)
     problem = pack_name_problem(name)
     if problem:
-        print(f"{problem}; rename the file to <name>.yaml", file=sys.stderr)
+        print(f"{problem}; rename the file to <name>.yaml, or pass --name <name>", file=sys.stderr)
         return 1
     try:
         pack = check(source)
@@ -374,6 +399,8 @@ def run_import(args) -> int:
         return 1
     registry.write_atomic(target, source.read_bytes())
     print(f"imported {name} into {target}: {len(pack.terms)} terms, language {pack.language_code}")
+    if name != source.stem and not args.name:
+        print(f"  the name {name} comes from {source.name}; --name installs it under another")
     note_language(pack.language_code)
     return 0
 
@@ -417,7 +444,12 @@ def add_arguments(commands) -> None:
     creating.set_defaults(run=run_create)
 
     importing = commands.add_parser("import", help="check a pack file and copy it into packs/")
-    importing.add_argument("file", help="a pack .yaml; its file name is the pack's name")
+    importing.add_argument(
+        "file",
+        help="a pack .yaml. Its name is the file's, without a `-<version>` that is the pack's own "
+        "(as `pack export` writes it); for `<name>/pack.yaml`, the folder's",
+    )
+    importing.add_argument("--name", help="the name to install it under, instead of the one taken from the file")
     importing.add_argument("--force", action="store_true", help="replace a pack of the same name in packs/")
     importing.set_defaults(run=run_import)
 

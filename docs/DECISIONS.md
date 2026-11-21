@@ -1008,6 +1008,32 @@ The four fixtures were folders named after the videos' ids, and each caption's h
 
 **Not done here.** The included financas-ptbr.yaml names the old ids in its comments; it is a copy of the packs repository's file at a released version, so its next version there renames them, and this copy follows when it is included. The release workflow's check that fetch reaches YouTube (`fetch --list`) used one of the fixtures' videos; it now uses another public video the owner chose, from a channel none of the fixtures came from, which `fetch --list` shows with an `original: pt-orig` track, as the check requires. The text the speakers said is still in the captions, and the git history still has the old names and headers: changing history was not asked for.
 
+## D-095 An edited pack keeps its generated part
+
+financas-ptbr 0.4.0 has 282 companies written by the packs repository's tools/gerar_termos.py, between two comment lines inside `terms:` (`  # >>> início da parte gerada`, with the generator's notes after it, and `  # <<< fim da parte gerada`); the generator finds its part by those lines to write it again. Saving a pack after an edit (D-066's add-term, edit-term, remove-term, and D-069's merge) loads the YAML and dumps it, so every comment below the top was lost, the markers with them, and a new term went to the end of `terms:`, after the generated ones. An edited copy, exported or proposed whole (D-067), could no longer be regenerated, and its hand-written and generated terms were mixed.
+
+When the pack being saved has such a part (a comment line starting `# >>>` inside the file, comment lines after it, and later one starting `# <<<`), the terms it held, by name, are written last in `terms:`, in their order, between the same marker lines, written as they were. Every other term, a new one included, goes before the part. A generated term renamed by hand is no longer the generator's, and leaves the part. With every generated term removed, the markers stay, with nothing between them. A merge takes the part from upstream, which regenerated it, and from the copy when upstream has none.
+
+Not changed: the other comments inside `terms:` are still lost on save, as before (the ones at the top are kept by D-066). Keeping every comment needs a YAML library that round-trips them, a new dependency for the executables; not done for this.
+
+Tested in tests/test_pack_upkeep.py; test_copy_of_the_bundled_pack_is_used_instead_and_editable now expects the added term before the generated part.
+
+## D-096 `pack import` takes the pack's name, not the export's file name
+
+A pack has no name inside the file: it is the file's name (D-017). `pack import` took the file's stem, so a file written by `pack export`, `<name>-<version>.yaml`, was imported as a pack called `financas-ptbr-0.4.1`, beside `financas-ptbr`, and a pack from the packs repository, `<name>/pack.yaml`, as a pack called `pack`.
+
+Now the name is taken as the files that hold packs are named: a stem ending in `-<the pack's own version>` loses it (`med-ptbr-0.1.3.yaml` with `version: 0.1.3` is `med-ptbr`; `med-ptbr-2.yaml` stays `med-ptbr-2`); `pack.yaml` takes its folder's name, or the folder above when its folder is a version (`financas-ptbr/0.3.9/pack.yaml`); anything else is the stem, as before. `--name` chooses the name instead. When the name is not the stem, import says where it came from. A name that is not a pack name is refused as before, with both ways out (rename the file, or `--name`). A pack of that name already in `packs/` still needs `--force`.
+
+Tested in tests/test_pack_upkeep.py.
+
+## D-097 The menu updates an installed pack that was not edited
+
+`pack update` installs the newest version of every pack installed with `pack install` and not edited here, from the repository or, after a program upgrade, included in the program (D-088). The menu had no way to it: Packs offered "Merge an update" only for a copy of the user's (D-069), so a pack installed as it was stayed at its old version until the command was typed, and normalize kept using it (D-017).
+
+Packs now has "Update packs", which runs `pack update`, whenever a pack is installed. Its description names what this program includes that is newer ("financas-ptbr 0.4.0 → 0.4.1 (included)"), and otherwise says what it does. When this program includes a newer version of an installed pack not edited here, the first screen and Packs say so in a line: "financas-ptbr 0.4.1 is included in this version (installed: 0.4.0). Packs → Update packs installs it." That look reads only files, so the first screen never waits; a newer version only in the repository is found when Update packs runs, as the command does. Nothing is updated unless asked. The option is last in Packs, so the numbers of the others do not change.
+
+Tested in tests/test_pack_upkeep.py.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
