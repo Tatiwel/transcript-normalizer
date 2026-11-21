@@ -73,12 +73,12 @@ The run id is the video id, read from the caption header when the input did not 
 
 Experimental, but the engine is a package with a regression test.
 
-- `fixtures/`: Brazilian Portuguese finance captions, one folder each. `legenda.txt` is the raw caption, `gold.csv` a hand-checked gold list, and `pack.yaml` the frozen pack it is measured against. The first one's gold has 196 rows: 167 domain-term errors in scope, plus aliases, case-only rows and 2 lines that must not be touched. The gold statuses separate corrections the tool made (`certo`), legitimate other names of a term (`alias`), and errors a person had to add (`conferido`); the meanings are in `src/transcript_normalizer/evaluate.py`.
+- `fixtures/`: Brazilian Portuguese finance captions, one folder each. `legenda.txt` is the raw caption, `gold.csv` a hand-checked gold list, and `pack.yaml` the frozen pack it is measured against. The first fixture made, the first entry of `BOUNDS` in `tests/test_regression_fixture.py`, has a gold of 196 rows: 167 domain-term errors in scope, plus aliases, case-only rows and 2 lines that must not be touched. The gold statuses separate corrections the tool made (`certo`), legitimate other names of a term (`alias`), and errors a person had to add (`conferido`); the meanings are in `src/transcript_normalizer/evaluate.py`.
 
 `uv run python scripts/measure.py` prints every fixture's numbers side by side; the regression test holds each one to its own bounds.
 - `experiments/`: throwaway scripts that measured how far naive approaches go against that fixture. Results are in `docs/DECISIONS.md`.
 
-Measured on the first fixture with its frozen pack (RapidFuzz plus a hand-curated variant list, unit rules and disciplined thresholds): 150 of 167 hits and 12 false positives in ~1000 caption lines; with the bundled pack 0.4.0, 123 hits and 12 false positives. `scripts/measure.py` is the source of these numbers: if they disagree with it, it is right.
+Measured on that first fixture with its frozen pack (RapidFuzz plus a hand-curated variant list, unit rules and disciplined thresholds): 150 of 167 hits and 12 false positives in ~1000 caption lines; with the bundled pack 0.4.0, 123 hits and 12 false positives. `scripts/measure.py` is the source of these numbers: if they disagree with it, it is right.
 
 ## Contributing
 
