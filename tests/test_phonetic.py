@@ -60,7 +60,7 @@ def test_under_85_is_not_proposed(tmp_path):
 
 
 def test_only_asked_even_at_100(tmp_path):
-    """wxgFO_fyfXg 36:41: `Warn Buffet` has the skeleton of `Warren Buffett`."""
+    """fixture0002 36:41: `Warn Buffet` has the skeleton of `Warren Buffett`."""
     assert phonetic(pack_of(tmp_path), "do Warn Buffet. Tem") == [
         ("Warn Buffet", "Warren Buffett", 100, "ask")
     ]

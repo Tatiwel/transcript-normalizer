@@ -14,10 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 FROZEN = sorted((ROOT / "fixtures").glob("*/pack.yaml"))
 #: The third and fourth fixtures froze the curated pack as it was when each was added.
 FROZEN_VERSIONS = {
-    "R2Qgz8tFWVI": "0.1.0",
-    "wxgFO_fyfXg": "0.1.0",
-    "4wCtn8BWR4o": "0.2.3",
-    "4tTmY8Buask": "0.2.4",
+    "fixture0001": "0.1.0",
+    "fixture0002": "0.1.0",
+    "fixture0004": "0.2.3",
+    "fixture0003": "0.2.4",
 }
 
 
@@ -39,7 +39,7 @@ def test_versions(v2):
 
 
 def test_every_new_term_from_the_second_gold_is_in_the_pack(v2):
-    with (ROOT / "fixtures" / "wxgFO_fyfXg" / "gold.csv").open(encoding="utf-8-sig") as fh:
+    with (ROOT / "fixtures" / "fixture0002" / "gold.csv").open(encoding="utf-8-sig") as fh:
         wanted = {r["term"] for r in csv.DictReader(fh) if r["status"] in ("conferido", "alias") and r["term"]}
     assert wanted <= {t.term for t in v2.terms}
 
@@ -115,7 +115,7 @@ def test_market_cap_is_a_term_with_its_other_names(v2):
 
 
 def test_what_the_third_fixture_added(v2):
-    """0.2.4, from 4wCtn8BWR4o. `preço alto` is two ordinary words (D-032)."""
+    """0.2.4, from fixture0004. `preço alto` is two ordinary words (D-032)."""
     assert applied(v2, "a evitida caiu") == [("evitida", "EBITDA", "term:variant", "correction")]
     assert applied(v2, "o dividendio subiu") == [("dividendio", "dividend yield", "term:variant", "correction")]
     assert applied(v2, "a dívida alíquida") == [("dívida alíquida", "dívida líquida", "term:variant", "correction")]

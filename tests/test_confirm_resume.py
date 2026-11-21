@@ -86,7 +86,7 @@ def test_a_finished_session_still_says_where_it_wrote(workspace, monkeypatch, ca
 def test_pending_after_an_interrupt_tells_asked_from_never_asked(workspace, monkeypatch):
     answering(monkeypatch, ["s"], [])  # skip the first, then Ctrl+C
     confirm(workspace)
-    pending = (workspace.parent / "runs" / "R2Qgz8tFWVI" / "needs-review" / "pending.txt").read_text(
+    pending = (workspace.parent / "runs" / "fixture0001" / "needs-review" / "pending.txt").read_text(
         encoding="utf-8"
     )
     first, second = medium_order()[:2]

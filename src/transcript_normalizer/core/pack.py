@@ -461,7 +461,7 @@ def load_pack(
 ) -> Pack:
     """Read a domain pack from YAML, merging the learned layer of D-013.
 
-    `fixtures/R2Qgz8tFWVI/pack.yaml` is the schema. The learned layer is read
+    `fixtures/fixture0001/pack.yaml` is the schema. The learned layer is read
     from `packs/<pack-name>.learned.yaml` (D-017); `learned_from` names a
     different file and `learned` supplies the layer directly. Its confirmed
     variants become corrections and its aliases become alias annotations (D-020).

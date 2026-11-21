@@ -4,10 +4,10 @@
 # NAO FOI TRANSCRITO POR PROVEDOR DE IA. Reconhecimento de fala
 # mapeia audio para texto e nao completa lacuna com plausibilidade.
 # Modelo: faster-whisper medium, idioma pt, vad_filter ativo
-# Titulo: CEMIG ESTÁ DE GRAÇA E ANUNCIOU NOVO DIVIDENDO (porém cuidado com cmig4!)
-# Canal: Adan Paulo - Adapta Partners
-# Publicado: 20260918
-# URL: https://youtu.be/4wCtn8BWR4o
+# Titulo: fixture0004
+# Canal: omitido
+# Publicado: omitido
+# URL: https://example.invalid/watch?v=fixture0004
 # Transcrito em: 2026-09-29
 #
 # Cada linha comeca com o timestamp mm:ss. O timestamp e a

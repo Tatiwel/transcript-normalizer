@@ -3,10 +3,10 @@
 # NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.
 # Legenda obtida da plataforma, sem transcricao por IA.
 # Origem da legenda: automatica (pt)
-# Titulo: CMIG4 vs CPFE3: Qual é a melhor Elétrica? COMPARATIVO COMPLETO
-# Canal: Geração Dividendos
-# Publicado: 20260825
-# URL: https://www.youtube.com/watch?v=wxgFO_fyfXg
+# Titulo: fixture0002
+# Canal: omitido
+# Publicado: omitido
+# URL: https://example.invalid/watch?v=fixture0002
 # Baixado em: 2026-09-21
 #
 # Cada linha comeca com o timestamp mm:ss. O timestamp e a

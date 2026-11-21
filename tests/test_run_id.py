@@ -14,7 +14,7 @@ from transcript_normalizer.runs import (
 
 from .conftest import CAPTION, FIXTURE_VIDEO_ID, PACK
 
-OTHER_ID = "wxgFO_fyfXg"
+OTHER_ID = "fixture0002"
 
 NO_URL_HEADER = (
     "# Legenda de video, material bruto para ingestao\n"

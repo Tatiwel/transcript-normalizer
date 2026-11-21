@@ -144,9 +144,9 @@ def test_a_stop_shows_the_lines_around_the_form(tmp_path, monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("url, link", [
-    ("https://www.youtube.com/watch?v=4tTmY8Buask", "https://youtu.be/4tTmY8Buask?t=125"),
-    ("https://youtu.be/4tTmY8Buask?si=x", "https://youtu.be/4tTmY8Buask?t=125"),
-    ("https://www.youtube.com/shorts/4tTmY8Buask", "https://youtu.be/4tTmY8Buask?t=125"),
+    ("https://www.youtube.com/watch?v=fixture0003", "https://youtu.be/fixture0003?t=125"),
+    ("https://youtu.be/fixture0003?si=x", "https://youtu.be/fixture0003?t=125"),
+    ("https://www.youtube.com/shorts/fixture0003", "https://youtu.be/fixture0003?t=125"),
     ("https://vimeo.com/123456", "https://vimeo.com/123456 at 2:05"),
     ("", ""),
 ])
@@ -158,11 +158,11 @@ def test_a_youtube_run_links_each_stop(tmp_path, monkeypatch, capsys):
     caption = tmp_path / "legenda.txt"
     monkeypatch.chdir(tmp_path)
     converted = cli.convert_subtitle(DATA / "review.vtt", tmp_path / "conv")
-    caption.write_text("# URL: https://www.youtube.com/watch?v=4tTmY8Buask\n" + converted.read_text(encoding="utf-8"),
+    caption.write_text("# URL: https://www.youtube.com/watch?v=fixture0003\n" + converted.read_text(encoding="utf-8"),
                        encoding="utf-8")
     reviewed(tmp_path, monkeypatch, ["", "", ""], caption)
     out = capsys.readouterr().out
-    assert "  watch: https://youtu.be/4tTmY8Buask?t=7" in out.split("2 of 3")[1]
+    assert "  watch: https://youtu.be/fixture0003?t=7" in out.split("2 of 3")[1]
 
 
 # ------------------------------------------------------------------ only in this video (D-073)
@@ -228,9 +228,9 @@ def test_the_menu_reviews_one_stop_at_a_time(tmp_path, monkeypatch, capsys):
 # ------------------------------------------------------------------ dubbed tracks (D-074)
 
 
-#: What yt-dlp reported for 4tTmY8Buask, a Portuguese video YouTube dubbed.
+#: What yt-dlp reported for fixture0003, a Portuguese video YouTube dubbed.
 DUBBED = Metadata(
-    id="4tTmY8Buask",
+    id="fixture0003",
     language="pt",
     manual_captions=("en",),
     automatic_captions=("de", "en", "en-US-orig", "es", "es-US-orig", "fr", "pt", "pt-orig"),

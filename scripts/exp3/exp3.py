@@ -4,7 +4,7 @@
     uv run --no-sync python scripts/exp3/exp3.py
 
 Hold-out design: BR Partners loses every variant (canonical name and aliases
-[BRBI11, Partners] only), so its 50 gold rows in 4tTmY8Buask have to be found
+[BRBI11, Partners] only), so its 50 gold rows in fixture0003 have to be found
 by the method under test. Each method runs only on 1-2 word spans the current
 matcher leaves untouched, only against the names (canonical and aliases) of
 companhia and pessoa terms, and its proposals are scored together with the
@@ -31,7 +31,7 @@ from transcript_normalizer.runs import BUNDLED_PACKS
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 HOLDOUT = HERE / "pack-holdout.yaml"
-TARGET = "4tTmY8Buask"
+TARGET = "fixture0003"
 HELD_OUT_TERM = "BR Partners"
 NAME_CLASSES = ("companhia", "pessoa")
 MIN_CODE_LEN = 4  # an encoded span shorter than this matches too much

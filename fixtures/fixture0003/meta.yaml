@@ -1,0 +1,11 @@
+title: fixture0003
+channel: omitido
+url: https://example.invalid/watch?v=fixture0003
+published: omitido
+fetched_at: '2026-09-30T19:40:55-03:00'
+source: url
+step: 1
+step_name: platform caption
+retries: 0
+caption_track: pt-orig
+caption_source: automatica original

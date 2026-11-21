@@ -67,11 +67,11 @@ Severity: **high** means wrong behaviour or a measurable cost to users; **medium
 | # | file:line | category | evidence | sev. | conf. | recommended action |
 |---|---|---|---|---|---|---|
 | F1 | README.md:6, docs/GUIDE.md:7,23, docs/GUIDE.pt-BR.md:7,23 | doc drift | The Python install line pins `@v0.4.2`. pyproject is 0.6.3. v0.4.2 has no `pack create/edit/merge/export`, no English, and its `ingest` extra lacks D-058's `av<19` / `faster-whisper<1.3` bounds, so a fresh resolve can produce the audio breakage D-058 fixed. | high | high | Point it at the latest tag, or drop the pin (`@main`) and say so. |
-| F2 | core/matcher.py:429 (and :413) | performance | The phonetic source checks every window against **every** applied span (`any(... for s, e in taken)`), so it is quadratic in caption length. Measured on wxgFO_fyfXg concatenated: phonetic 0.38 s at 1×, 1.33 s at 2×, **5.29 s at 4×** (×3.5, ×4.0). | high (long captions only) | high | Sort `taken` and bisect, or mark taken token indices in a boolean array. Cost becomes linear. |
-| F3 | core/matcher.py:313-328 | performance | Every window is scored against every candidate in Python: 21.7k windows × 255 candidates = **5.5 M `_score` calls**, 60–75 % of normalize time on every fixture (§3). Most calls are length mismatches that fall through to `span == candidate`. The cost is linear, but grows with pack size × caption length. | medium | high | Bucket fuzzy candidates by length (only lengths within ±2 can score), and look up exact-only candidates in a dict. Expect normalize to drop from ~2.3 s to well under 1 s on wxgFO_fyfXg. Verify with the regression bounds unchanged. |
+| F2 | core/matcher.py:429 (and :413) | performance | The phonetic source checks every window against **every** applied span (`any(... for s, e in taken)`), so it is quadratic in caption length. Measured on fixture0002 concatenated: phonetic 0.38 s at 1×, 1.33 s at 2×, **5.29 s at 4×** (×3.5, ×4.0). | high (long captions only) | high | Sort `taken` and bisect, or mark taken token indices in a boolean array. Cost becomes linear. |
+| F3 | core/matcher.py:313-328 | performance | Every window is scored against every candidate in Python: 21.7k windows × 255 candidates = **5.5 M `_score` calls**, 60–75 % of normalize time on every fixture (§3). Most calls are length mismatches that fall through to `span == candidate`. The cost is linear, but grows with pack size × caption length. | medium | high | Bucket fuzzy candidates by length (only lengths within ±2 can score), and look up exact-only candidates in a dict. Expect normalize to drop from ~2.3 s to well under 1 s on fixture0002. Verify with the regression bounds unchanged. |
 | F4 | core/matcher.py:282-286, 373-374 | dead code (logic) | Mutant M1 (`inside_a_longer_name` → `False`) passes all 516 tests and changes **no resolved annotation** in any of the 8 fixture × {frozen, bundled} runs. The longer exact name always has score 100, high band and the longer span, so `resolve_overlaps` already drops the shorter correction. | medium | medium | Leave as is until someone constructs a case where it matters (e.g. the longer name is itself rejected). If none exists, remove it with a note in D-040. In either case add a pre-resolution test that pins it. |
 | F5 | core/matcher.py:278-280, 361-362 | dead code (logic) | The same applies to `covered_by_its_own_name` (D-049): mutant M9 passes all tests, and no fixture output changes. The test that names D-049 asserts only post-resolution output, which overlap resolution produces anyway. | medium | medium | Same as F4. |
-| F6 | core/matcher.py:317-322 | test quality | Mutant M3 removes D-047's **ranking** demotion (`rank = APPLY_THRESHOLD - 1`). All 516 tests pass, yet it **changes output**: on 4wCtn8BWR4o with the bundled pack, `Adapta Valuer` at 4878–4892 goes from medium to low. The D-047 tests in test_bands.py pass because `band_for(..., from_variant=True)` marks such matches low by itself; nothing tests which candidate wins. | medium | high | Add a test where a variant at 80–84 and the term at ≥80 compete for one span. |
+| F6 | core/matcher.py:317-322 | test quality | Mutant M3 removes D-047's **ranking** demotion (`rank = APPLY_THRESHOLD - 1`). All 516 tests pass, yet it **changes output**: on fixture0004 with the bundled pack, `Adapta Valuer` at 4878–4892 goes from medium to low. The D-047 tests in test_bands.py pass because `band_for(..., from_variant=True)` marks such matches low by itself; nothing tests which candidate wins. | medium | high | Add a test where a variant at 80–84 and the term at ≥80 compete for one span. |
 | F7 | core/matcher.py:118-120 | dead code | `contains_words` has no caller in `src/`. Its last use was replaced in `a94af64` (D-049). It survives only through `test_containment_is_by_whole_words` (6 parametrised cases), which therefore tests nothing that runs. `Pack.is_rejected` (core/pack.py:284) does its own whole-word containment. | medium | high | Delete the function and its parametrised test. Keep the four behavioural tests in that file. |
 | F8 | core/fit.py:23-24 | dead code | `fits()` is never called (vulture 60 %, confirmed by grep). cli.py and measure.py compare `fitting_terms(...)` with `MIN_FIT_TERMS` inline. | low | high | Use `fits()` at cli.py:566 and measure.py:95, or delete it. |
 | F9 | evaluate.py:122, 239, 265 | dead code / doc drift | `Result.unlisted_aliases` is computed but never read: not by `as_row`, `render`, measure.py or any test. The comment at :239 says an unlisted alias "is reported". It is not. | low | high | Either report it in `render()` or remove the field and fix the comment. |
@@ -81,7 +81,7 @@ Severity: **high** means wrong behaviour or a measurable cost to users; **medium
 | F13 | packedit.py:50 | (false positive) | vulture 100 %: `indentless` unused. It is a PyYAML override signature that deliberately ignores the argument. | — | high | Leave as is. |
 | F14 | prompts.py:359,364 | (false positive) | vulture: two functions named `_` unused. They are prompt_toolkit key-binding handlers registered by decorator. | — | high | Leave as is. |
 | F15 | core/matcher.py:315,319; merge.py:520 | (checked, fine) | ruff B023: a closure uses a loop variable. `ranked` and the merge lambda are called within the same iteration and never stored, so this is not the late-binding bug. | — | high | Leave as is. Optionally pass the variable as a parameter to silence the rule. |
-| F16 | docs/GUIDE.md:323-330 (+ pt-BR) | doc drift | The §8 table says "the pack that ships (0.3.4)" with wrong changes 16 / 10 for R2Qgz8tFWVI / wxgFO_fyfXg. The bundled pack is 0.3.7, and measure.py prints 15 / 9. | medium | high | Regenerate the table from measure.py. |
+| F16 | docs/GUIDE.md:323-330 (+ pt-BR) | doc drift | The §8 table says "the pack that ships (0.3.4)" with wrong changes 16 / 10 for fixture0001 / fixture0002. The bundled pack is 0.3.7, and measure.py prints 15 / 9. | medium | high | Regenerate the table from measure.py. |
 | F17 | CONTRIBUTING.md:108; core/pack.py:26-27 | doc drift | Both say phonetic proposals go to `companhia` and `pessoa`. Since D-068 it is `pack.phonetic_classes` (matcher.py:404-408), with a different default. The paragraph right after it (CONTRIBUTING.md:110) is correct and contradicts it. | medium | high | Rewrite the sentence to point to the next paragraph, and fix the comment. |
 | F18 | README.md:76-82 | doc drift | "168 domain-term errors" (measure: 167 in scope). "228-row gold file" (225 rows parsed). "156 of 168 hits, 9 false positives" is D-014-era; the frozen result now is 150/167 hits with 14 false positives. | low | high | Update, or point to measure.py instead of quoting numbers. |
 | F19 | GUIDE.md:136,350; README.md:50 | doc drift | Docs list the bands high/medium/low. The code has a fourth, `ask` (standoff.py, matcher.py:97-98, D-060), written to annotations.json and queued in pending.txt. | medium | high | Document `ask`. |
@@ -94,7 +94,7 @@ Severity: **high** means wrong behaviour or a measurable cost to users; **medium
 | F26 | core/matcher.py:1-5 | doc drift | The module docstring says it is a port of exp2 "with one deliberate difference". Thirty-odd decisions later, exp2 is history, not the reference behaviour. | low | high | Reword it as "started as a port of exp2". |
 | F27 | merge.py:740; interactive.py:92 → merge.offers → packfiles.index_within | performance | With a pack copy installed, every menu start waits for the packs index. The first screen took 0.18 s with no copy and 0.34–0.52 s with a copy and GitHub reachable. With the index host **unreachable (packets dropped)** it took **3.21 s every start** (the full `INDEX_WAIT_SECONDS = 3`). | medium | high | Fetch in a background thread and show the merge offer when it arrives, or cache the index for a day in the data dir. |
 | F28 | core/matcher.py:467; core/text.py:43-48, 55 | performance | `resolve_overlaps` scans all kept annotations for each one, `Transcript.line_at` rebuilds `_starts()` on every call, and `spans` scans all lines. All three are quadratic, but small: resolve 8 → 135 ms and render 7 → 115 ms from 1× to 4×. | low | high | Leave as is for now. If F2/F3 are done, cache `_starts` (frozen dataclass, so a `cached_property` or a field) and sort-and-sweep in `resolve_overlaps`. |
-| F29 | tests/conftest.py:44-64; tests/test_confirm_resume.py, test_learned_layer.py, test_pending.py | test quality / performance | `medium_order()` reruns the full matcher on R2Qgz8tFWVI (~1.7 s) on every call. `answers_for()` calls it again, with 12 call sites. These tests dominate the slowest list: 2–4 s each without coverage, 13–27 s each under coverage. | medium | high | Cache `medium_order()` (`functools.cache`; the pack and caption are fixed files). Most of the slowest 15 would drop by about 1.7 s each. F3 would cut it further. |
+| F29 | tests/conftest.py:44-64; tests/test_confirm_resume.py, test_learned_layer.py, test_pending.py | test quality / performance | `medium_order()` reruns the full matcher on fixture0001 (~1.7 s) on every call. `answers_for()` calls it again, with 12 call sites. These tests dominate the slowest list: 2–4 s each without coverage, 13–27 s each under coverage. | medium | high | Cache `medium_order()` (`functools.cache`; the pack and caption are fixed files). Most of the slowest 15 would drop by about 1.7 s each. F3 would cut it further. |
 | F30 | tests/test_whole_word_guard.py:14, test_pack_v2.py:27, test_exact_only.py:19, test_inflection.py:16 | test quality (duplication) | The same fixture `v2` (`load_pack(PACK_V2, learned=Learned())`) is defined 4 times. Helpers are copied under the same name: `annotate` ×4, `applied` ×3, `fetched` ×4, `publish` ×3, `pack_text` ×2, `home` ×2 (packedit, packfiles). | low | high | Move `v2` and the one-line `annotate`/`applied` into conftest. Leave `fetched`/`publish` as is: their signatures differ per file on purpose. |
 | F31 | tests/test_contribute.py:13, test_field_fixes.py:10, test_pack_fit.py:21 | test residue | ruff F401: `fetch_fakes.URL` is imported and unused. Eight RUF059 hits are unused unpacked variables in tests. | low | high | `ruff --fix` for F401; leave the rest. |
 | F32 | core/matcher.py:153 (`find_annotations`, CC 46, radon F); evaluate.py:142 (E 35); merge.py `run_merge`/`Merge.run` (D 26) | complexity | radon cc: one F, two E (one is `scripts/exp3`), 12 D. The average is A (4.55). `find_annotations` is a 237-line function holding five closures and three passes over the windows. | medium | high | Split `find_annotations` into named passes (unit hits, exact maps, main loop, phonetic) when F3 is done, not before. Leave merge.py: it is long but each method is one D-069 rule, and it is 92 % covered. |
@@ -121,14 +121,14 @@ Severity: **high** means wrong behaviour or a measurable cost to users; **medium
 
 | fixture | lines | annotations | load_pack | normalize | peak alloc | CLI end to end (incl. startup) |
 |---|---:|---:|---:|---:|---:|---:|
-| 4wCtn8BWR4o | 239 | 179 | 22 ms | 0.76 s | 1.6 MB | 0.87 s, RSS 31 MB |
-| 4tTmY8Buask | 743 | 300 | 24 ms | 1.15 s | 2.6 MB | 1.27 s, RSS 33 MB |
-| R2Qgz8tFWVI (31 min) | 1,018 | 407 | 21 ms | 1.74 s | 3.4 MB | 1.87 s, RSS 34 MB |
-| wxgFO_fyfXg (40 min) | 1,259 | 530 | 21 ms | 2.29 s | 4.3 MB | 2.38 s, RSS 35 MB |
+| fixture0004 | 239 | 179 | 22 ms | 0.76 s | 1.6 MB | 0.87 s, RSS 31 MB |
+| fixture0003 | 743 | 300 | 24 ms | 1.15 s | 2.6 MB | 1.27 s, RSS 33 MB |
+| fixture0001 (31 min) | 1,018 | 407 | 21 ms | 1.74 s | 3.4 MB | 1.87 s, RSS 34 MB |
+| fixture0002 (40 min) | 1,259 | 530 | 21 ms | 2.29 s | 4.3 MB | 2.38 s, RSS 35 MB |
 
 Top 5 by cumulative time (cProfile). The order is the same on all four fixtures, and only the totals scale:
 
-| wxgFO_fyfXg (8.27 s under the profiler) | cumulative |
+| fixture0002 (8.27 s under the profiler) | cumulative |
 |---|---:|
 | `matcher.find_annotations` | 8.24 s |
 | `builtins.max` (over the candidate generator, matcher.py:325) | 6.07 s |
@@ -137,9 +137,9 @@ Top 5 by cumulative time (cProfile). The order is the same on all four fixtures,
 | `matcher._score` (5.54 M calls) | 2.72 s |
 | *(next: `phonetic_proposals` 1.29 s)* | |
 
-On the other fixtures `find_annotations` and `max` took 4.71 s and 3.72 s (4tTmY8Buask), 2.78 s and 2.26 s (4wCtn8BWR4o), and 6.50 s and 5.01 s (R2Qgz8tFWVI), with `<genexpr>`, `ranked` and `_score` next in the same order.
+On the other fixtures `find_annotations` and `max` took 4.71 s and 3.72 s (fixture0003), 2.78 s and 2.26 s (fixture0004), and 6.50 s and 5.01 s (fixture0001), with `<genexpr>`, `ranked` and `_score` next in the same order.
 
-### Quadratic check: wxgFO_fyfXg concatenated 1×, 2×, 4×
+### Quadratic check: fixture0002 concatenated 1×, 2×, 4×
 
 | | 1× | 2× | 4× | growth 1×→4× |
 |---|---:|---:|---:|---|
@@ -174,7 +174,7 @@ Importing the menu (`transcript_normalizer.interactive` + `prompts` + rich + que
 ```
 3.98s test_confirm_resume.py::test_a_rerun_only_asks_what_is_still_pending
 2.95s test_learned_layer.py::test_all_yes_stops_at_the_end_of_its_term
-2.32s test_pack_fit.py::test_every_fixture_fits_its_pack[bundled-wxgFO_fyfXg]
+2.32s test_pack_fit.py::test_every_fixture_fits_its_pack[bundled-fixture0002]
 2.10s test_learned_layer.py::test_a_rejected_pair_is_never_proposed_again
 2.09s test_learned_layer.py::test_a_second_run_honours_what_the_first_one_learned
 2.09s test_learned_layer.py::test_a_mixed_group_is_answered_one_variant_at_a_time
@@ -215,7 +215,7 @@ The suite catches 10 of 13 mutants. Three survive everything: two because the gu
 
 ### Duplicated fixtures and helpers
 
-See F30. The `v2` fixture is defined 4 times and the one-line `annotate`/`applied` helpers 3–4 times. `pack` appears twice with different meanings (conftest: the R2Qgz8tFWVI frozen pack; test_rejection.py: a local one), which is legitimate shadowing, not duplication. `scored` is the same: two different fixtures that share a name.
+See F30. The `v2` fixture is defined 4 times and the one-line `annotate`/`applied` helpers 3–4 times. `pack` appears twice with different meanings (conftest: the fixture0001 frozen pack; test_rejection.py: a local one), which is legitimate shadowing, not duplication. `scored` is the same: two different fixtures that share a name.
 
 ---
 
@@ -264,7 +264,7 @@ See F30. The `v2` fixture is defined 4 times and the one-line `annotate`/`applie
 | F6: add a test for D-047's ranking demotion **first** | Closes the one real behavioural gap the mutants found. A prerequisite for touching the matcher. |
 | F4, F5: add pre-resolution tests for D-040/D-049, then decide | Either they find a case where the guards matter (keep them, now tested), or the guards go with a DECISIONS amendment. Either way it is −2 untested code paths. |
 | F2: linear `taken` check in `phonetic_proposals` | 4× captions: 5.3 s → ~1.3 s. Normalizing a 3-hour video gets ~40 % faster; no change below about an hour. |
-| F3: length-bucketed fuzzy candidates and exact dict lookup | Expected normalize ~2.3 s → <1 s on wxgFO_fyfXg. The test suite gets faster in proportion (most of its time is the matcher). This also stops pack growth from multiplying normalize time. |
+| F3: length-bucketed fuzzy candidates and exact dict lookup | Expected normalize ~2.3 s → <1 s on fixture0002. The test suite gets faster in proportion (most of its time is the matcher). This also stops pack growth from multiplying normalize time. |
 | F28: cache `Transcript._starts`, sort-sweep `resolve_overlaps` | ~250 ms off 4× captions; negligible otherwise. Do it only alongside F2/F3. |
 
 ### Risk: medium (product behaviour)
@@ -284,8 +284,8 @@ See F30. The `v2` fixture is defined 4 times and the one-line `annotate`/`applie
 ## Follow-up (same day, during the cleanup)
 
 - **F4 and F5 were wrong.** The guards are not redundant with `resolve_overlaps`. They matter when a rejection by containment (D-027) removes the longer name's own annotation, so that nothing longer is left to win the span. Measured by rejecting the first or the last word of every multi-word name, on all eight fixture × pack runs, with and without each guard:
-  - D-040: on 4wCtn8BWR4o (frozen pack), `Dividend` in `Dividend Yield` becomes an applied correction to dividendo, twice.
-  - D-049: on wxgFO_fyfXg (bundled pack), `preços` in `preços tetos` becomes a low mark on preço teto, three times.
+  - D-040: on fixture0004 (frozen pack), `Dividend` in `Dividend Yield` becomes an applied correction to dividendo, twice.
+  - D-049: on fixture0002 (bundled pack), `preços` in `preços tetos` becomes a low mark on preço teto, three times.
 
   Both guards stay, and tests in `test_exact_over_exact.py` and `test_whole_word_guard.py` now pin them before and after resolution.
 - **F6 is closed** by two tests in `test_bands.py`. All three surviving mutants (M1, M3, M9) are now killed.

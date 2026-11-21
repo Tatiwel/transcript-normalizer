@@ -2,7 +2,7 @@
 
 The header is what the core reads: `core.text.parse_caption` skips these `#`
 lines and every line after them is `m:ss text`. The wording stays in Portuguese
-because `fixtures/R2Qgz8tFWVI/legenda.txt` is the reference for this format and
+because `fixtures/fixture0001/legenda.txt` is the reference for this format and
 the fixture is the regression test's input.
 """
 

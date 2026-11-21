@@ -8,7 +8,7 @@ from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.core.render import render_lines
 from transcript_normalizer.core.standoff import KIND_ALIAS
 
-PACK = Path(__file__).resolve().parents[1] / "fixtures" / "4wCtn8BWR4o" / "pack.yaml"
+PACK = Path(__file__).resolve().parents[1] / "fixtures" / "fixture0004" / "pack.yaml"
 LINE = "Atualmente um Dividend Yield de 11,5%, quase 12% em Dividend Yield e anunciou um"
 
 
@@ -19,7 +19,7 @@ def run(line):
 
 
 def test_dividend_yield_spelled_out_is_recognized_twice():
-    """4wCtn8BWR4o 0:19: both mentions, as the speaker said them."""
+    """fixture0004 0:19: both mentions, as the speaker said them."""
     transcript, found = run(LINE)
     assert [(a.original, a.term, a.rule, a.kind) for a in found if a.applied] == [
         ("Dividend Yield", "dividend yield", "term:exact", KIND_ALIAS)

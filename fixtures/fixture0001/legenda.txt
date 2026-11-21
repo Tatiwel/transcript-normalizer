@@ -3,10 +3,10 @@
 # NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.
 # Legenda obtida da plataforma, sem transcricao por IA.
 # Origem da legenda: automatica (pt)
-# Titulo: CEMIG despencando, armadilha ou oportunidade?
-# Canal: Geração Dividendos
-# Publicado: 20260821
-# URL: https://youtu.be/R2Qgz8tFWVI
+# Titulo: fixture0001
+# Canal: omitido
+# Publicado: omitido
+# URL: https://example.invalid/watch?v=fixture0001
 # Baixado em: 2026-09-09
 #
 # Cada linha comeca com o timestamp mm:ss. O timestamp e a

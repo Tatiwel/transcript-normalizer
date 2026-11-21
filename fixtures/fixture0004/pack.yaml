@@ -1,8 +1,8 @@
 # frozen copy for the regression test
 # Termos de financas, pt-BR.
-# 0.1.0 veio do gabarito de R2Qgz8tFWVI. Termo com "?" no gabarito nao entrou.
-# 0.2.0 acrescenta os termos de wxgFO_fyfXg (linhas conferido e alias do gold).
-# 0.2.1 acrescenta variantes de wxgFO_fyfXg a termos que ja existiam, e os plurais
+# 0.1.0 veio do gabarito de fixture0001. Termo com "?" no gabarito nao entrou.
+# 0.2.0 acrescenta os termos de fixture0002 (linhas conferido e alias do gold).
+# 0.2.1 acrescenta variantes de fixture0002 a termos que ja existiam, e os plurais
 # de preço teto como aliases.
 # 0.2.2 tira variantes que sao palavras comuns (D-032) e acrescenta market cap.
 # 0.2.3 acrescenta variantes de preço teto que o fuzzy nao alcanca (abaixo de 80).

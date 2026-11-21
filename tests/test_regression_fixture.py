@@ -43,7 +43,7 @@ BOUNDS = {
     # D-047 (variant fuzzy needs 85): `dos 10` x2, `nesse ramo`, `de eBit` (18 -> 14).
     # D-050's phonetic source added `como gestão` -> CEMIG (via `Cemig GT`), gone
     # again with its minimum skeleton length of 5 (14 -> 15 -> 14).
-    "R2Qgz8tFWVI": Bounds(in_scope=167, min_hits=150, max_false_positives=14),
+    "fixture0001": Bounds(in_scope=167, min_hits=150, max_false_positives=14),
     # D-031: one above the pre-D-030 57, again `tira` -> TIR. The touched
     # `manter` row is 15:54, by `divide` (85; `divide a` is a mark since D-047).
     # D-047 also drops the three `dividend -> dividendo` gold rows (225 -> 222,
@@ -55,7 +55,7 @@ BOUNDS = {
     # skeleton length of 5 (53 -> 55 -> 53).
     # D-060: phonetic matches only ask, so 36:41 `Warn Buffet` is a question
     # again with the frozen pack (105 -> 104); the bundled pack lists it.
-    "wxgFO_fyfXg": Bounds(
+    "fixture0002": Bounds(
         in_scope=222, min_hits=104, max_false_positives=53, max_manter_touched=1
     ),
     # Whisper medium, not platform captions; frozen pack 0.2.3. D-040 took out
@@ -63,13 +63,13 @@ BOUNDS = {
     # D-041 makes those two alias rows hits (35 -> 37). D-047 adds five gold rows
     # for the channel's tool, which 0.2.3 does not know (40 -> 45 in scope), and
     # takes out `saber se` -> Sabesp (5 -> 4).
-    "4wCtn8BWR4o": Bounds(in_scope=45, min_hits=37, max_false_positives=4),
-    # Same speaker as 4wCtn8BWR4o, new sector; platform `pt-orig` caption (D-045),
+    "fixture0004": Bounds(in_scope=45, min_hits=37, max_false_positives=4),
+    # Same speaker as fixture0004, new sector; platform `pt-orig` caption (D-045),
     # frozen pack 0.2.4. 36 of the 40 hits are alias rows; 4 of 81 corrections.
     # The touched `manter` row is 19:46 `bicho`, an EBITDA variant in 0.2.4.
     # D-048: the two `de dividend` proposals lose to `dividend` itself (8 -> 6).
     # D-049's gold change adds two BR Partners rows (117 -> 119) that 0.2.4 misses.
-    "4tTmY8Buask": Bounds(
+    "fixture0003": Bounds(
         in_scope=119, min_hits=40, max_false_positives=6, max_manter_touched=1
     ),
 }

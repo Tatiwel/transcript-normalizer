@@ -13,7 +13,7 @@ Libraries installed ad hoc for this run: `epitran 1.35.2`, which pulled in `panp
 
 ## Design
 
-- **Hold-out.** `pack-holdout.yaml` is the bundled pack (0.3.2) with BR Partners reduced to its canonical name and the aliases `BRBI11` and `Partners`, with no variants. `exp3.py` regenerates it. Against `fixtures/4tTmY8Buask` the target is BR Partners' 50 gold rows: 18 distinct forms after folding.
+- **Hold-out.** `pack-holdout.yaml` is the bundled pack (0.3.2) with BR Partners reduced to its canonical name and the aliases `BRBI11` and `Partners`, with no variants. `exp3.py` regenerates it. Against `fixtures/fixture0003` the target is BR Partners' 50 gold rows: 18 distinct forms after folding.
 - **Where a method runs.** Only on 1- and 2-word spans that no applied annotation of the current matcher covers. Spans do not cross pt-BR sentence boundaries, commas included (D-024, D-044).
 - **What it matches against.** Only the canonical names and aliases of terms of class `companhia` or `pessoa`. An encoded span or name shorter than 4 characters is skipped.
 - **Scoring.** A proposal is a medium-band correction. Proposals are scored with the matcher's own annotations after overlap resolution (D-048), with the same gold as the regression. "FP added" is a fixture's false positives minus the baseline's.
@@ -28,9 +28,9 @@ Methods:
 
 ## Results
 
-BR Partners held out: 18 distinct forms, 50 gold rows in 4tTmY8Buask.
+BR Partners held out: 18 distinct forms, 50 gold rows in fixture0003.
 
-| method | forms recovered (of 18) | rows hit (of 50) | FP added 4tTmY8Buask | FP added 4wCtn8BWR4o | FP added R2Qgz8tFWVI | FP added wxgFO_fyfXg |
+| method | forms recovered (of 18) | rows hit (of 50) | FP added fixture0003 | FP added fixture0004 | FP added fixture0001 | FP added fixture0002 |
 |---|---|---|---|---|---|---|
 | baseline | 2 | 8 | 0 | 0 | 0 | 0 |
 | M1 metaphone-ptbr | not on PyPI | | | | | |
@@ -41,7 +41,7 @@ BR Partners held out: 18 distinct forms, 50 gold rows in 4tTmY8Buask.
 
 Hits gained over the baseline, any term:
 
-| method | 4tTmY8Buask | 4wCtn8BWR4o | R2Qgz8tFWVI | wxgFO_fyfXg |
+| method | fixture0003 | fixture0004 | fixture0001 | fixture0002 |
 |---|---|---|---|---|
 | M2 epitran 80 | 0 | 0 | 1 | 0 |
 | M2 epitran 85 | 0 | 0 | 0 | 0 |
@@ -53,24 +53,24 @@ The baseline's two forms are `BR Portness` and `Portness`. The canonical name re
 ### Examples
 
 M2 epitran 80:
-- Hits: `serig` → CEMIG (80, R2Qgz8tFWVI), one of the three misses D-010 named. No other hit.
-- FPs: `casa` → Copasa (80, R2Qgz8tFWVI and wxgFO_fyfXg), `sabe` → Sabesp (80, R2Qgz8tFWVI).
+- Hits: `serig` → CEMIG (80, fixture0001), one of the three misses D-010 named. No other hit.
+- FPs: `casa` → Copasa (80, fixture0001 and fixture0002), `sabe` → Sabesp (80, fixture0001).
 
 M2 epitran 85:
 - Hits: none.
-- FPs: `partner` → BR Partners (93, 4tTmY8Buask 11:39). This is probably a real mention the gold lacks (see below). It is the method's only proposal.
+- FPs: `partner` → BR Partners (93, fixture0003 11:39). This is probably a real mention the gold lacks (see below). It is the method's only proposal.
 
 M3 skeleton 80:
 - Hits: `a Portness` → BR Partners (90), `Berry Portene` → BR Partners (85), `Portess` → BR Partners (80).
-- FPs: `aportar` → BR Partners (80, R2Qgz8tFWVI), `presta atenção` → BR Partners (83, 4tTmY8Buask), `a partir` → BR Partners (80, 4wCtn8BWR4o).
+- FPs: `aportar` → BR Partners (80, fixture0001), `presta atenção` → BR Partners (83, fixture0003), `a partir` → BR Partners (80, fixture0004).
 
 M3 skeleton 85:
 - Hits: `a Portness` → BR Partners (90), `Berry Portene` → BR Partners (85), `Portness` → BR Partners (90).
-- FPs: `A Partens` → BR Partners (90, 4tTmY8Buask 7:48), `partner e` → BR Partners (90, 4tTmY8Buask 11:39), `para três` → BR Partners (90, R2Qgz8tFWVI).
+- FPs: `A Partens` → BR Partners (90, fixture0003 7:48), `partner e` → BR Partners (90, fixture0003 11:39), `para três` → BR Partners (90, fixture0001).
 
 ## What it says
 
 - **M2 does not capture what M3 captures; it is the other way round.** At both thresholds every form M2 recovers is one the baseline already had. M3 adds seven forms at 80 (`berry portene`, `br portance`, `portance`, `portas`, `portes`, `portess`, `portinas`) and four at 85. In `por-Latn` IPA, `Portness` and `Partners` score 75, because the vowel symbols differ (`o`/`ɐ`, `s`/`ɾ`). Dropping vowels removes exactly that difference.
-- **M3 at 85 is the only setting worth a second look.** It recovers 25 more rows of the held-out company, and adds 2, 0, 1 and 1 false positives. Two of the 4tTmY8Buask false positives are probably not false. 7:48 "A Partens, em…" and 11:39 "eu tenho partner e é minha segunda maior" read as mentions of BR Partners that the gold does not list. The gold was not changed.
+- **M3 at 85 is the only setting worth a second look.** It recovers 25 more rows of the held-out company, and adds 2, 0, 1 and 1 false positives. Two of the fixture0003 false positives are probably not false. 7:48 "A Partens, em…" and 11:39 "eu tenho partner e é minha segunda maior" read as mentions of BR Partners that the gold does not list. The gold was not changed.
 - **Phonetics does not reach these forms:** `b partners`, `br port`, `pornet`, `port`, `porta`, `portizar`, `portou`, `portudo`, `wortness`. Of these, `port`, `porta` and `br port` are short or ordinary words that D-005 and D-032 keep out anyway.
 - **This is one company and one speaker.** The hold-out measures recall on a single name with many forms. Under the pack, the same forms are listed variants. Whether a phonetic layer earns a place before the first sighting of a name is the open question. This run suggests a skeleton fold at 85 restricted to name classes, not IPA.

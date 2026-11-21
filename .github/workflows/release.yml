@@ -265,8 +265,8 @@ jobs:
         run: |
           "$EXE" help
           export TRANSCRIPT_NORMALIZER_HOME="$RUNNER_TEMP/tn-home"
-          "$EXE" fixtures/R2Qgz8tFWVI/legenda.txt
-          test -f "$TRANSCRIPT_NORMALIZER_HOME/runs/R2Qgz8tFWVI/normalized.txt"
+          "$EXE" fixtures/fixture0001/legenda.txt
+          test -f "$TRANSCRIPT_NORMALIZER_HOME/runs/fixture0001/normalized.txt"
           # D-065: the field templates are inside, and a pack made from one loads.
           "$EXE" pack create --template medicina --name smoke-ptbr --lang pt-BR
           "$EXE" pack list --installed | grep -q '^smoke-ptbr '
@@ -433,8 +433,8 @@ jobs:
           rm -rf "$docs" "$settings"
           unset TRANSCRIPT_NORMALIZER_HOME
           "$root/transcript-normalizer.exe" help | head -3
-          "$root/transcript-normalizer.exe" fixtures/R2Qgz8tFWVI/legenda.txt | tail -1
-          test -f "$root/data/runs/R2Qgz8tFWVI/normalized.txt"
+          "$root/transcript-normalizer.exe" fixtures/fixture0001/legenda.txt | tail -1
+          test -f "$root/data/runs/fixture0001/normalized.txt"
           test ! -e "$docs" && test ! -e "$settings" && test ! -e runs
           find "$root/data" -type f | head -20
 

@@ -72,7 +72,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
 corrected 24  (semiga → CEMIG, Semig → CEMIG)
 recognized 65  (terms already spelled right, left as they are)
 applied, please confirm 6  (the tool was unsure; your answer is remembered)
-result: runs/4wCtn8BWR4o/normalized.txt
+result: runs/<video-id>/normalized.txt
 ```
 
 `transcript-normalizer help` (ou `--help`, ou o item 8 do menu) imprime a referência inteira, em seções: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE. `transcript-normalizer --version` imprime só a versão instalada, a mesma que o menu mostra.
@@ -80,15 +80,15 @@ result: runs/4wCtn8BWR4o/normalized.txt
 **Os três comandos.**
 
 ```
-transcript-normalizer fetch https://youtu.be/4wCtn8BWR4o
-transcript-normalizer runs/4wCtn8BWR4o/legenda.txt
-transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
+transcript-normalizer fetch https://youtu.be/<video-id>
+transcript-normalizer runs/<video-id>/legenda.txt
+transcript-normalizer runs/<video-id>/legenda.txt --review
 ```
 
 O `fetch` pega a legenda da plataforma (no idioma original, a faixa do próprio canal, senão a automática do áudio original; nunca uma tradução automática, D-045, D-081) e, se não houver, transcreve o áudio localmente (D-036). Também aceita um arquivo de áudio ou vídeo: `transcript-normalizer fetch aula.mp4`. O `.vtt` ou `.srt` baixado é apagado depois de convertido em `legenda.txt`; `--keep-raw` o mantém. O segundo comando normaliza, e aceita também um `.srt` ou `.vtt`, que antes converte em `runs/<nome-do-arquivo>/legenda.txt`; o terceiro faz o mesmo e depois pergunta o que ficou em dúvida. `fetch --list <url>` confere um link sem baixar nada: o site, título e duração, as faixas de legenda (ou nenhuma), se há áudio para transcrever e se o site pede login (D-078); e `fetch --track <código>` escolhe uma exatamente (`pt-orig`, `pt`, `en`), no lugar da escolha do `--lang` (D-062). Sem `--lang`, a legenda é no idioma do próprio vídeo, como o site informa; quando o site não diz, a única faixa de áudio original do vídeo, senão a única manual, senão português, com uma linha avisando (D-080). `transcript-normalizer list` mostra o que você já tem. Parte do que o segundo imprime para o vídeo acima:
 
 ```
-runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.4.0
+runs/<video-id>/legenda.txt: 239 caption lines, pack 0.4.0
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
@@ -182,7 +182,7 @@ O item 3 do menu, ou `--review`, para uma vez em cada forma de que a ferramenta 
     0:04  hoje a Klabine caiu bastante
   » 0:07  e a «Klabim» subiu depois
     0:10  a Clabine pagou dividendos
-  watch: https://youtu.be/4tTmY8Buask?t=7
+  watch: https://youtu.be/<video-id>?t=7
 Is «Klabim» Klabin?
   Enter decides later; b ends the review here
    1. Yes: this is Klabin (fix it from now on)
@@ -336,7 +336,7 @@ Conflict 1: Echo: the class differs on both sides
   mine      Echo  (exame)
   theirs    Echo  (doenca)
   in your runs:
-    R2Qgz8tFWVI  3:10 o Echo saiu da lista
+    fixture0001  3:10 o Echo saiu da lista
 Which one?
    m. Keep mine
    t. Take theirs
@@ -350,14 +350,14 @@ Which one?
 ```
 The wrong form you saw
 > mississões
-  in 1 line(s) of R2Qgz8tFWVI:
+  in 1 line(s) of fixture0001:
     3:22 gestão, tanto as mississões e tal. Então
 Is 'mississões' the form you saw? [Y/n]
 What it should be
 > emissão
 + term     emissão (conceito)
   + variant  mississões -> emissão
-Normalize R2Qgz8tFWVI again with it? [Y/n]
+Normalize fixture0001 again with it? [Y/n]
 ```
 
 **Devolvendo.** O que você ensina à ferramenta numa revisão fica na sua camada aprendida. Para oferecê-lo a todo mundo que usa o pacote:
@@ -389,15 +389,15 @@ Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são me
 
 | vídeo | linhas a acertar | acertos | faltas | mudanças erradas |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 123 | 44 | 12 |
-| wxgFO_fyfXg | 222 | 168 | 54 | 3 |
-| 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
-| 4tTmY8Buask | 119 | 105 | 14 | 4 |
+| fixture0001 | 167 | 123 | 44 | 12 |
+| fixture0002 | 222 | 168 | 54 | 3 |
+| fixture0004 | 45 | 44 | 1 | 2 |
+| fixture0003 | 119 | 105 | 14 | 4 |
 
-- **R2Qgz8tFWVI**: um canal de finanças falando de uma elétrica (CEMIG), legenda da plataforma; o primeiro gabarito, de onde vem a maior parte das variantes.
-- **wxgFO_fyfXg**: o mesmo canal comparando duas elétricas; muitos aliases (tickers, plurais) que não podem ser alterados.
-- **4wCtn8BWR4o**: outro falante sobre a mesma empresa, transcrito localmente com faster-whisper em vez da legenda da plataforma.
-- **4tTmY8Buask**: esse segundo falante num setor novo (um banco de investimento), com um nome de empresa que o pacote não conhecia.
+- **fixture0001**: finanças, legenda da plataforma; o primeiro gabarito, de onde vem a maior parte das variantes.
+- **fixture0002**: finanças, legenda da plataforma; muitos aliases (tickers, plurais) que não podem ser alterados.
+- **fixture0004**: finanças, transcrito localmente com faster-whisper em vez da legenda da plataforma.
+- **fixture0003**: finanças, legenda da plataforma, com um nome de empresa que o pacote não conhecia.
 
 Os limites, sem rodeio:
 
