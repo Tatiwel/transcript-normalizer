@@ -364,7 +364,7 @@ def import_name(source: Path) -> str:
     as `<name>/pack.yaml` (and old versions as `<name>/<version>/pack.yaml`).
     Anything else: the file's name, as before."""
     if source.stem == "pack":
-        folder = source.parent
+        folder = source.resolve().parent  # `pack.yaml` run from inside its folder has a parent of "."
         if _VERSION_DIR.match(folder.name):
             folder = folder.parent
         return folder.name

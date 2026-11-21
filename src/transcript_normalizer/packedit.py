@@ -18,6 +18,7 @@ import math
 import re
 import shutil
 import sys
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -102,11 +103,13 @@ def generated_block(text: str) -> Block | None:
     first = start + 1
     while first < end and lines[first].strip().startswith("#"):
         first += 1
-    names = []
-    for line in lines[first:end]:
-        found = _TERM_ENTRY.match(line)
-        if found:
-            names.append(str(yaml.safe_load(found.group(2))))
+    # The entries between the markers, read as YAML, so a term whose `term:`
+    # is not its first key is still one of them.
+    try:
+        entries = yaml.safe_load(textwrap.dedent("".join(lines[first:end]))) or []
+    except yaml.YAMLError:
+        entries = []
+    names = [str(e["term"]) for e in entries if isinstance(e, dict) and "term" in e] if isinstance(entries, list) else []
     closing = lines[end] if lines[end].endswith("\n") else lines[end] + "\n"
     return Block(tuple(lines[start:first]), closing, tuple(names))
 
