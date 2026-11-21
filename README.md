@@ -10,7 +10,7 @@ Domain-term normalization for ASR transcripts and auto-captions.
 
 ## The problem
 
-Automatic captions and speech recognition systematically garble domain vocabulary: company names, acronyms, indicators, units. In a Brazilian finance video, `CEMIG` came out as `SEMIG`, `SEMIC`, `CIC`, `sem amig`, `esse amigo`; `EBITDA` came out as `Ebítida`, `web ebita`, `bicho`; `Geração Dividendos` (the channel's own name) came out as `Geração de Dentes`.
+Automatic captions and speech recognition systematically garble domain vocabulary: company names, acronyms, indicators, units. In Brazilian Portuguese finance captions, `CEMIG` came out as `SEMIG`, `SEMIC`, `CIC`, `sem amig`, `esse amigo`, and `EBITDA` came out as `Ebítida`, `web ebita`, `bicho`.
 
 Spell checkers do not help. Half of these errors are valid words. `Word` is a perfectly spelled word; the speaker said `Ward`, the name of a tool.
 
@@ -73,8 +73,7 @@ The run id is the video id, read from the caption header when the input did not 
 
 Experimental, but the engine is a package with a regression test.
 
-- `fixtures/R2Qgz8tFWVI/`: one Brazilian Portuguese finance video (31 min). `legenda.txt` is the raw platform caption, `gold.csv` is a hand-checked gold list of 196 rows: 167 domain-term errors in scope, plus aliases, case-only rows and 2 lines that must not be touched, `pack.yaml` is the first domain pack.
-- `fixtures/wxgFO_fyfXg/`: a second video from the same channel (40 min, CEMIG vs CPFL), with a 225-row gold file whose statuses separate corrections the tool made (`certo`), legitimate other names of a term (`alias`), and errors a person had to add (`conferido`). The meanings are in `src/transcript_normalizer/evaluate.py`.
+- `fixtures/`: Brazilian Portuguese finance captions, one folder each. `legenda.txt` is the raw caption, `gold.csv` a hand-checked gold list, and `pack.yaml` the frozen pack it is measured against. The first one's gold has 196 rows: 167 domain-term errors in scope, plus aliases, case-only rows and 2 lines that must not be touched. The gold statuses separate corrections the tool made (`certo`), legitimate other names of a term (`alias`), and errors a person had to add (`conferido`); the meanings are in `src/transcript_normalizer/evaluate.py`.
 
 `uv run python scripts/measure.py` prints every fixture's numbers side by side; the regression test holds each one to its own bounds.
 - `experiments/`: throwaway scripts that measured how far naive approaches go against that fixture. Results are in `docs/DECISIONS.md`.
@@ -87,7 +86,7 @@ Measured on the first fixture with its frozen pack (RapidFuzz plus a hand-curate
 
 ## Test content
 
-Code, docs and API are in English. Test fixtures are Brazilian Portuguese finance videos, because that is the problem this was built to solve. Contributions of fixtures in other languages and domains are welcome.
+Code, docs and API are in English. Test fixtures are Brazilian Portuguese finance captions, because that is the problem this was built to solve. Contributions of fixtures in other languages and domains are welcome.
 
 ## Related work this builds on
 
