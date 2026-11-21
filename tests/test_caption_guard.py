@@ -409,3 +409,62 @@ def test_two_earlier_stretches_are_named_apart():
 
 def test_a_refrain_that_overlaps_itself_is_not_a_passage_written_twice():
     assert find_repeats(body(("0:01", "alpha beta gamma delta epsilon zeta " * 4))) == []
+
+
+# ------------------------------------------------------------------ D-099: a local file's fingerprint
+
+
+def other_wav(tmp_path, folder):
+    path = tmp_path / folder / "aula.wav"
+    path.parent.mkdir()
+    with wave.open(str(path), "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(16000)
+        out.writeframes(b"\1\0" * 1600)
+    return path
+
+
+def test_the_header_names_the_file_s_content(tmp_path, monkeypatch, wav):
+    assert fetch_file(tmp_path, monkeypatch, str(wav)) == 0
+    existing = caption_guard.read_existing(tmp_path / "runs" / "aula")
+    assert existing.fingerprint == caption_guard.fingerprint(wav)
+    assert existing.fingerprint.startswith("sha256 ") and existing.fingerprint.endswith(f", {wav.stat().st_size} bytes")
+    assert f"# Impressao digital: {existing.fingerprint}" in existing.header
+
+
+def test_another_file_with_the_same_name_is_refused(tmp_path, monkeypatch, capsys, wav):
+    assert fetch_file(tmp_path, monkeypatch, str(wav)) == 0
+    caption = tmp_path / "runs" / "aula" / CAPTION_FILE
+    before = caption.read_bytes()
+    calls = []
+    monkeypatch.setattr(fetch, "transcribe", lambda *a, **k: calls.append(a) or ("0:01 outra aula", 1.0))
+    other = other_wav(tmp_path, "outro-curso")
+
+    assert fetch_file(tmp_path, monkeypatch, str(other)) == EXIT_CAPTION_EXISTS
+    assert calls == [] and caption.read_bytes() == before
+    assert "aula.wav has other content" in capsys.readouterr().err
+
+    assert fetch_file(tmp_path, monkeypatch, str(wav)) == 0  # the first file is still the same
+    assert calls == []
+
+
+def test_the_same_content_under_another_folder_is_the_same_file(tmp_path, monkeypatch, wav):
+    assert fetch_file(tmp_path, monkeypatch, str(wav)) == 0
+    copy = tmp_path / "copia" / "aula.wav"
+    copy.parent.mkdir()
+    shutil.copy(wav, copy)
+    monkeypatch.setattr(fetch, "transcribe", lambda *a, **k: pytest.fail("transcribed again"))
+    assert fetch_file(tmp_path, monkeypatch, str(copy)) == 0
+
+
+def test_a_text_without_a_fingerprint_is_compared_by_name_as_before(tmp_path, monkeypatch, capsys, wav):
+    run = tmp_path / "runs" / "aula"
+    run.mkdir(parents=True)
+    (run / CAPTION_FILE).write_text(  # as 0.8.2 wrote it
+        speech_header(Metadata(id="aula", title="aula"), "", "pt", "medium", file_name="aula.wav") + "0:01 a\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(fetch, "transcribe", lambda *a, **k: pytest.fail("transcribed again"))
+    assert fetch_file(tmp_path, monkeypatch, str(other_wav(tmp_path, "outro-curso"))) == 0
+    assert caption_guard.read_existing(run).fingerprint == ""

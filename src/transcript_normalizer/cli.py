@@ -568,6 +568,7 @@ def run_normalize(args: argparse.Namespace) -> int:
     except (LanguageNotFound, EngineTooOld) as error:
         print(error, file=sys.stderr)
         return 2
+    warn_orphaned(pack, learned_at)
     transcript = read_caption(args.caption)
     out_dir = run_dir(args.caption, args.out, transcript.header_field("URL"))
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -823,6 +824,26 @@ def build_parser() -> argparse.ArgumentParser:
 def is_interactive() -> bool:
     """D-051: a person at a terminal, not a script or a pipe."""
     return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def warn_orphaned(pack, learned_at) -> None:
+    """D-100: learned entries for a term the pack no longer has are said, not skipped in silence."""
+    if not pack.orphaned_learned:
+        return
+    total = sum(count for _, count in pack.orphaned_learned)
+    print(
+        f"{learned_at} has {total} learned entr{'y' if total == 1 else 'ies'} for "
+        f"{len(pack.orphaned_learned)} term(s) this pack no longer has; they stay in the file "
+        f"and are not used:",
+        file=sys.stderr,
+    )
+    for name, count in pack.orphaned_learned:
+        print(f"  {name}: {count}", file=sys.stderr)
+    print(
+        "  To use them again, put the term back in a pack of your own: "
+        "`pack copy`, then `pack add-term`.",
+        file=sys.stderr,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

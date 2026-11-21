@@ -99,10 +99,12 @@ def speech_header(
     step: str | None = None,
     file_name: str | None = None,
     repeats: list[str] | None = None,
+    fingerprint: str | None = None,
 ) -> str:
     """The header of a transcript produced by local speech recognition.
 
-    `repeats` are the lines D-092's search wrote (ingest/repeats.py)."""
+    `repeats` are the lines D-092's search wrote (ingest/repeats.py);
+    `fingerprint`, D-099's `sha256 <hex>, <n> bytes` of a local file."""
     return "\n".join(
         [
             "# Transcricao por reconhecimento de fala local, material bruto",
@@ -116,6 +118,7 @@ def speech_header(
             f"# Canal: {meta.channel}",
             f"# Publicado: {meta.published}",
             f"# Arquivo: {file_name}" if file_name else f"# URL: {url}",
+            *([f"# Impressao digital: {fingerprint}"] if file_name and fingerprint else []),
             f"# Transcrito em: {transcribed or _today()}",
             "#",
             *START_OF_SEGMENT,

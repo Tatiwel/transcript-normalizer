@@ -1045,6 +1045,20 @@ So the included pack is no longer a superset of every term in the fixtures' froz
 
 An installed 0.4.0 that was not edited is offered 0.4.1 by the menu and by `pack update` (D-097); one that was edited is offered a merge (D-069).
 
+## D-099 A local file is the same file by its content
+
+D-091 told a local file transcribed again from another one by its name only, the `# Arquivo:` line of the header, which has no folder. Two courses each with an `aula1.mp4` go to the same `runs/aula1/`, so the second one was taken for the first, and its transcription was the first one's text, with exit 0 and "already here, from the same source".
+
+A transcription of a local file now writes a line after `# Arquivo:`, `# Impressao digital: sha256 <hex>, <n> bytes`, the file's SHA-256 and size, read before transcribing. Fetching a local file again compares that: other content is another source, and the command stops with exit 4 (D-091) and says the file "has other content"; the same content is the same source whatever its folder or name, and the text there is used. The comparison is made before transcribing and again before writing, as D-091's.
+
+A `legenda.txt` written before 0.8.3 has no such line, and the name decides, as it did: the program cannot know which file it came from. Transcribing it again with `--replace-caption`, or deleting the run folder, writes one with the line. A converted `.srt` or `.vtt` is unchanged: it was already compared by its lines.
+
+## D-100 Learned entries for a term the pack no longer has are said
+
+The learned layer (D-013) is read by the pack's term names. An entry for a term the pack no longer has (D-098 took four out) stayed in the file and was skipped, with nothing said: its variants stopped being corrected without a word.
+
+`normalize` now says it, on standard error, before normalizing: how many entries, for which terms, that they stay in the file and are not used, and how to use them again (`pack copy`, then `pack add-term` with the term). Nothing is removed from the learned file and nothing is changed in the pack: putting the term back is a choice of the person whose layer it is. The exit status is unchanged.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
