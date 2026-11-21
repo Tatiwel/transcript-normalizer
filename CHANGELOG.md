@@ -2,16 +2,18 @@
 
 ## Unreleased
 
-- The included financas-ptbr is 0.4.1 (D-098): BR Partners matches only as written, so `aportes` and `portas` no longer become it, and four terms tied to channels rather than to the market are gone. 348 terms.
+## 0.8.2
 
+2026-11-21. A run's text is never replaced unasked (D-091); passages a transcription wrote twice are shown (D-092); the header says which moment a timestamp is (D-093); fixtures without names (D-094); packs keep their generated part, import by name and update from the menu (D-095 to D-097); financas-ptbr 0.4.1 included (D-098).
+
+- A run's `legenda.txt` is never replaced unasked (D-091). `fetch` of a link or a file, and `normalize` of a `.srt` or `.vtt`, look at the text already in the run folder before doing anything: from the same source (same video, language, model, track; a subtitle with the same lines), it is used as it is and nothing is downloaded or written, with exit 0; from another, the command stops, says what is there, and exits with 4. `--out <folder>` keeps both; the new `--replace-caption` replaces it, moving the old text and what was made from it into `replaced-<date and time>/` inside the run (nothing is deleted; a replacement that fails or is stopped with Ctrl+C puts it back). The menu asks "Keep the one there" or "Replace it". A `.vtt` or `.srt` kept in a run folder belongs to that run.
+- Passages a local transcription wrote twice are found (D-092): 15 words or more repeating what was said less than a minute before, each earlier stretch named. fetch prints where, lists them in `needs-review/repeats.txt`, and the header of `legenda.txt` says so (or that none was found, which does not mean nothing is missing). The text is not changed.
+- The header of `legenda.txt` says which moment its timestamps are (D-093): the end of the cue for a platform caption or a converted subtitle, the start of the speech for a local transcription. The moments themselves are unchanged.
+- The fixtures name no channel, video or link (D-094): their folders are `fixture0001` to `fixture0004`, and their headers keep no title, channel, date or link. The measured numbers are unchanged.
 - Editing a pack keeps the part a program generated (D-095): the comment lines that mark it stay, its terms stay together inside them, and a term you add goes before it. financas-ptbr's 282 listed companies are such a part; before, an edit dropped the markers and put new terms after the companies.
 - `pack import` takes the pack's name (D-096): `financas-ptbr-0.4.1.yaml`, as `pack export` writes it, is imported as `financas-ptbr`, and a `pack.yaml` from the packs repository takes its folder's name. `--name` chooses another.
 - The menu updates installed packs (D-097): Packs → "Update packs" runs `pack update`, and the first screen says when this version includes a newer version of a pack you installed and did not edit.
-
-- A run's `legenda.txt` is never replaced unasked (D-091). `fetch` of a link or a file, and `normalize` of a `.srt` or `.vtt`, look at the text already in the run folder before doing anything: from the same source (same video, model, track; a subtitle with the same lines), it is used as it is and nothing is downloaded or written; from another, the command stops, says what is there, and exits with 4. `--out <folder>` keeps both; the new `--replace-caption` replaces it, moving the old text and what was made from it into `replaced-<date and time>/` inside the run (nothing is deleted, and a failed replacement puts it back). The menu asks "Keep the one there" or "Replace it". A `.vtt` or `.srt` kept in a run folder belongs to that run.
-- Passages a local transcription wrote twice are found (D-092): 15 words or more repeating a passage from less than a minute before. fetch prints where, lists them in `needs-review/repeats.txt`, and the header of `legenda.txt` says so (or that none was found, which does not mean nothing is missing). The text is not changed.
-- The fixtures name no channel, video or link (D-094): their folders are `fixture0001` to `fixture0004`, and their headers keep no title, channel, date or link. The measured numbers are unchanged.
-- The header of `legenda.txt` says which moment its timestamps are (D-093): the end of the cue for a platform caption or a converted subtitle, the start of the speech for a local transcription. The moments themselves are unchanged.
+- The included financas-ptbr is 0.4.1 (D-098): BR Partners matches only as written, so `aportes` and `portas` no longer become it, and four terms tied to channels rather than to the market are gone. 348 terms.
 
 ## 0.8.1
 
