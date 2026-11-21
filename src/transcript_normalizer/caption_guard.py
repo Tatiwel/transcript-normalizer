@@ -71,6 +71,7 @@ class Existing:
     file_name: str = ""
     model: str = ""
     track: str = ""
+    lang: str = ""  # the base language: `pt` of `pt-orig`, or a transcription's `idioma pt`
     header: tuple[str, ...] = ()
     body: tuple[str, ...] = ()
 
@@ -122,18 +123,24 @@ def read_existing(run: Path) -> Existing | None:
         kind = FILE
     else:
         kind = UNKNOWN
-    model = ""
-    found = re.match(r"faster-whisper (\S+?),", _field(header, "Modelo"))
+    model = lang = ""
+    found = re.match(r"faster-whisper (\S+?),\s*idioma (\S+?),", _field(header, "Modelo"))
     if found:
-        model = found.group(1)
+        model, lang = found.group(1), found.group(2)
     track = ""
     found = re.search(r"\(([^()]+)\)\s*$", _field(header, "Origem da legenda"))
     if found:
         track = found.group(1)
+        lang = base_lang(track)
     return Existing(
         path=path, kind=kind, url=_field(header, "URL"), file_name=_field(header, "Arquivo"),
-        model=model, track=track, header=header, body=body,
+        model=model, track=track, lang=base_lang(lang), header=header, body=body,
     )
+
+
+def base_lang(code: str) -> str:
+    """`pt` of `pt-orig`, `pt-BR` or `pt`."""
+    return code.split("-")[0].lower() if code else ""
 
 
 def same_video(existing_url: str, url: str, video_id: str = "") -> bool:
@@ -146,7 +153,7 @@ def same_video(existing_url: str, url: str, video_id: str = "") -> bool:
 
 def fetch_mismatch(
     existing: Existing, url: str, video_id: str, *, whisper: bool, caption_only: bool, track: str | None,
-    model: str,
+    model: str, lang: str | None = None,
 ) -> str:
     """Why a fetch of `url` would not give the text that is already there; "" when it would.
 
@@ -155,6 +162,8 @@ def fetch_mismatch(
     """
     if existing.kind not in (SPEECH, CAPTION) or not same_video(existing.url, url, video_id):
         return f"it holds {existing.describe()}, not of this link"
+    if not track and lang and existing.lang and base_lang(lang) != existing.lang:
+        return f"it holds {existing.describe()} in '{existing.lang}', and you asked for '{lang}'"
     if existing.kind == SPEECH:
         if caption_only or track:
             return f"it holds {existing.describe()}, and you asked for the platform's caption"
@@ -168,10 +177,12 @@ def fetch_mismatch(
     return ""
 
 
-def file_mismatch(existing: Existing, file_name: str, model: str) -> str:
+def file_mismatch(existing: Existing, file_name: str, model: str, lang: str | None = None) -> str:
     """Why transcribing the local file `file_name` would not give the text there; "" when it would."""
     if existing.kind != SPEECH or existing.file_name != file_name:
         return f"it holds {existing.describe()}, not of {file_name}"
+    if lang and existing.lang and base_lang(lang) != existing.lang:
+        return f"it holds {existing.describe()} in '{existing.lang}', and you asked for '{lang}'"
     if existing.model != model:
         return f"it holds {existing.describe()}, and you asked for the model {model}"
     return ""
