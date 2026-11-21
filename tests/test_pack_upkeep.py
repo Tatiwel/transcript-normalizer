@@ -186,3 +186,22 @@ def test_an_edited_pack_is_not_offered_an_update(home, monkeypatch, capsys, olde
 def test_no_update_option_without_an_installed_pack(home, monkeypatch, capsys):
     _, out, _ = menu(home, monkeypatch, capsys, ["6", "b", "q"])
     assert "Update packs" not in out
+
+
+def test_a_generated_term_written_with_another_key_first_stays_inside(gen, capsys):
+    text = gen.read_text(encoding="utf-8").replace(
+        "  - term: Beta\n    class: companhia\n", "  - class: companhia\n    term: Beta\n")
+    gen.write_text(text, encoding="utf-8")
+    assert packedit.generated_block(text).names == ("Alfa", "Beta")
+    assert main(["pack", "add-term", "gen", "payout", "--class", "conceito"]) == 0
+    assert names(gen) == ["dividendo", "payout", "Alfa", "Beta"]
+    assert packedit.generated_block(gen.read_text(encoding="utf-8")).names == ("Alfa", "Beta")
+
+
+def test_import_of_pack_yaml_from_inside_its_folder(home, monkeypatch, capsys):
+    folder = home / "repo" / "med-ptbr"
+    write_pack(folder / "pack.yaml")
+    monkeypatch.chdir(folder)
+    monkeypatch.setenv("TRANSCRIPT_NORMALIZER_HOME", str(home))
+    assert main(["pack", "import", "pack.yaml"]) == 0
+    assert (home / "packs" / "med-ptbr.yaml").exists()
