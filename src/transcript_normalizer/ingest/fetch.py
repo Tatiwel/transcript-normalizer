@@ -920,7 +920,11 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     meta = Metadata(id=media.stem, title=media.stem)
     target = fetch_dir(media.stem, args.out)  # D-018 rule 3: the file's stem
     existing = caption_guard.read_existing(target)  # D-091: before any work
-    fingerprint = caption_guard.fingerprint(media)  # D-099: the same file is the same content
+    try:
+        fingerprint = caption_guard.fingerprint(media)  # D-099: the same file is the same content
+    except OSError as error:
+        print(f"could not read {media}: {error}", file=sys.stderr)
+        return 1
     if existing is not None and not args.replace_caption:
         why = caption_guard.file_mismatch(existing, media.name, args.model, args.lang, fingerprint)
         return reuse(existing, out) if not why else refuse(existing, why)
@@ -935,6 +939,17 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
         print(f"could not transcribe {media}: {error}", file=sys.stderr)
         return 1
     meta = measured(meta, seconds, out)
+    # D-099: the text must be of the content the header names. Reading the file
+    # again costs seconds; a transcription, minutes to hours.
+    try:
+        changed = caption_guard.fingerprint(media) != fingerprint
+    except OSError as error:
+        print(f"could not read {media}: {error}", file=sys.stderr)
+        return 1
+    if changed:
+        print(f"{media} changed while it was being transcribed; nothing was written. Run it again.",
+              file=sys.stderr)
+        return 1
     # D-091: look again, since a transcription takes long and another run of
     # the same file may have written its text meanwhile.
     existing = caption_guard.read_existing(target)

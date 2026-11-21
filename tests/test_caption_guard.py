@@ -468,3 +468,23 @@ def test_a_text_without_a_fingerprint_is_compared_by_name_as_before(tmp_path, mo
     monkeypatch.setattr(fetch, "transcribe", lambda *a, **k: pytest.fail("transcribed again"))
     assert fetch_file(tmp_path, monkeypatch, str(other_wav(tmp_path, "outro-curso"))) == 0
     assert caption_guard.read_existing(run).fingerprint == ""
+
+
+def test_a_file_changed_while_transcribed_is_not_written(tmp_path, monkeypatch, capsys, wav):
+    def rewrite(*args, **kwargs):
+        wav.write_bytes(wav.read_bytes() + b"\0\0")
+        return "0:01 b", 1.0
+
+    monkeypatch.setattr(fetch, "transcribe", rewrite)
+    assert fetch_file(tmp_path, monkeypatch, str(wav)) == 1
+    assert "changed while it was being transcribed" in capsys.readouterr().err
+    assert not (tmp_path / "runs" / "aula" / CAPTION_FILE).exists()
+
+
+def test_a_file_that_cannot_be_read_is_said(tmp_path, monkeypatch, capsys, wav):
+    def unreadable(path):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(caption_guard, "fingerprint", unreadable)
+    assert fetch_file(tmp_path, monkeypatch, str(wav)) == 1
+    assert f"could not read {wav}" in capsys.readouterr().err
