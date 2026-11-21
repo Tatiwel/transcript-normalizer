@@ -349,3 +349,63 @@ def test_each_header_says_which_moment_its_timestamps_are():
     assert "do FIM do trecho" in file_header("a.vtt", "a")
     speech = speech_header(meta, URL, "pt", "medium")
     assert "do INICIO do trecho" in speech and "FIM" not in speech
+
+
+# ------------------------------------------------------------------ review of PR #5
+
+
+def test_another_language_is_another_source(tmp_path, monkeypatch, capsys):
+    platform = dict(automatic=("pt", "en"))
+    assert fetch_url(tmp_path, monkeypatch, ytdlp=FakeYtDlp(**platform))[0] == 0
+    capsys.readouterr()
+    assert fetch_url(tmp_path, monkeypatch, "--lang", "pt-BR", ytdlp=FakeYtDlp(**platform))[0] == 0
+    code, fake = fetch_url(tmp_path, monkeypatch, "--lang", "en", ytdlp=FakeYtDlp(**platform))
+    assert code == EXIT_CAPTION_EXISTS and fake.calls == ["metadata"]
+    assert "in 'pt', and you asked for 'en'" in capsys.readouterr().err
+
+
+def test_an_interrupted_replacement_puts_the_old_text_back(tmp_path, monkeypatch):
+    assert fetch_url(tmp_path, monkeypatch)[0] == 0
+    run = run_of(tmp_path)
+    before = {p.relative_to(run): p.read_bytes() for p in run.rglob("*") if p.is_file()}
+
+    def interrupted(*args, **kwargs):
+        (run / "audio.m4a").write_bytes(b"partial")
+        raise KeyboardInterrupt
+
+    monkeypatch.chdir(tmp_path)
+    fetch_fakes.install(monkeypatch, fetch, FakeYtDlp())
+    monkeypatch.setattr(fetch, "step_speech", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        main(["fetch", URL, "--whisper", "--replace-caption"])
+    assert {p.relative_to(run): p.read_bytes() for p in run.rglob("*") if p.is_file()} == before
+    assert replaced(run) == []
+
+
+def test_a_text_written_while_transcribing_a_file_is_not_written_over(tmp_path, monkeypatch, capsys, wav):
+    run = tmp_path / "runs" / "aula"
+
+    def meanwhile(*args, **kwargs):  # another run of the same file finished first, with another model
+        run.mkdir(parents=True, exist_ok=True)
+        (run / CAPTION_FILE).write_text(
+            speech_header(Metadata(id="aula", title="aula"), "", "pt", "small", file_name="aula.wav") + "0:01 a\n",
+            encoding="utf-8",
+        )
+        return "0:01 b", 1.0
+
+    monkeypatch.setattr(fetch, "transcribe", meanwhile)
+    assert fetch_file(tmp_path, monkeypatch, str(wav)) == EXIT_CAPTION_EXISTS
+    assert "0:01 a" in (run / CAPTION_FILE).read_text(encoding="utf-8")
+    assert "you asked for the model medium" in capsys.readouterr().err
+
+
+def test_two_earlier_stretches_are_named_apart():
+    first = " ".join(f"um{i}" for i in range(10))
+    second = " ".join(f"dois{i}" for i in range(10))
+    [found] = find_repeats(body(("1:00", first + " coisa dita no meio"), ("1:10", second), ("1:30", f"{first} {second}")))
+    assert found.sources == (("1:00", "1:00"), ("1:10", "1:10"))
+    assert header_lines([found])[1].startswith("#   1:30 repete 1:00 e 1:10 (20 palavras)")
+
+
+def test_a_refrain_that_overlaps_itself_is_not_a_passage_written_twice():
+    assert find_repeats(body(("0:01", "alpha beta gamma delta epsilon zeta " * 4))) == []

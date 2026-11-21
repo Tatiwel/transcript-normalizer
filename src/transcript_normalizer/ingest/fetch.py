@@ -921,7 +921,7 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     target = fetch_dir(media.stem, args.out)  # D-018 rule 3: the file's stem
     existing = caption_guard.read_existing(target)  # D-091: before any work
     if existing is not None and not args.replace_caption:
-        why = caption_guard.file_mismatch(existing, media.name, args.model)
+        why = caption_guard.file_mismatch(existing, media.name, args.model, args.lang)
         return reuse(existing, out) if not why else refuse(existing, why)
     target.mkdir(parents=True, exist_ok=True)
     out.detail("file", media, "path")
@@ -934,7 +934,13 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
         print(f"could not transcribe {media}: {error}", file=sys.stderr)
         return 1
     meta = measured(meta, seconds, out)
-    if existing is not None:  # D-091: the transcription is done; now the old one moves aside
+    # D-091: look again, since a transcription takes long and another run of
+    # the same file may have written its text meanwhile.
+    existing = caption_guard.read_existing(target)
+    if existing is not None and not args.replace_caption:
+        why = caption_guard.file_mismatch(existing, media.name, args.model, args.lang)
+        return reuse(existing, out) if not why else refuse(existing, why)
+    if existing is not None:  # the transcription is done; now the old one moves aside
         out.detail("replaced", caption_guard.archive(target), "path", note="(kept there)")
     found = look_for_repeats(body, target, out)
     caption = target / CAPTION_FILE
@@ -1306,7 +1312,7 @@ def run(args: argparse.Namespace) -> int:
         if not args.replace_caption:
             why = caption_guard.fetch_mismatch(
                 existing, args.url, meta.id, whisper=args.whisper, caption_only=args.caption_only,
-                track=args.track, model=args.model,
+                track=args.track, model=args.model, lang=args.lang,
             )
             return reuse(existing, out) if not why else refuse(existing, why)
         archived = caption_guard.archive(target)
@@ -1325,66 +1331,72 @@ def run(args: argparse.Namespace) -> int:
             caption_guard.restore(target, archived)
             out.info(f"{CAPTION_FILE} and what was made from it are back as they were")
 
-    step = None
-    failures: list[str] = []
-    if args.whisper:
-        reason = "pedido com --whisper"
-    else:
-        out.stage(f"step 1: {STEP_NAMES[STEP_CAPTION]}")
-        try:
-            step = step_caption(args, meta, target, out, cookies)
-        except (SignInRequired, CookiesUnreadable) as error:
-            # The audio would meet the same check: no use falling through.
-            give_back()
-            return report_sign_in(error, args)
-        except NoCaption as error:
-            # D-079: a site with no captions at all gets the menu's sentence; the
-            # detailed line is for one with captions, none in the language asked
-            # (or not the --track named).
-            has_any = bool(meta.manual_captions or meta.automatic_captions)
-            reason = "sem legenda na plataforma"
-            plainly = str(error) if has_any or args.track else no_captions(meta.site)
-            failures.append(plainly)
-            if is_lite_build() and not args.caption_only and not (has_any or args.track):
-                # D-078: no step 2 here, and nothing failed: say what would help.
-                print(f"{plainly} {FULL_CAN_TRANSCRIBE}", file=sys.stderr)
+    # D-091: an attempt stopped by Ctrl+C, or by anything not handled below,
+    # takes back what it wrote and puts a replaced text back, then stops.
+    try:
+        step = None
+        failures: list[str] = []
+        if args.whisper:
+            reason = "pedido com --whisper"
+        else:
+            out.stage(f"step 1: {STEP_NAMES[STEP_CAPTION]}")
+            try:
+                step = step_caption(args, meta, target, out, cookies)
+            except (SignInRequired, CookiesUnreadable) as error:
+                # The audio would meet the same check: no use falling through.
                 give_back()
-                return 1
-        except RateLimited as error:
-            failures.append(str(error))
-            reason = f"legenda falhou: HTTP 429 em {MAX_ATTEMPTS} tentativas"
-            plainly = TOO_MANY_REQUESTS
-        except FetchError as error:
-            failures.append(str(error))
-            reason, plainly = "legenda falhou", f"The caption could not be downloaded: {error}"
+                return report_sign_in(error, args)
+            except NoCaption as error:
+                # D-079: a site with no captions at all gets the menu's sentence; the
+                # detailed line is for one with captions, none in the language asked
+                # (or not the --track named).
+                has_any = bool(meta.manual_captions or meta.automatic_captions)
+                reason = "sem legenda na plataforma"
+                plainly = str(error) if has_any or args.track else no_captions(meta.site)
+                failures.append(plainly)
+                if is_lite_build() and not args.caption_only and not (has_any or args.track):
+                    # D-078: no step 2 here, and nothing failed: say what would help.
+                    print(f"{plainly} {FULL_CAN_TRANSCRIBE}", file=sys.stderr)
+                    give_back()
+                    return 1
+            except RateLimited as error:
+                failures.append(str(error))
+                reason = f"legenda falhou: HTTP 429 em {MAX_ATTEMPTS} tentativas"
+                plainly = TOO_MANY_REQUESTS
+            except FetchError as error:
+                failures.append(str(error))
+                reason, plainly = "legenda falhou", f"The caption could not be downloaded: {error}"
+            if step is None:
+                if args.caption_only:
+                    # Step 1 was all that was asked for: say why in plain words,
+                    # without naming flags (the menu asks its next question after).
+                    print(plainly, file=sys.stderr)
+                    give_back()
+                    return 1
+                out.warn(failures[-1])
+
         if step is None:
-            if args.caption_only:
-                # Step 1 was all that was asked for: say why in plain words,
-                # without naming flags (the menu asks its next question after).
-                print(plainly, file=sys.stderr)
+            out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
+            try:
+                step, meta = step_speech(args, meta, target, reason, out, cookies)
+            except (SignInRequired, CookiesUnreadable) as error:
+                give_back()
+                return report_sign_in(error, args)
+            except Exception as error:  # FetchError, or a decoder or model failure
+                failures.append(str(error) if isinstance(error, FetchError) else f"{type(error).__name__}: {error}")
+                print("could not get a text for this video:", file=sys.stderr)
+                for failure in failures:
+                    print(f"  - {failure}", file=sys.stderr)
                 give_back()
                 return 1
-            out.warn(failures[-1])
 
-    if step is None:
-        out.stage(f"step 2: {STEP_NAMES[STEP_SPEECH]}")
-        try:
-            step, meta = step_speech(args, meta, target, reason, out, cookies)
-        except (SignInRequired, CookiesUnreadable) as error:
-            give_back()
-            return report_sign_in(error, args)
-        except Exception as error:  # FetchError, or a decoder or model failure
-            failures.append(str(error) if isinstance(error, FetchError) else f"{type(error).__name__}: {error}")
-            print("could not get a text for this video:", file=sys.stderr)
-            for failure in failures:
-                print(f"  - {failure}", file=sys.stderr)
-            give_back()
-            return 1
-
-    caption = target / CAPTION_FILE
-    out.detail("meta", save_meta(target, meta, args.url, step), "path")
-    out.detail("text", caption, "path", note=f"(step {step.number}, {step.name})")
-    out.detail("lines", len(caption.read_text(encoding="utf-8").splitlines()), "number")
-    if archived is not None:
-        out.detail("replaced", archived, "path", note="(the earlier text, kept there)")
-    return 0
+        caption = target / CAPTION_FILE
+        out.detail("meta", save_meta(target, meta, args.url, step), "path")
+        out.detail("text", caption, "path", note=f"(step {step.number}, {step.name})")
+        out.detail("lines", len(caption.read_text(encoding="utf-8").splitlines()), "number")
+        if archived is not None:
+            out.detail("replaced", archived, "path", note="(the earlier text, kept there)")
+        return 0
+    except BaseException:
+        give_back()
+        raise

@@ -39,10 +39,13 @@ class Repeat:
 
     start: str  # m:ss of the line where the second copy begins
     end: str  # m:ss of the line where it ends
-    source_start: str  # m:ss of the line where the first copy begins
-    source_end: str
+    source_start: str  # m:ss of the line where the earliest of the first copies begins
+    source_end: str  # m:ss of the line where the latest of them ends
     words: int
     text: str  # the lines the second copy is in, `m:ss text`, as written
+    #: The stretches it repeats, each (m:ss start, m:ss end). Usually one; the
+    #: lesson that motivated this wrote two earlier stretches back to back.
+    sources: tuple[tuple[str, str], ...] = ()
 
 
 def _fold(word: str) -> str:
@@ -85,31 +88,51 @@ def find_repeats(body: str) -> list[Repeat]:
                 break
         seen.setdefault(gram, []).append(j)
 
-    passages: list[list[int]] = []  # [first token, last token, first source, last source]
+    # A passage: [first token, last token, [[source first, source last], ...]].
+    # Its sources are kept apart when they are apart in the text, so a report
+    # never spans words between them that were not repeated.
+    passages: list[list] = []
     for j, i in hits:
         if passages and j <= passages[-1][1] + 1:
             passage = passages[-1]
             passage[1] = j + NGRAM - 1
-            passage[2], passage[3] = min(passage[2], i), max(passage[3], i + NGRAM - 1)
+            runs = passage[2]
+            if i <= runs[-1][1] + 1 and i >= runs[-1][0]:
+                runs[-1][1] = max(runs[-1][1], i + NGRAM - 1)
+            else:
+                runs.append([i, i + NGRAM - 1])
         else:
-            passages.append([j, j + NGRAM - 1, i, i + NGRAM - 1])
+            passages.append([j, j + NGRAM - 1, [[i, i + NGRAM - 1]]])
+
+    def stamp(token: int) -> str:
+        return lines[tokens[token][1]][0]
 
     found = []
-    for first, last, source_first, source_last in passages:
+    for first, last, runs in passages:
         words = last - first + 1
-        if words < MIN_WORDS:
+        # The second copy counts only in the words it does not share with its
+        # own first copies: a refrain sung over and over overlaps itself, and
+        # is not one passage written twice.
+        inside = {token for start, end in runs for token in range(start, end + 1)}
+        if sum(1 for token in range(first, last + 1) if token not in inside) < MIN_WORDS:
             continue
         found.append(Repeat(
-            start=lines[tokens[first][1]][0], end=lines[tokens[last][1]][0],
-            source_start=lines[tokens[source_first][1]][0], source_end=lines[tokens[source_last][1]][0],
+            start=stamp(first), end=stamp(last),
+            source_start=stamp(min(start for start, _ in runs)), source_end=stamp(max(end for _, end in runs)),
             words=words,
-            text="\n".join(f"{stamp} {text}" for stamp, text in lines[tokens[first][1] : tokens[last][1] + 1]),
+            text="\n".join(f"{when} {text}" for when, text in lines[tokens[first][1] : tokens[last][1] + 1]),
+            sources=tuple((stamp(start), stamp(end)) for start, end in runs),
         ))
     return found
 
 
-def _span(start: str, end: str) -> str:
-    return start if start == end else f"{start} a {end}"
+def _span(start: str, end: str, to: str = "a") -> str:
+    return start if start == end else f"{start} {to} {end}"
+
+
+def _sources(repeat: Repeat, to: str, join: str) -> str:
+    spans = repeat.sources or ((repeat.source_start, repeat.source_end),)
+    return join.join(_span(start, end, to) for start, end in spans)
 
 
 def header_lines(repeats: list[Repeat]) -> list[str]:
@@ -119,7 +142,7 @@ def header_lines(repeats: list[Repeat]) -> list[str]:
     lines = [f"# Trecho repetido: {len(repeats)}. Ouca o audio antes de citar estes trechos:"]
     for repeat in repeats:
         lines.append(
-            f"#   {_span(repeat.start, repeat.end)} repete {_span(repeat.source_start, repeat.source_end)}"
+            f"#   {_span(repeat.start, repeat.end)} repete {_sources(repeat, 'a', ' e ')}"
             f" ({repeat.words} palavras); a fala real ali pode ter se perdido."
         )
     return lines
@@ -135,7 +158,7 @@ def report(repeats: list[Repeat]) -> str:
     ]
     for repeat in repeats:
         out.append(
-            f"{_span(repeat.start, repeat.end)}  repeats {_span(repeat.source_start, repeat.source_end)}"
+            f"{_span(repeat.start, repeat.end, 'to')}  repeats {_sources(repeat, 'to', ' and ')}"
             f"  ({repeat.words} words)"
         )
         out.extend(f"  {line}" for line in repeat.text.splitlines())
