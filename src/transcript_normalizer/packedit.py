@@ -78,7 +78,7 @@ def header(text: str) -> str:
 #: more comment lines, and closes with one starting `# <<<`.
 OPEN_MARK = "# >>>"
 CLOSE_MARK = "# <<<"
-_TERM_ENTRY = re.compile(r"^(\s*)- term:\s*(.+?)\s*$")
+_ITEM = re.compile(r"^(\s*)- ")
 
 
 @dataclass(frozen=True)
@@ -119,13 +119,17 @@ def place_block(data: dict, body: str, block: Block) -> str:
     `body`. The terms the block had stay together, last in `terms:`, so a term
     added by hand lands before the block, among the hand-written ones."""
     lines = body.splitlines(keepends=True)
-    entries = [i for i, line in enumerate(lines) if _TERM_ENTRY.match(line)]
     inside = set(block.names)
     curated = sum(1 for term in data.get("terms") or () if str(term.get("term")) not in inside)
     at_terms = next((i for i, line in enumerate(lines) if line.startswith("terms:")), None)
     if at_terms is None:
         return body
     after = next((i for i in range(at_terms + 1, len(lines)) if lines[i][:1] not in (" ", "\n", "")), len(lines))
+    # Each item of `terms:` starts with `- ` at the list's indentation, whatever
+    # its first key is (a term may list `class` before `term`).
+    items = [i for i in range(at_terms + 1, after) if _ITEM.match(lines[i])]
+    indent = _ITEM.match(lines[items[0]]).group(1) if items else ""
+    entries = [i for i in items if _ITEM.match(lines[i]).group(1) == indent]
     opening = entries[curated] if curated < len(entries) else after
     return "".join(lines[:opening] + list(block.opening) + lines[opening:after] + [block.closing] + lines[after:])
 
