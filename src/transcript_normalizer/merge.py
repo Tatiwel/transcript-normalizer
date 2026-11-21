@@ -829,7 +829,9 @@ def run_merge(args) -> int:
         return 0
 
     head = packedit.header(text)
-    new_text = packedit.dump(head, data)
+    # D-095: the generated part is upstream's, which regenerated it; else the copy's.
+    block = packedit.generated_block(up_text) or packedit.generated_block(text)
+    new_text = packedit.dump(head, data, block)
     problem = validate(path, new_text, up, merge)
     if problem:
         print(f"not written: {problem}", file=sys.stderr)

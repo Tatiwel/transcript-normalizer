@@ -87,12 +87,38 @@ def first_screen() -> None:
         say(mark(f"portable mode: everything stays in {portable_dir()}", "hint"))
     say(TYPICAL_FLOW)
     say(pack_line_of_first_screen())
+    for line in included_update_lines():
+        say(mark(line, "need"))
     say(mark(f"Keyboard: {prompts.legend('select')}", "hint"))
     start_merge_check()
 
 
 #: D-088: what the first screen says when no pack is installed.
 NO_PACK_YET = "No pack installed yet: you will be asked what the video is about."
+
+
+def included_updates() -> list[tuple[str, str, str]]:
+    """D-097: installed packs, as installed (not edited here), whose copy
+    included in this program is newer: (name, installed version, included
+    version). Read from disk only, so the first screen never waits."""
+    from . import registry
+    from .runs import included_packs
+
+    record = registry.installed()
+    found = []
+    for name, path in included_packs().items():
+        have = str((record.get(name) or {}).get("version") or "")
+        if not have or registry.edited(name):
+            continue
+        mine = registry.pack_info(path)[0]
+        if registry.newer(mine, have):
+            found.append((name, have, mine))
+    return found
+
+
+def included_update_lines() -> list[str]:
+    return [f"{name} {mine} is included in this version (installed: {have}). Packs → Update packs installs it."
+            for name, have, mine in included_updates()]
 
 
 def pack_line_of_first_screen() -> str:
@@ -1596,6 +1622,12 @@ def remove_pack() -> None:
     run_command(["pack", "remove", picked])
 
 
+def update_packs() -> None:
+    """D-097: `pack update`: the installed packs not edited here, to their newest
+    version, included in the program (no connection) or from the repository."""
+    run_command(["pack", "update"])
+
+
 def merge_update() -> None:
     """D-069: merge an upstream update into a copy, asking about each conflict."""
     found = {o.name: o for o in merge_offers()}
@@ -1615,13 +1647,23 @@ PACK_ACTIONS = {
     "installed": installed_table, "get": get_pack, "create": create_pack, "edit": edit_pack,
     "import": import_pack, "export": export_pack, "remove": remove_pack,
     "contribute": contribute_pack, "first": choose_first_pack, "merge": merge_update,
+    "update": update_packs,
 }
+
+
+def registry_installed() -> bool:
+    """Whether any pack was installed with `pack install` (and so can be updated)."""
+    from .registry import installed
+
+    return bool(installed())
 
 
 def packs() -> None:
     stage("Packs")
     for offer in merge_offers():
         say(mark(offer.line(), "need"))
+    for line in included_update_lines():
+        say(mark(line, "need"))
     while True:
         first = next(iter(packs_in_order()), "")
         offered = merge_offers()
@@ -1630,6 +1672,14 @@ def packs() -> None:
         merge_option = [Option(
             "Merge an update", ", ".join(f"{o.name} {o.upstream.version}" for o in offered), value="merge",
         )] if offered else []
+        # D-097: for the packs installed as they are; a copy of yours is merged instead.
+        waiting = included_updates()
+        update_option = [Option(
+            "Update packs",
+            ", ".join(f"{name} {have} → {mine} (included)" for name, have, mine in waiting)
+            or "installed packs not edited here, to their newest version",
+            value="update",
+        )] if registry_installed() else []
         choice = prompts.select("What would you like to do with packs?", merge_option + [
             Option("Installed packs", "name, version, language, terms, size, source", value="installed"),
             Option("Get a pack", "included in the program, or from the packs repository", value="get"),
@@ -1639,7 +1689,7 @@ def packs() -> None:
             Option("Export a pack file", "as <name>-<version>.yaml, into a folder", value="export"),
             Option("Remove a pack", "an installed one, from packs/", value="remove"),
             Option("Contribute a pack", "propose it to the packs repository", value="contribute"),
-        ] + first_option)
+        ] + first_option + update_option)
         if choice is None:
             return
         PACK_ACTIONS[choice]()

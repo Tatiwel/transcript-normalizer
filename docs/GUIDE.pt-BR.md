@@ -240,11 +240,12 @@ O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote
 | Get a pack | `pack install <nome>` | lista os pacotes não instalados, primeiro os que vêm com o programa, "(included, not installed)", depois os do repositório, "(from the packs repository)", e instala no seu `packs/` o que você escolher; sem internet, ainda lista os que vêm com o programa |
 | Create a pack | `pack create --template <área> --name <n> --lang <l>` | um pacote novo a partir de um modelo de área, com as classes da área e nenhum termo; depois o menu oferece pô-lo em primeiro |
 | Edit a pack | `pack add-term`, `edit-term`, `remove-term`, `show` | acrescenta, edita, remove e mostra termos; um pacote que vem com o programa ou do repositório é só leitura, e o menu oferece antes uma cópia sua (`pack copy`) |
-| Import a pack file | `pack import <arquivo>` | uma janela de arquivos com filtro `.yaml` (ou um caminho digitado); o arquivo é conferido como o `normalize` o leria, e copiado para `packs/` |
+| Import a pack file | `pack import <arquivo> [--name <nome>]` | uma janela de arquivos com filtro `.yaml` (ou um caminho digitado); o arquivo é conferido como o `normalize` o leria, e copiado para `packs/`. O nome do pacote é o do arquivo, sem um `-<versão>` que seja a versão do próprio pacote, então `financas-ptbr-0.4.1.yaml`, como o Export grava, é importado como `financas-ptbr`; um `pack.yaml` leva o nome da pasta, como o repositório de pacotes os guarda; `--name` escolhe outro (D-096) |
 | Export a pack file | `pack export <nome> [--to <caminho>]` | grava `<nome>-<versão>.yaml` na pasta que você escolher |
 | Remove a pack | `pack remove <nome>` | pergunta duas vezes e mostra o arquivo; um pacote que vem com o programa continua nele, para instalar de novo |
 | Contribute a pack | `pack propose --whole <nome>` | propõe o pacote inteiro ao repositório de pacotes (abaixo) |
 | The pack offered first | (configuração do próprio menu) | o pacote no topo de "What is this video about?"; só aparece com um pacote instalado, e com um só é ele, sem perguntar |
+| Update packs | `pack update` | os pacotes instalados que você não editou, para a versão mais nova: a que vem com o programa (sem precisar de conexão) ou a do repositório de pacotes. Aparece quando há um pacote instalado; quando esta versão do programa traz uma mais nova, a primeira tela e Packs avisam: "financas-ptbr 0.4.1 is included in this version (installed: 0.4.0). Packs → Update packs installs it." Uma cópia sua é mesclada em vez disso (abaixo) (D-097) |
 
 ```
 name           version  language  terms  size (KB)  source   update
@@ -327,6 +328,8 @@ transcript-normalizer pack show biomed-ptbr --search metf
 ```
 financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
 ```
+
+Um pacote em que parte dos termos é escrita por um programa (as companhias listadas do financas-ptbr, entre as linhas de comentário `# >>> início da parte gerada` e `# <<< fim da parte gerada`) mantém essa parte quando você o edita: os marcadores ficam, os termos gerados ficam juntos dentro deles, e um termo que você acrescenta entra antes deles, entre os escritos à mão. Um termo gerado que você renomeia sai dessa parte, porque deixou de ser do programa (D-095). Outros comentários dentro dos termos não são mantidos quando o pacote é salvo; os do topo são.
 
 Nada é mesclado sem você pedir. A mescla vai termo a termo: o que só o upstream mudou é aceito, o que só você mudou é mantido, e o que os dois mudaram é combinado quando dá. Quando não dá, ela pergunta, um conflito por vez, mostrando as duas versões e até três linhas das suas próprias runs em que a forma aparece (D-069):
 

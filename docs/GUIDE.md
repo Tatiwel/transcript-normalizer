@@ -240,11 +240,12 @@ pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing
 | Get a pack | `pack install <name>` | lists the packs that are not installed, those included in the program first, "(included, not installed)", then the packs repository's, "(from the packs repository)", and installs the one you pick into your `packs/`; offline it still lists the included ones |
 | Create a pack | `pack create --template <field> --name <n> --lang <l>` | a new pack from a field template, with the field's classes and no terms; the menu then offers to put it first |
 | Edit a pack | `pack add-term`, `edit-term`, `remove-term`, `show` | add, edit, remove and show terms; an included or repository pack is read-only, and the menu offers your own copy first (`pack copy`) |
-| Import a pack file | `pack import <file>` | a file dialog on `.yaml` files (or a typed path); the file is checked as `normalize` would load it, then copied into `packs/` |
+| Import a pack file | `pack import <file> [--name <name>]` | a file dialog on `.yaml` files (or a typed path); the file is checked as `normalize` would load it, then copied into `packs/`. The pack's name is the file's, without a `-<version>` that is the pack's own, so `financas-ptbr-0.4.1.yaml`, as Export writes it, is imported as `financas-ptbr`; a `pack.yaml` takes its folder's name, as the packs repository keeps them; `--name` chooses another (D-096) |
 | Export a pack file | `pack export <name> [--to <path>]` | writes `<name>-<version>.yaml` into the folder you choose |
 | Remove a pack | `pack remove <name>` | asks twice and shows the file; an included pack stays in the program, to install again |
 | Contribute a pack | `pack propose --whole <name>` | proposes the whole pack to the packs repository (below) |
 | The pack offered first | (the menu's own setting) | the pack at the top of "What is this video about?"; shown only with a pack installed, and with one installed it is that one, without asking |
+| Update packs | `pack update` | the installed packs you have not edited, to their newest version: included in the program (no connection needed) or from the packs repository. Shown when a pack is installed; when this version of the program includes a newer one, the first screen and Packs say so: "financas-ptbr 0.4.1 is included in this version (installed: 0.4.0). Packs → Update packs installs it." A copy of yours is merged instead (below) (D-097) |
 
 ```
 name           version  language  terms  size (KB)  source   update
@@ -327,6 +328,8 @@ transcript-normalizer pack show biomed-ptbr --search metf
 ```
 financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
 ```
+
+A pack whose terms are partly written by a program (financas-ptbr's listed companies, between the comment lines `# >>> início da parte gerada` and `# <<< fim da parte gerada`) keeps that part when you edit it: the markers stay, the generated terms stay together inside them, and a term you add goes before them, among the ones written by hand. A generated term you rename leaves that part, since it is no longer the program's (D-095). Other comments inside the terms are not kept when a pack is saved; the ones at the top are.
 
 Nothing is merged unless you ask. A merge goes term by term: what only upstream changed is taken, what only you changed is kept, and what both changed is combined when it can be. Where it cannot, it asks, one conflict at a time, showing both versions and up to three lines from your own runs where the form occurs (D-069):
 

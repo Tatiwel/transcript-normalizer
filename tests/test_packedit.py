@@ -124,7 +124,13 @@ def test_copy_of_the_bundled_pack_is_used_instead_and_editable(home, capsys):
     assert text.startswith(packedit.header(BUNDLED.read_text(encoding="utf-8")))  # the comments on top stay
     before, after = data(BUNDLED), data(target)
     assert after["version"] == packedit.bump(before["version"])
-    assert after["terms"][:-1] == before["terms"] and after["unit_rules"] == before["unit_rules"]
+    # D-095: the new term goes before the generated part, which keeps its markers.
+    added = next(i for i, t in enumerate(after["terms"]) if t["term"] == "emissão")
+    generated = packedit.generated_block(BUNDLED.read_text(encoding="utf-8"))
+    assert after["terms"][added + 1]["term"] == generated.names[0]
+    assert after["terms"][:added] + after["terms"][added + 1:] == before["terms"]
+    assert after["unit_rules"] == before["unit_rules"]
+    assert packedit.generated_block(text) == generated
     assert after["local_edits"] == 1
 
 
