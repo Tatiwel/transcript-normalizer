@@ -205,3 +205,15 @@ def test_import_of_pack_yaml_from_inside_its_folder(home, monkeypatch, capsys):
     monkeypatch.setenv("TRANSCRIPT_NORMALIZER_HOME", str(home))
     assert main(["pack", "import", "pack.yaml"]) == 0
     assert (home / "packs" / "med-ptbr.yaml").exists()
+
+
+def test_the_only_generated_term_written_class_first_stays_inside(home, capsys):
+    (home / "packs").mkdir()
+    path = home / "packs" / "gen.yaml"
+    path.write_text(GENERATED_PACK.replace(
+        "  - term: Alfa\n    class: companhia\n    match: exact\n    aliases: [ALFA3]\n", "").replace(
+        "  - term: Beta\n    class: companhia\n", "  - class: companhia\n    term: Beta\n"), encoding="utf-8")
+    assert main(["pack", "add-term", "gen", "payout", "--class", "conceito"]) == 0
+    text = path.read_text(encoding="utf-8")
+    assert packedit.generated_block(text).names == ("Beta",)
+    assert text.index("- term: payout") < text.index("# >>> início") < text.index("term: Beta") < text.index("# <<< fim")
