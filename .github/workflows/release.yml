@@ -310,7 +310,7 @@ jobs:
         run: |
           export TRANSCRIPT_NORMALIZER_HOME="$RUNNER_TEMP/tn-home"
           set +e
-          "$EXE" fetch --list https://youtu.be/4wCtn8BWR4o > list.txt 2>&1
+          "$EXE" fetch --list https://youtu.be/cmGKTIF4VN0 > list.txt 2>&1
           status=$?
           set -e
           cat list.txt
