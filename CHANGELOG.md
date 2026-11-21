@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.3
+
+2026-11-21. A local file is told by its content, not its name (D-099); learned entries for a term the pack no longer has are said (D-100).
+
 - A local file transcribed again is told by its content, not its name (D-099). The header of its `legenda.txt` has a new line, `# Impressao digital: sha256 <hex>, <n> bytes`, and fetching a file with the same name and other content (another course's `aula1.mp4`) stops with exit 4 instead of reusing the first one's text. The same content in another folder is the same file. A text written before this version has no fingerprint and is compared by name, as before.
 - `normalize` says when your learned layer has entries for a term the pack no longer has (D-100): how many, for which terms, that they stay in the file unused, and how to use them again (`pack copy`, then `pack add-term`). Before, they were skipped without a word.
 
