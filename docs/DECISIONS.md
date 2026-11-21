@@ -1006,7 +1006,7 @@ The four fixtures were folders named after the videos' ids, and each caption's h
 
 **Tests.** The header writer's test describes the fixture's video with these values, and the catalog's test, which read a publication date from the fixture's header, now writes one into its copy, since the fixture has none.
 
-**Not done here.** The included financas-ptbr.yaml names the old ids in its comments; it is a copy of the packs repository's file at a released version, so its next version there renames them, and this copy follows when it is included. The release workflow's check that fetch reaches YouTube (`fetch --list`) still uses one of the videos, since it needs a real public video with an original-language track; which one replaces it is the owner's choice. The text the speakers said is still in the captions, and the git history still has the old names and headers: changing history was not asked for.
+**Not done here.** The included financas-ptbr.yaml names the old ids in its comments; it is a copy of the packs repository's file at a released version, so its next version there renames them, and this copy follows when it is included. The release workflow's check that fetch reaches YouTube (`fetch --list`) used one of the fixtures' videos; it now uses another public video the owner chose, from a channel none of the fixtures came from, which `fetch --list` shows with an `original: pt-orig` track, as the check requires. The text the speakers said is still in the captions, and the git history still has the old names and headers: changing history was not asked for.
 
 ## Open, not yet decided
 
