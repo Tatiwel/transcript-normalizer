@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The included financas-ptbr is 0.4.1 (D-098): BR Partners matches only as written, so `aportes` and `portas` no longer become it, and four terms tied to channels rather than to the market are gone. 348 terms.
+
 - Editing a pack keeps the part a program generated (D-095): the comment lines that mark it stay, its terms stay together inside them, and a term you add goes before it. financas-ptbr's 282 listed companies are such a part; before, an edit dropped the markers and put new terms after the companies.
 - `pack import` takes the pack's name (D-096): `financas-ptbr-0.4.1.yaml`, as `pack export` writes it, is imported as `financas-ptbr`, and a `pack.yaml` from the packs repository takes its folder's name. `--name` chooses another.
 - The menu updates installed packs (D-097): Packs → "Update packs" runs `pack update`, and the first screen says when this version includes a newer version of a pack you installed and did not edit.

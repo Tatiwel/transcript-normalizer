@@ -16,7 +16,7 @@ from transcript_normalizer.runs import (
     packs_root,
 )
 
-from .conftest import CAPTION, FIXTURE, FIXTURE_VIDEO_ID, PACK
+from .conftest import CAPTION, FIXTURE, FIXTURE_VIDEO_ID, PACK, TAKEN_OUT_IN_0_4_1
 
 REPO_PACK = BUNDLED_PACKS / DEFAULT_PACK
 
@@ -25,8 +25,11 @@ def test_the_repo_ships_a_usable_default_pack():
     pack = load_pack(REPO_PACK, learned=Learned())
     assert pack.terms
     assert pack.unit_rules
-    # packs/ grows from the frozen fixture copy (D-017); nothing is dropped.
-    assert {t.term for t in pack.terms} >= {t.term for t in load_pack(PACK, learned=Learned()).terms}
+    # packs/ grows from the frozen fixture copy (D-017); nothing is dropped but
+    # the terms D-098 took out.
+    frozen = {t.term for t in load_pack(PACK, learned=Learned()).terms}
+    assert {t.term for t in pack.terms} >= frozen - TAKEN_OUT_IN_0_4_1
+    assert not {t.term for t in pack.terms} & TAKEN_OUT_IN_0_4_1
 
 
 def test_pack_defaults_to_the_packs_directory(tmp_path, monkeypatch):

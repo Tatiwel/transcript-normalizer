@@ -88,7 +88,7 @@ transcript-normalizer runs/<video-id>/legenda.txt --review
 `fetch` takes the platform's caption (in the original language, the channel's own track, else the original audio's automatic one; never an automatic translation, D-045, D-081) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The downloaded `.vtt` or `.srt` is deleted once converted into `legenda.txt`; `--keep-raw` keeps it. The second command normalizes, and takes a `.srt` or `.vtt` as well, which it converts into `runs/<file-name>/legenda.txt` first; the third does the same and then asks you about what it was unsure of. `fetch --list <url>` checks a link without downloading anything: the site, title and duration, the caption tracks (or none), whether there is audio to transcribe, and whether the site asks for a login (D-078); and `fetch --track <code>` takes one exactly (`pt-orig`, `pt`, `en`) instead of the choice `--lang` makes (D-062). Without `--lang`, the caption is in the video's own language, as the site reports it; when the site does not say, the video's only original-audio track, else its only manual track, else Portuguese, with a line saying so (D-080). `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
 
 ```
-runs/<video-id>/legenda.txt: 239 caption lines, pack 0.4.0
+runs/<video-id>/legenda.txt: 239 caption lines, pack 0.4.1
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
@@ -100,7 +100,6 @@ recognized (not changed):
   bilhões, Bilhões (8 occurrences) -> bilhão
 
 applied, please confirm:
-  Adaptavalda, DAPTA Valdre, AdaptaValor, adaptavala (4 occurrences) -> Adapta Valuer
   dividido (2 occurrences) -> dividendo
   preço alto (1 occurrence) -> preço alvo
 ```
@@ -167,7 +166,7 @@ Everything goes under `runs/<video-id>/` in the current directory; nothing is wr
 ```json
 {"start": 9141, "end": 9156, "original": "dívida alíquida", "replacement": "dívida líquida",
  "term": "dívida líquida", "rule": "term:variant", "kind": "correction", "band": "high",
- "score": 100, "applied": true, "pack_version": "0.4.0"}
+ "score": 100, "applied": true, "pack_version": "0.4.1"}
 ```
 
 `kind` is `correction` or `alias`. `band` is how sure the tool is: **high** (a listed form: applied), **medium** (a close guess: applied, and listed in `pending.txt` for you to confirm), **ask** (a name that sounds like a pack name: never applied, only listed in `pending.txt` and asked about, D-050, D-060), **low** (a faint resemblance: only recorded, never applied) (D-011).
@@ -249,7 +248,7 @@ pack financas-ptbr does not seem to fit this transcript (1 terms found); nothing
 
 ```
 name           version  language  terms  size (KB)  source   update
-financas-ptbr  0.4.0    pt-BR       352       48.6  included
+financas-ptbr  0.4.1    pt-BR       348       49.1  included
 medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
@@ -326,7 +325,7 @@ transcript-normalizer pack show biomed-ptbr --search metf
 **When upstream releases a new version.** Your copy remembers what it was copied from (`based_on: financas-ptbr@0.3.7`) and how many changes you saved since (`local_edits`). When a newer version comes out, included in a new release of the program or in the packs repository, the menu says so in one line (it looks in the background, so it never makes you wait; the answer is kept for a day), Packs offers "Merge an update", Installed packs marks it `↑ merge available`, and `pack update` mentions it:
 
 ```
-financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
+financas-ptbr 0.4.1 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
 ```
 
 A pack whose terms are partly written by a program (financas-ptbr's listed companies, between the comment lines `# >>> início da parte gerada` and `# <<< fim da parte gerada`) keeps that part when you edit it: the markers stay, the generated terms stay together inside them, and a term you add goes before them, among the ones written by hand. A generated term you rename leaves that part, since it is no longer the program's (D-095). Other comments inside the terms are not kept when a pack is saved; the ones at the top are.
@@ -370,7 +369,7 @@ transcript-normalizer pack propose --pack financas-ptbr
 ```
 
 ```
-What would be contributed to financas-ptbr 0.4.0 (3), from packs/financas-ptbr.learned.yaml:
+What would be contributed to financas-ptbr 0.4.1 (3), from packs/financas-ptbr.learned.yaml:
   + variant   esse mig -> CEMIG
   + alias     Klabinha -> Klabin
   - rejected  saber se  (not Sabesp)
@@ -388,14 +387,14 @@ A pack declares its language (`language: pt-BR`), and a language module supplies
 
 ## 8. How good is it
 
-Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change. The numbers below come from `uv run python scripts/measure.py`, which is the source: if they disagree, it is right. With the pack that ships (0.4.0):
+Four videos have a hand-checked answer key (a **gold** file) and are re-measured on every change. The numbers below come from `uv run python scripts/measure.py`, which is the source: if they disagree, it is right. With the pack that ships (0.4.1):
 
 | video | rows to get right | right | missed | wrong changes |
 |---|---|---|---|---|
-| fixture0001 | 167 | 123 | 44 | 12 |
+| fixture0001 | 167 | 119 | 48 | 12 |
 | fixture0002 | 222 | 168 | 54 | 3 |
-| fixture0004 | 45 | 44 | 1 | 2 |
-| fixture0003 | 119 | 105 | 14 | 4 |
+| fixture0004 | 45 | 40 | 5 | 2 |
+| fixture0003 | 119 | 101 | 18 | 3 |
 
 - **fixture0001**: finance, platform captions; the first fixture, where most variants come from.
 - **fixture0002**: finance, platform captions; many aliases (tickers, plurals) that must not be changed.

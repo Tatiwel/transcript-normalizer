@@ -88,7 +88,7 @@ transcript-normalizer runs/<video-id>/legenda.txt --review
 O `fetch` pega a legenda da plataforma (no idioma original, a faixa do próprio canal, senão a automática do áudio original; nunca uma tradução automática, D-045, D-081) e, se não houver, transcreve o áudio localmente (D-036). Também aceita um arquivo de áudio ou vídeo: `transcript-normalizer fetch aula.mp4`. O `.vtt` ou `.srt` baixado é apagado depois de convertido em `legenda.txt`; `--keep-raw` o mantém. O segundo comando normaliza, e aceita também um `.srt` ou `.vtt`, que antes converte em `runs/<nome-do-arquivo>/legenda.txt`; o terceiro faz o mesmo e depois pergunta o que ficou em dúvida. `fetch --list <url>` confere um link sem baixar nada: o site, título e duração, as faixas de legenda (ou nenhuma), se há áudio para transcrever e se o site pede login (D-078); e `fetch --track <código>` escolhe uma exatamente (`pt-orig`, `pt`, `en`), no lugar da escolha do `--lang` (D-062). Sem `--lang`, a legenda é no idioma do próprio vídeo, como o site informa; quando o site não diz, a única faixa de áudio original do vídeo, senão a única manual, senão português, com uma linha avisando (D-080). `transcript-normalizer list` mostra o que você já tem. Parte do que o segundo imprime para o vídeo acima:
 
 ```
-runs/<video-id>/legenda.txt: 239 caption lines, pack 0.4.0
+runs/<video-id>/legenda.txt: 239 caption lines, pack 0.4.1
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
@@ -100,7 +100,6 @@ recognized (not changed):
   bilhões, Bilhões (8 occurrences) -> bilhão
 
 applied, please confirm:
-  Adaptavalda, DAPTA Valdre, AdaptaValor, adaptavala (4 occurrences) -> Adapta Valuer
   dividido (2 occurrences) -> dividendo
   preço alto (1 occurrence) -> preço alvo
 ```
@@ -167,7 +166,7 @@ O `annotations.json` tem um registro por mudança, apontando posições de carac
 ```json
 {"start": 9141, "end": 9156, "original": "dívida alíquida", "replacement": "dívida líquida",
  "term": "dívida líquida", "rule": "term:variant", "kind": "correction", "band": "high",
- "score": 100, "applied": true, "pack_version": "0.4.0"}
+ "score": 100, "applied": true, "pack_version": "0.4.1"}
 ```
 
 `kind` é `correction` ou `alias`. `band` é o grau de certeza: **high** (uma forma já listada: aplicada), **medium** (um palpite próximo: aplicado e listado em `pending.txt` para você confirmar), **ask** (um nome que soa como um nome do pacote: nunca aplicado, só listado em `pending.txt` e perguntado, D-050, D-060), **low** (uma semelhança fraca: só registrada, nunca aplicada) (D-011).
@@ -249,7 +248,7 @@ O `normalized.txt` fica então igual à transcrição. `--force` aplica o pacote
 
 ```
 name           version  language  terms  size (KB)  source   update
-financas-ptbr  0.4.0    pt-BR       352       48.6  included
+financas-ptbr  0.4.1    pt-BR       348       49.1  included
 medicina-ptbr  0.1.0    pt-BR         0        0.5  mine
 ```
 
@@ -326,7 +325,7 @@ transcript-normalizer pack show biomed-ptbr --search metf
 **Quando sai uma versão nova.** A sua cópia lembra de onde veio (`based_on: financas-ptbr@0.3.7`) e quantas mudanças você salvou desde então (`local_edits`). Quando sai uma versão mais nova, junto com uma nova versão do programa ou no repositório de pacotes, o menu avisa numa linha (ele verifica em segundo plano, então nunca faz você esperar; a resposta fica guardada por um dia), Packs oferece "Merge an update", Installed packs marca `↑ merge available`, e o `pack update` menciona:
 
 ```
-financas-ptbr 0.4.0 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
+financas-ptbr 0.4.1 is available; your copy is based on 0.3.7 with 3 local edits. Packs → Merge an update merges it.
 ```
 
 Um pacote em que parte dos termos é escrita por um programa (as companhias listadas do financas-ptbr, entre as linhas de comentário `# >>> início da parte gerada` e `# <<< fim da parte gerada`) mantém essa parte quando você o edita: os marcadores ficam, os termos gerados ficam juntos dentro deles, e um termo que você acrescenta entra antes deles, entre os escritos à mão. Um termo gerado que você renomeia sai dessa parte, porque deixou de ser do programa (D-095). Outros comentários dentro dos termos não são mantidos quando o pacote é salvo; os do topo são.
@@ -370,7 +369,7 @@ transcript-normalizer pack propose --pack financas-ptbr
 ```
 
 ```
-What would be contributed to financas-ptbr 0.4.0 (3), from packs/financas-ptbr.learned.yaml:
+What would be contributed to financas-ptbr 0.4.1 (3), from packs/financas-ptbr.learned.yaml:
   + variant   esse mig -> CEMIG
   + alias     Klabinha -> Klabin
   - rejected  saber se  (not Sabesp)
@@ -388,14 +387,14 @@ O pacote declara o idioma (`language: pt-BR`), e um módulo de idioma fornece o 
 
 ## 8. Quão bom é
 
-Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são medidos de novo a cada mudança. Os números abaixo vêm de `uv run python scripts/measure.py`, que é a fonte: se discordarem, ele está certo. Com o pacote que vem junto (0.4.0):
+Quatro vídeos têm um gabarito conferido à mão (o arquivo **gold**) e são medidos de novo a cada mudança. Os números abaixo vêm de `uv run python scripts/measure.py`, que é a fonte: se discordarem, ele está certo. Com o pacote que vem junto (0.4.1):
 
 | vídeo | linhas a acertar | acertos | faltas | mudanças erradas |
 |---|---|---|---|---|
-| fixture0001 | 167 | 123 | 44 | 12 |
+| fixture0001 | 167 | 119 | 48 | 12 |
 | fixture0002 | 222 | 168 | 54 | 3 |
-| fixture0004 | 45 | 44 | 1 | 2 |
-| fixture0003 | 119 | 105 | 14 | 4 |
+| fixture0004 | 45 | 40 | 5 | 2 |
+| fixture0003 | 119 | 101 | 18 | 3 |
 
 - **fixture0001**: finanças, legenda da plataforma; o primeiro gabarito, de onde vem a maior parte das variantes.
 - **fixture0002**: finanças, legenda da plataforma; muitos aliases (tickers, plurais) que não podem ser alterados.
