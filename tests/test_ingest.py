@@ -12,14 +12,15 @@ from transcript_normalizer.ingest import fetch
 
 from .conftest import CAPTION
 
-# What the platform reported for the fixture video.
+# What the fixture's header says: the video's title, channel and link are
+# left out of the fixtures, and the link is a placeholder with the fixture's id.
 FIXTURE_META = Metadata(
-    id="R2Qgz8tFWVI",
-    title="CEMIG despencando, armadilha ou oportunidade?",
-    channel="Geração Dividendos",
-    published="20260821",
+    id="fixture0001",
+    title="fixture0001",
+    channel="omitido",
+    published="omitido",
 )
-FIXTURE_URL = "https://youtu.be/R2Qgz8tFWVI"
+FIXTURE_URL = "https://example.invalid/watch?v=fixture0001"
 FIXTURE_DOWNLOADED = "2026-09-09"
 
 
@@ -109,5 +110,5 @@ def test_importing_the_core_does_not_import_the_extra(module):
 
 def test_fetch_writes_under_runs_by_video_id(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    assert fetch.fetch_dir("R2Qgz8tFWVI") == tmp_path / "runs" / "R2Qgz8tFWVI"
-    assert fetch.fetch_dir("R2Qgz8tFWVI", tmp_path / "elsewhere") == tmp_path / "elsewhere"
+    assert fetch.fetch_dir("fixture0001") == tmp_path / "runs" / "fixture0001"
+    assert fetch.fetch_dir("fixture0001", tmp_path / "elsewhere") == tmp_path / "elsewhere"

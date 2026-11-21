@@ -112,8 +112,8 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("r", "no to this form and the remaining forms of the same term"),
         ]),
         ("EXAMPLES", [
-            (f"{PROG} fetch https://youtu.be/4wCtn8BWR4o", ""),
-            (f"{PROG} runs/4wCtn8BWR4o/legenda.txt --confirm", ""),
+            (f"{PROG} fetch https://youtu.be/<video-id>", ""),
+            (f"{PROG} runs/<video-id>/legenda.txt --confirm", ""),
             (f"{PROG} aula.txt --pack packs/biomed-ptbr.yaml", ""),
         ]),
         ("YOUTUBE SAYS I'M A BOT", [

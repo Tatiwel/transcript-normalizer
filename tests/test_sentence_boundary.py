@@ -48,7 +48,7 @@ def test_strong_punctuation_closes_a_sentence(text, expected):
 
 
 def test_the_reported_case_is_no_longer_one_span(tiny_pack):
-    """wxgFO_fyfXg 36:41: `Warn Buffet. Tem` was proposed as Warren Buffett."""
+    """fixture0002 36:41: `Warn Buffet. Tem` was proposed as Warren Buffett."""
     found = find_annotations(parse_caption("0:01 braço direito do Warn Buffet. Tem gente"), tiny_pack)
     originals = {a.original for a in found}
     assert "Warn Buffet" in originals
@@ -72,7 +72,7 @@ def test_the_unit_rule_is_a_regex_and_does_not_care(tiny_pack):
 
 
 def test_on_the_first_fixture_preco_entao_is_gone(annotations):
-    """R2Qgz8tFWVI 1:12 `preço. Então` -> preço teto was a false positive."""
+    """fixture0001 1:12 `preço. Então` -> preço teto was a false positive."""
     assert not [a for a in annotations if a.original == "preço. Então"]
 
 
@@ -85,7 +85,7 @@ def test_on_the_first_fixture_preco_entao_is_gone(annotations):
     ],
 )
 def test_no_proposal_crosses_a_comma(line, crossing):
-    """D-044, measured on 4tTmY8Buask: each was a medium-band proposal, applied."""
+    """D-044, measured on fixture0003: each was a medium-band proposal, applied."""
     pack = load_pack(BUNDLED_PACKS / "financas-ptbr.yaml", learned=Learned())
     found = find_annotations(parse_caption(f"0:01 {line}"), pack)
     assert crossing not in {a.original for a in found}

@@ -10,8 +10,8 @@ from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.evaluate import Fixture, evaluate
 
 ROOT = Path(__file__).resolve().parent.parent
-FIXTURE = Fixture(ROOT / "fixtures" / "wxgFO_fyfXg")
-LEARNED = Path(__file__).resolve().parent / "data" / "wxgFO_fyfXg.learned.yaml"
+FIXTURE = Fixture(ROOT / "fixtures" / "fixture0002")
+LEARNED = Path(__file__).resolve().parent / "data" / "fixture0002.learned.yaml"
 
 
 def manter_touched(pack):

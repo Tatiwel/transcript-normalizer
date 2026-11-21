@@ -108,7 +108,7 @@ packs/ is the user's knowledge directory; fixtures/ packs are frozen test copies
 
 `packs/financas-ptbr.yaml` is the first one, copied from the fixture pack, and it is what `--pack` falls back to. The learned layer of a pack moves here too, to `packs/<name>.learned.yaml`, superseding the `runs/learned/` location of D-015: what the user confirmed belongs with the pack it is about, not with a disposable run. The learned file is gitignored; the pack is not.
 
-Why: `fixtures/R2Qgz8tFWVI/pack.yaml` is an input to the regression test and has to stay frozen, so it cannot also be the pack people edit as they work.
+Why: `fixtures/fixture0001/pack.yaml` is an input to the regression test and has to stay frozen, so it cannot also be the pack people edit as they work.
 
 ## D-018 The run id comes from the video, not from the file name
 
@@ -120,13 +120,13 @@ A recognizable id is the eleven-character platform id, read from the `youtu.be/<
 
 ## D-019 Confirmation is per variant, not per term group
 
-Confirmation is per variant, not per term group. In a real run (wxgFO_fyfXg) the group `ser mais, dos 10, sem mig, que caiu, esse mig -> CEMIG` was accepted with one `y`; only two of the five were CEMIG. A term-level answer cannot express a mixed group. The prompt shows the term once, then asks for each variant separately, with that variant's own example lines (up to 3), `[y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no`. `a` and `r` apply to the remaining variants of the current term only.
+Confirmation is per variant, not per term group. In a real run (fixture0002) the group `ser mais, dos 10, sem mig, que caiu, esse mig -> CEMIG` was accepted with one `y`; only two of the five were CEMIG. A term-level answer cannot express a mixed group. The prompt shows the term once, then asks for each variant separately, with that variant's own example lines (up to 3), `[y]es / [n]o / [s]kip / [a]ll-yes / [r]est-no`. `a` and `r` apply to the remaining variants of the current term only.
 
 `review/to-confirm.txt` keeps the grouped view and lists each variant under its term with its own examples and its own question, so the file still shows what the loop will ask.
 
 ## D-020 Two kinds of annotation: correction and alias
 
-Two kinds of annotation. `correction`: the caption misrecognized the term; the span is substituted in normalized.txt. `alias`: the text is a legitimate other name of the term (ticker CPFE for CPFL, plural `preços teto`, spoken `CEMIG 4` for CMIG4); the span is annotated with the term but never substituted. Pack `aliases` produce alias annotations; pack `variants` produce corrections. Inflection is alias, not variant. The learned layer gains an `aliases` section beside `confirmed` and `rejected`; --confirm gains the answer `[l]ias` = 'it is this term, but the speaker said it that way'. Measured on wxgFO_fyfXg: 42 of 228 gold rows are aliases; substituting them rewrites what the speaker said.
+Two kinds of annotation. `correction`: the caption misrecognized the term; the span is substituted in normalized.txt. `alias`: the text is a legitimate other name of the term (ticker CPFE for CPFL, plural `preços teto`, spoken `CEMIG 4` for CMIG4); the span is annotated with the term but never substituted. Pack `aliases` produce alias annotations; pack `variants` produce corrections. Inflection is alias, not variant. The learned layer gains an `aliases` section beside `confirmed` and `rejected`; --confirm gains the answer `[l]ias` = 'it is this term, but the speaker said it that way'. Measured on fixture0002: 42 of 228 gold rows are aliases; substituting them rewrites what the speaker said.
 
 An alias annotation comes only from an exact match against an alias; a fuzzy match near one is still a guess that the text is garbled, so it stays a correction. It is high band and its `replacement` is the original text. In `annotations.json` the `kind` field carries the difference, and the report lists aliases under "recognized (not changed)". The prompt shows the answer as `a[l]ias`, since `a` is taken by all-yes. A given text is either a confirmed variant or an alias of a term, never both: recording one removes the other.
 
@@ -134,9 +134,9 @@ An alias annotation comes only from an exact match against an alias; a fuzzy mat
 
 Eight classes, closed list: companhia (has ticker and balance sheet), indicador (a number per company or asset), conceito (idea, method, strategy), unidade, pessoa, organizacao (not a listed company: regulator, fund manager, channel, series), ferramenta, sigla (sector or regulatory abbreviation). Migration: indice→indicador; instrumento, tributario, estrangeirismo→conceito; periodo→unidade; gestora, canal, serie do canal→organizacao; sigla setorial→sigla. Class is a label for consumers; it does not affect matching.
 
-Applied to `packs/financas-ptbr.yaml`, both fixture packs and `fixtures/R2Qgz8tFWVI/gold.csv`; `fixtures/wxgFO_fyfXg/gold.csv` already used the eight, and the legacy copy is left as it was. The loader refuses a class that is not on the list. Two cases the migration did not name: `operacao` (emissão, diluição; three gold rows) became `conceito`, the nearest of the eight and where `instrumento` went; `numero` appears only on out-of-scope rows with no term, where the class column is a free note like `fala comum`, so it stays. One in-scope gold row has no class at all (18:38 `aoonista` -> acionista) and is left blank: a blank means unlabelled, not a ninth class.
+Applied to `packs/financas-ptbr.yaml`, both fixture packs and `fixtures/fixture0001/gold.csv`; `fixtures/fixture0002/gold.csv` already used the eight, and the legacy copy is left as it was. The loader refuses a class that is not on the list. Two cases the migration did not name: `operacao` (emissão, diluição; three gold rows) became `conceito`, the nearest of the eight and where `instrumento` went; `numero` appears only on out-of-scope rows with no term, where the class column is a free note like `fala comum`, so it stays. One in-scope gold row has no class at all (18:38 `aoonista` -> acionista) and is left blank: a blank means unlabelled, not a ninth class.
 
-The eight `CPFE -> CPFL` rows of `fixtures/R2Qgz8tFWVI/gold.csv` are now status `alias` with `correct` equal to `wrong`, the same speaker habit as wxgFO_fyfXg. Measured: that fixture moves from 156 hits / 9 false positives to 148 / 17. The frozen pack still lists CPFE as a variant, so all eight are substituted, and each counts as a miss and as a false positive. New bounds: hits >= 148, false positives <= 17, in scope 168.
+The eight `CPFE -> CPFL` rows of `fixtures/fixture0001/gold.csv` are now status `alias` with `correct` equal to `wrong`, the same speaker habit as fixture0002. Measured: that fixture moves from 156 hits / 9 false positives to 148 / 17. The frozen pack still lists CPFE as a variant, so all eight are substituted, and each counts as a miss and as a false positive. New bounds: hits >= 148, false positives <= 17, in scope 168.
 
 Amended by D-064: a pack now declares its own classes; these eight are what a pack without a `classes:` line keeps, and what financas-ptbr declares.
 
@@ -156,49 +156,49 @@ Amended: `--gold-draft` is removed (2026-10, after 0.6.3). It was kept for one r
 
 ## D-024 Word n-grams stop at strong punctuation
 
-Word n-grams do not cross strong punctuation (. ? ! ;). Measured: `Warn Buffet. Tem` was proposed as one variant of Warren Buffett in wxgFO_fyfXg.
+Word n-grams do not cross strong punctuation (. ? ! ;). Measured: `Warn Buffet. Tem` was proposed as one variant of Warren Buffett in fixture0002.
 
 The tokenizer marks each token followed by `.`, `?`, `!` or `;`, and no n-gram runs across the mark. A `.` inside a token is a decimal point (`6.7`) and does not count, a comma does not count, and a caption break is not punctuation, so D-007's `ser` / `MIG` still joins. The unit rules are regexes over the text and are unaffected.
 
-Measured: R2Qgz8tFWVI loses the false positive `preço. Então` -> preço teto (17 -> 16) and no hit. wxgFO_fyfXg loses one hit, 36:41 `Warn Buffet` -> Warren Buffett (103 -> 102). That hit was credited only to the span `Warn Buffet. Tem`; the caption line ends `do Warn Buffet.`, and nothing in the frozen pack reaches `Warn Buffet` without crossing the full stop. Its bound moves to hits >= 102. The first fixture's bounds stay as they were, since it lost no hit.
+Measured: fixture0001 loses the false positive `preço. Então` -> preço teto (17 -> 16) and no hit. fixture0002 loses one hit, 36:41 `Warn Buffet` -> Warren Buffett (103 -> 102). That hit was credited only to the span `Warn Buffet. Tem`; the caption line ends `do Warn Buffet.`, and nothing in the frozen pack reaches `Warn Buffet` without crossing the full stop. Its bound moves to hits >= 102. The first fixture's bounds stay as they were, since it lost no hit.
 
 ## D-025 Aliases and learned variants match exactly
 
-Fuzzy matching runs only against the canonical term and the curated pack variants. Aliases and learned variants match by exact normalized equality only. Measured: alias `bilhões` fuzzy-matched `milhões` at 85.7, medium band, applied: 24 false positives on wxgFO_fyfXg and millions rewritten as billions in normalized.txt for any user of the default pack. Aliases are legitimate spellings, not misrecognitions; fuzzy is for finding misrecognitions. This also closes open question (a): learned confirmations no longer widen fuzzy reach.
+Fuzzy matching runs only against the canonical term and the curated pack variants. Aliases and learned variants match by exact normalized equality only. Measured: alias `bilhões` fuzzy-matched `milhões` at 85.7, medium band, applied: 24 false positives on fixture0002 and millions rewritten as billions in normalized.txt for any user of the default pack. Aliases are legitimate spellings, not misrecognitions; fuzzy is for finding misrecognitions. This also closes open question (a): learned confirmations no longer widen fuzzy reach.
 
-Measured after: wxgFO_fyfXg against pack 0.2.0 drops from 53 to 32 false positives with no hit lost; neither fixture moves against its frozen pack. The hazard is not fully closed, because the canonical term is still fuzzy. `milhões` scores 61.5 against `bilhão` and is only a low-band mark now (neither applied nor rendered), but `milhão` scores 83 against it, medium band, and is still applied: three times on wxgFO_fyfXg. Both are held as strict expected failures in `tests/test_exact_only.py`, so the suite goes red if either is fixed without being promoted to a real test.
+Measured after: fixture0002 against pack 0.2.0 drops from 53 to 32 false positives with no hit lost; neither fixture moves against its frozen pack. The hazard is not fully closed, because the canonical term is still fuzzy. `milhões` scores 61.5 against `bilhão` and is only a low-band mark now (neither applied nor rendered), but `milhão` scores 83 against it, medium band, and is still applied: three times on fixture0002. Both are held as strict expected failures in `tests/test_exact_only.py`, so the suite goes red if either is fixed without being promoted to a real test.
 
 ## D-026 Gold status is provenance; scoring is one rule
 
 In gold.csv, certo and conferido record who wrote the row (tool-proposed and human-checked vs human-added). Scoring does not distinguish them: every row with correct != wrong expects that correction; hit if an applied correction produces it on that line, miss otherwise. alias expects an alias annotation and no substitution; manter expects no applied annotation; rows with empty term are out of scope. Both fixtures use this one rule.
 
-This replaces the two gold conventions of the first version of the evaluator, under which `conferido` was always a miss in wxgFO_fyfXg and scored like `certo` in R2Qgz8tFWVI. "Produces it" means an applied correction for the row's term that covers the row's text on that line; the rendered text is not compared with `correct`, which people write with more context than the span (`Tanto as emissões`) and with their own decimal separator (`4,6 bi`). `correct != wrong` is compared on normalized text, so D-008 still holds: the three `CPFe -> CPFE` alias rows stay aliases, and 15:57 `Etaú -> ETAU`, a `conferido` row differing only by case and accent, is out of scope.
+This replaces the two gold conventions of the first version of the evaluator, under which `conferido` was always a miss in fixture0002 and scored like `certo` in fixture0001. "Produces it" means an applied correction for the row's term that covers the row's text on that line; the rendered text is not compared with `correct`, which people write with more context than the span (`Tanto as emissões`) and with their own decimal separator (`4,6 bi`). `correct != wrong` is compared on normalized text, so D-008 still holds: the three `CPFe -> CPFE` alias rows stay aliases, and 15:57 `Etaú -> ETAU`, a `conferido` row differing only by case and accent, is out of scope.
 
-Measured: R2Qgz8tFWVI does not move (167 in scope, 147 hits, 16 false positives), since it already scored the two alike. wxgFO_fyfXg goes to 225 in scope with 107 hits and 57 false positives: the frozen pack finds none of its conferido rows. Against pack 0.2.0 the same fixture goes from 149 to 188 hits, the 39 conferido rows that pack now finds.
+Measured: fixture0001 does not move (167 in scope, 147 hits, 16 false positives), since it already scored the two alike. fixture0002 goes to 225 in scope with 107 hits and 57 false positives: the frozen pack finds none of its conferido rows. Against pack 0.2.0 the same fixture goes from 149 to 188 hits, the 39 conferido rows that pack now finds.
 
 ## D-027 Rejection by containment
 
-A rejected pair (text, term) suppresses any proposal for that term whose normalized span contains the rejected text as whole words. Measured: rejecting `divide → dividendo` did not suppress `divide a → dividendo` at 15:54 in wxgFO_fyfXg, violating a manter row.
+A rejected pair (text, term) suppresses any proposal for that term whose normalized span contains the rejected text as whole words. Measured: rejecting `divide → dividendo` did not suppress `divide a → dividendo` at 15:54 in fixture0002, violating a manter row.
 
-Whole words means `divide` rules out `divide a` and `ele divide a` but not `dividida` or `subdivide`, and a rejection for one term says nothing about another. Measured with the user's learned layer and pack 0.2.0 on wxgFO_fyfXg: the manter row goes clean, false positives go from 18 to 17, and no hit is lost. The regression bounds do not move, since the fixtures are scored with no learned layer. This closes the open question on rejection by exact text.
+Whole words means `divide` rules out `divide a` and `ele divide a` but not `dividida` or `subdivide`, and a rejection for one term says nothing about another. Measured with the user's learned layer and pack 0.2.0 on fixture0002: the manter row goes clean, false positives go from 18 to 17, and no hit is lost. The regression bounds do not move, since the fixtures are scored with no learned layer. This closes the open question on rejection by exact text.
 
 ## D-028 Unit terms never enter fuzzy matching
 
-Terms of class unidade never enter fuzzy matching. They are matched by the unit rules (D-006) and by exact normalized equality of the term, its aliases and its variants. Measured: with fuzzy on, the canonical `bilhão` matched `milhão` at 83 (applied, 3 rewrites of millions as billions on wxgFO_fyfXg) and the alias `bilhões` matched `milhões` at 85.7. One-letter differences between real words cannot be separated by a threshold.
+Terms of class unidade never enter fuzzy matching. They are matched by the unit rules (D-006) and by exact normalized equality of the term, its aliases and its variants. Measured: with fuzzy on, the canonical `bilhão` matched `milhão` at 83 (applied, 3 rewrites of millions as billions on fixture0002) and the alias `bilhões` matched `milhões` at 85.7. One-letter differences between real words cannot be separated by a threshold.
 
-This supersedes D-021's "it does not affect matching" for one class: `unidade` is the only class the matcher reads. Measured after: wxgFO_fyfXg against pack 0.2.0 goes from 32 to 29 false positives with no hit lost, and `milhões` is not even marked; neither fixture moves against its frozen pack.
+This supersedes D-021's "it does not affect matching" for one class: `unidade` is the only class the matcher reads. Measured after: fixture0002 against pack 0.2.0 goes from 32 to 29 false positives with no hit lost, and `milhões` is not even marked; neither fixture moves against its frozen pack.
 
 ## D-029 Low band lower threshold is 70
 
 Low band lower threshold is 70. Measured at 60: 499 and 579 passive marks per fixture; at 70: 113 and 91. Marks are never applied, so the threshold only governs noise in annotations.json.
 
-This supersedes the initial mark threshold of D-011 (60); the apply threshold stays 80. Counted after overlap resolution with the frozen packs, R2Qgz8tFWVI then wxgFO_fyfXg. No bound moves, since marks are never applied.
+This supersedes the initial mark threshold of D-011 (60); the apply threshold stays 80. Counted after overlap resolution with the frozen packs, fixture0001 then fixture0002. No bound moves, since marks are never applied.
 
 ## D-030 "Already spelled out" means as whole words
 
 The guard that skips a span because the term (or one of its aliases) is already spelled out in it now tests whole-word containment, the rule of D-027, instead of raw substring containment. Measured: `dec` was found inside `deck` and `enterprise value` inside `enterprise valuey`, so both listed variants could never match.
 
-Measured: R2Qgz8tFWVI gains three hits (`autocapex`, `Sabespe`, `segundo trio`) and wxgFO_fyfXg against pack 0.2.0 gains four (`deck` three times, `Enterprise Valuey`). The cost: the substring guard had also been blocking real words that contain the term, and they now come through. The term's own plural is fuzzily corrected to the singular (`dividendos` -> dividendo at 94, eight times on R2Qgz8tFWVI and nine on wxgFO_fyfXg; `valuations` -> valuation three times), which D-020 says is an alias, never a correction; and the TIR variant `tira`, also an everyday word, applies (three times). R2Qgz8tFWVI goes from 147 / 16 to 150 / 26; wxgFO_fyfXg from 107 / 57 to 107 / 70. The plural case is held as a strict expected failure in `tests/test_whole_word_guard.py`.
+Measured: fixture0001 gains three hits (`autocapex`, `Sabespe`, `segundo trio`) and fixture0002 against pack 0.2.0 gains four (`deck` three times, `Enterprise Valuey`). The cost: the substring guard had also been blocking real words that contain the term, and they now come through. The term's own plural is fuzzily corrected to the singular (`dividendos` -> dividendo at 94, eight times on fixture0001 and nine on fixture0002; `valuations` -> valuation three times), which D-020 says is an alias, never a correction; and the TIR variant `tira`, also an everyday word, applies (three times). fixture0001 goes from 147 / 16 to 150 / 26; fixture0002 from 107 / 57 to 107 / 70. The plural case is held as a strict expected failure in `tests/test_whole_word_guard.py`.
 
 ## D-031 Inflection is the term spelled out; exact beats fuzzy
 
@@ -206,13 +206,13 @@ Measured: R2Qgz8tFWVI gains three hits (`autocapex`, `Sabespe`, `segundo trio`) 
 
 The language module maps a single normalized word to its base forms; a word whose base form is a single-word term or alias is annotated as that alias: exact-only by D-025, and part of D-030's "already spelled out" guard. A word that some term already lists explicitly belongs to that term. (Amended with D-033: the inflection list moved from the core to the pt-BR module; the rule and its measurements are unchanged.) (b) applies to fuzzy proposals only and to other terms only, as worded.
 
-Measured: R2Qgz8tFWVI goes from 150 / 26 to 150 / 18, wxgFO_fyfXg from 107 / 70 to 107 / 58, and wxgFO_fyfXg against pack 0.2.1 from 42 to 25 false positives with no hit lost. All three D-030 hits are kept. Neither fixture gets back to its pre-D-030 false positives (16 and 57): the difference is exactly the variant `tira -> TIR` (twice and once), which is not an inflection. The frozen fixture packs keep it, so D-032's removal of it from packs/ does not reach those numbers. The inflection open question is closed.
+Measured: fixture0001 goes from 150 / 26 to 150 / 18, fixture0002 from 107 / 70 to 107 / 58, and fixture0002 against pack 0.2.1 from 42 to 25 false positives with no hit lost. All three D-030 hits are kept. Neither fixture gets back to its pre-D-030 false positives (16 and 57): the difference is exactly the variant `tira -> TIR` (twice and once), which is not an inflection. The frozen fixture packs keep it, so D-032's removal of it from packs/ does not reach those numbers. The inflection open question is closed.
 
 ## D-032 An ordinary word is not a variant
 
 Curation rule: a variant that is an ordinary Portuguese word does not enter the pack, even if the caption used it for the term. Exact matching on ordinary words is wrong more often than right (`tira → TIR`, `rápido → RAP`, `divide → dividendo`). Such cases wait for a collocation layer (open).
 
-Pack 0.2.2 removes `tira` from TIR, `rápido` from RAP and `valorist` from valuation, and adds the term `market cap` (indicador; aliases `marketcap`, `valor de mercado`). Measured, wxgFO_fyfXg against 0.2.2: false positives go from 25 to 20 and one hit is lost, 15:54 `rápido -> RAP`, the one row the removed variant existed for; `valorist` is still reached fuzzily through `valoristo`. `market -> market share` (three times, in `market cap`) remains: the exact form is the two-word term, which D-031 (b) does not see from inside the one-word span. The frozen fixture packs keep `tira`.
+Pack 0.2.2 removes `tira` from TIR, `rápido` from RAP and `valorist` from valuation, and adds the term `market cap` (indicador; aliases `marketcap`, `valor de mercado`). Measured, fixture0002 against 0.2.2: false positives go from 25 to 20 and one hit is lost, 15:54 `rápido -> RAP`, the one row the removed variant existed for; `valorist` is still reached fuzzily through `valoristo`. `market -> market share` (three times, in `market cap`) remains: the exact form is the two-word term, which D-031 (b) does not see from inside the one-word span. The frozen fixture packs keep `tira`.
 
 ## D-033 Language modules
 
@@ -220,13 +220,13 @@ The core is language-agnostic. Everything language-specific lives in src/transcr
 
 `languages/pt_br.py` holds what the core used to know: accent folding to `[a-z0-9$ ]`, the plural inflections of D-031a (now word -> base form, the inverse of the old generation of plurals), the three unit rules of D-006, and `. ? ! ;`. `languages/generic.py` has no inflections and no unit rules, keeps letters of any script, and uses `. ? ! ;`; it is used only when `--allow-generic` is passed for a pack whose language has no module. A pack that declares no language is refused too (D-002). A code maps to a module by name (`pt-BR` -> `pt_br`); a module kept elsewhere is made known with `languages.register`. Each unit rule is a `UnitRule(pattern, replacement, term)` with one optional field, `owns`: the words only that rule may match for its term, which is how `bit` stays EBITDA's everywhere except after a number (D-028). The learned layer has no language, so it compares its own entries by case and spacing only; the pack's language normalizes them when they are loaded.
 
-Measured: every annotation of both fixtures, and of wxgFO_fyfXg against pack 0.2.2 with and without a rejection, is identical field for field before and after. Declaring `language: pt-BR` in the three packs is not a curation change and no bound moves. `tests/test_language_xx.py` runs the core on an invented language, with the generic module and with a module of its own.
+Measured: every annotation of both fixtures, and of fixture0002 against pack 0.2.2 with and without a rejection, is identical field for field before and after. Declaring `language: pt-BR` in the three packs is not a curation change and no bound moves. `tests/test_language_xx.py` runs the core on an invented language, with the generic module and with a module of its own.
 
 ## D-034 D-031(b) is overlap, not containment
 
 D-031(b) is overlap, not containment: a fuzzy proposal is dropped when its span overlaps, in either direction, an exact-match span of a different term. Measured: `market` → market share ×3 survived D-031(b) because the fuzzy span sits inside the exact span `market cap`.
 
-Overlap means sharing any token: the fuzzy span inside the exact one, around it, or across part of it. Exact-match spans are found before any fuzzy guess, whether or not they produce an annotation themselves: `market cap` spelled out produces none and still counts. Measured: neither fixture moves against its frozen pack; wxgFO_fyfXg against pack 0.2.2 goes from 20 to 17 false positives with no hit lost. On these fixtures "overlap" and "containment either way" score the same: every proposal whose removal changed a number was inside another term's exact span (`market` in `market cap`, `de Dentes` in `Geração de Dentes`). Overlap drops five more raw proposals that share only part of their span (`o market`, `Valuey, aí`, `o dividend`, `de dividend` twice), each either a low mark or one that overlap resolution already discarded.
+Overlap means sharing any token: the fuzzy span inside the exact one, around it, or across part of it. Exact-match spans are found before any fuzzy guess, whether or not they produce an annotation themselves: `market cap` spelled out produces none and still counts. Measured: neither fixture moves against its frozen pack; fixture0002 against pack 0.2.2 goes from 20 to 17 false positives with no hit lost. On these fixtures "overlap" and "containment either way" score the same: every proposal whose removal changed a number was inside another term's exact span (`market` in `market cap`, `de Dentes` in `Geração de Dentes`). Overlap drops five more raw proposals that share only part of their span (`o market`, `Valuey, aí`, `o dividend`, `de dividend` twice), each either a low mark or one that overlap resolution already discarded.
 
 ## D-035 Out-of-domain silence test
 
@@ -234,7 +234,7 @@ Out-of-domain silence test. Pack financas-ptbr 0.3.3 on a 16-minute street prank
 
 The number was reserved on 2026-09-29 for this test and is used for it now, on 2026-10-06. The recognition's span is `tir` alone, on the 3:47 line, which reads `tir uma`. It is the canonical name spelled out (D-041), so the text is unchanged. The two corrections are at 2:08 and 2:12 (`Ox, entende nada`). Pack 0.3.4 removes `Ox` from OPEX's variants (D-032: an ordinary word, and the Northeastern `oxe` is common in Brazilian speech). It predates D-005 and keeps `O PX`. Two other short variants from before D-005 remain in the pack, `TR` (the unit tri) and `Lu` (Leo); each should be checked against a silence run before the next pack release (CONTRIBUTING 2.4).
 
-The removal has a cost in domain, measured against the bundled pack (hits / false positives, 0.3.3 → 0.3.4). R2Qgz8tFWVI goes from 145 / 16 to 142 / 16: its three `Ox` → OPEX rows (10:59, 11:03, 11:20) are real, because there the speaker spells the term out ("Ox. O PX. O editor vai escrever aí"). 4tTmY8Buask (108 / 4), 4wCtn8BWR4o (44 / 2) and wxgFO_fyfXg (211 / 10) do not move, and no frozen bound moves. Three hits in domain are traded for two false positives out of it, because out of domain the text is someone else's speech being rewritten. Like `dividendio` and `bicho` (D-046), `Ox` is a garble whose meaning only its context gives, and the collocation layer (open) would have to decide it. With 0.3.4 the silence run applies nothing: the one remaining annotation is the `tir` recognition.
+The removal has a cost in domain, measured against the bundled pack (hits / false positives, 0.3.3 → 0.3.4). fixture0001 goes from 145 / 16 to 142 / 16: its three `Ox` → OPEX rows (10:59, 11:03, 11:20) are real, because there the speaker spells the term out ("Ox. O PX. O editor vai escrever aí"). fixture0003 (108 / 4), fixture0004 (44 / 2) and fixture0002 (211 / 10) do not move, and no frozen bound moves. Three hits in domain are traded for two false positives out of it, because out of domain the text is someone else's speech being rewritten. Like `dividendio` and `bicho` (D-046), `Ox` is a garble whose meaning only its context gives, and the collocation layer (open) would have to decide it. With 0.3.4 the silence run applies nothing: the one remaining annotation is the `tir` recognition.
 
 A second measurement, on a clean silence run. The video is yJxxTf0IQC8 (Ciência Todo Dia, on prions): platform caption pt-orig, 428 lines, a single narrator, scripted science speech. Pack fit (D-054) finds 1 term with confidence and applies nothing, which is the intended answer out of domain. With `--force` and pack 0.3.4, the run applied 41 annotations, all false positives. 40 were `proteínas`, `proteína priônica` and `proteína se` → BR Partners, all from the phonetic source (D-050): skeleton `prtns` against `prtnrs`, 91, medium band, applied. One was `trio` → tri, an ordinary word ("trio de irmãs estranhas"). After D-060 (phonetic matches only ask) and pack 0.3.5 (`trio` only in `primeiro/segundo/terceiro/quarto trio`), the forced run applies 0: the 40 phonetic forms are questions in needs-review, and the text is unchanged. The prank run with 0.3.5 and `--force` applies only the `tir` recognition. Neither run is kept as a fixture.
 
@@ -256,35 +256,35 @@ Every `y`, `n` and `l` is written before the next question; a skip changes nothi
 
 ## D-039 The design is stable for pt-BR finance
 
-Third fixture (4wCtn8BWR4o) changed only the speaker and the recognizer (Whisper medium instead of platform captions) while keeping the vocabulary. Result with pack 0.2.3 and the user's learned layer: 37 applied, 4 asked (1 confirmed, 3 rejected), no new design rule required; every gap was pack data (evitida, dividendio, preço alvo, dívida alíquida). CEMIG misrecognitions (Semig, semiga) appeared with a different speaker and recognizer, so the variants are properties of the recognizers, not of one speaker. The design is considered stable for pt-BR finance: from here, new videos are expected to change packs, not code. Amended by D-040: one matcher gap (exact-over-exact overlap) was found in this fixture.
+Third fixture (fixture0004) changed only the speaker and the recognizer (Whisper medium instead of platform captions) while keeping the vocabulary. Result with pack 0.2.3 and the user's learned layer: 37 applied, 4 asked (1 confirmed, 3 rejected), no new design rule required; every gap was pack data (evitida, dividendio, preço alvo, dívida alíquida). CEMIG misrecognitions (Semig, semiga) appeared with a different speaker and recognizer, so the variants are properties of the recognizers, not of one speaker. The design is considered stable for pt-BR finance: from here, new videos are expected to change packs, not code. Amended by D-040: one matcher gap (exact-over-exact overlap) was found in this fixture.
 
 The four answers are the 2026-09-29 entries of the learned layer: `evitida` → EBITDA confirmed; `saber se` → Sabesp, `dividendio` → dividendo and `preço alto` → preço teto rejected. The two gold rows at 0:19 are status alias (`Dividend Yield`, both words, is in the caption line).
 
-Measured against the frozen pack 0.2.3, no learned layer: 40 in scope, 35 hits, 5 misses, 7 false positives, 13 aliases recognized, 2 wrongly substituted. CEMIG is 21/21. New regression bounds: hits >= 35, false positives <= 7, in scope 40. With the learned layer, false positives drop to 2 and no hit moves. Against packs/ 0.2.4, no learned layer: 38 hits, 2 misses, 6 false positives. `preço alto` → preço alvo is a hit reached fuzzily, not through a variant, and the new term brings one false positive (`preço, você` → preço alvo). R2Qgz8tFWVI (147 / 22) and wxgFO_fyfXg (214 / 18) do not move from 0.2.3 to 0.2.4.
+Measured against the frozen pack 0.2.3, no learned layer: 40 in scope, 35 hits, 5 misses, 7 false positives, 13 aliases recognized, 2 wrongly substituted. CEMIG is 21/21. New regression bounds: hits >= 35, false positives <= 7, in scope 40. With the learned layer, false positives drop to 2 and no hit moves. Against packs/ 0.2.4, no learned layer: 38 hits, 2 misses, 6 false positives. `preço alto` → preço alvo is a hit reached fuzzily, not through a variant, and the new term brings one false positive (`preço, você` → preço alvo). fixture0001 (147 / 22) and fixture0002 (214 / 18) do not move from 0.2.3 to 0.2.4.
 
 One gap is not in the list: at 0:19 the exact variant `dividend` of dividendo substitutes `Dividend` inside the term `Dividend Yield` spelled out. That is two false positives, two aliases wrongly substituted and two alias misses, with every pack measured. D-034 drops fuzzy proposals that overlap an exact span of another term. It does not drop exact ones.
 
 ## D-040 An exact name suppresses a shorter correction overlapping it
 
-An exact term or alias span suppresses any shorter correction of another term that overlaps it, the way D-034 suppresses fuzzy proposals. Measured: at 4wCtn8BWR4o 0:19 the exact variant `dividend` of dividendo substituted `Dividend` inside `Dividend Yield`, twice. That is the gap D-039 names. D-034's check ran only on fuzzy proposals, so an exact variant got through.
+An exact term or alias span suppresses any shorter correction of another term that overlaps it, the way D-034 suppresses fuzzy proposals. Measured: at fixture0004 0:19 the exact variant `dividend` of dividendo substituted `Dividend` inside `Dividend Yield`, twice. That is the gap D-039 names. D-034's check ran only on fuzzy proposals, so an exact variant got through.
 
 A name is the canonical term, an alias (curated or learned), or D-031a's inflection of either. A variant is not a name, so a longer variant does not suppress anything here. "Shorter" counts tokens: the correction's span has fewer words than the name's. An equal or longer one is still left to `resolve_overlaps`. A name of the same term suppresses nothing, since D-030's spelled-out guard already covers that. Unit rules (D-006) run before the dictionary and are unaffected. `dividend` on its own is still corrected.
 
-Measured: 4wCtn8BWR4o against its frozen pack 0.2.3 goes from 35 hits / 7 false positives / 2 aliases wrongly substituted to 35 / 5 / 0. Against packs/ 0.2.4 it goes from 38 / 6 / 2 to 38 / 4 / 0. Its bound moves to false positives <= 5. R2Qgz8tFWVI and wxgFO_fyfXg do not move, against their frozen packs or against 0.2.4. The two 0:19 alias rows are still misses. The term's canonical name spelled out produces no annotation, while an alias row expects an alias annotation.
+Measured: fixture0004 against its frozen pack 0.2.3 goes from 35 hits / 7 false positives / 2 aliases wrongly substituted to 35 / 5 / 0. Against packs/ 0.2.4 it goes from 38 / 6 / 2 to 38 / 4 / 0. Its bound moves to false positives <= 5. fixture0001 and fixture0002 do not move, against their frozen packs or against 0.2.4. The two 0:19 alias rows are still misses. The term's canonical name spelled out produces no annotation, while an alias row expects an alias annotation.
 
 ## D-041 Canonical mentions are recognized
 
-An exact occurrence of a term's canonical name (or its inflected form) produces a recognition annotation (kind alias, rule term:exact) like an alias does; nothing is substituted. Downstream consumers need every mention of a term, not only the misspelled ones. Measured: the two `Dividend Yield` rows at 0:19 in 4wCtn8BWR4o were counted as misses because a correctly spelled term produced no annotation.
+An exact occurrence of a term's canonical name (or its inflected form) produces a recognition annotation (kind alias, rule term:exact) like an alias does; nothing is substituted. Downstream consumers need every mention of a term, not only the misspelled ones. Measured: the two `Dividend Yield` rows at 0:19 in fixture0004 were counted as misses because a correctly spelled term produced no annotation.
 
 The inflected form already produced a recognition under D-031a, and its rule stays `term:alias`. The new annotation is the exact canonical name, compared folded (case and accent), so `Léo` is the name `Leo`. The report lists these under "recognized (not changed)". normalized.txt does not change.
 
-Measured, after overlap resolution, `term:exact` annotations per fixture (frozen pack / packs/ 0.2.4): 4wCtn8BWR4o 43 / 48, R2Qgz8tFWVI 61 / 76, wxgFO_fyfXg 105 / 125. Against the frozen packs, 4wCtn8BWR4o goes from 35 to 37 hits and from 13 to 15 aliases recognized: the two 0:19 rows. Its misses go from 5 to 3 and its false positives stay at 5. Its bound moves to hits >= 37. R2Qgz8tFWVI and wxgFO_fyfXg do not move in hits, false positives or aliases, against either pack. Against 0.2.4, 4wCtn8BWR4o has 40 hits, 0 misses and 4 false positives. One `manter` row of R2Qgz8tFWVI now carries an applied annotation: 7:30 `Léo ruim` is recognized as the term Leo. The gold note says the speaker said "Leo, ruim?". The text is not substituted, but D-026 counts any applied annotation on a manter row, so that fixture's bound allows one touched row. Amended by D-042: recognitions do not touch a manter row, and the bound is back to zero.
+Measured, after overlap resolution, `term:exact` annotations per fixture (frozen pack / packs/ 0.2.4): fixture0004 43 / 48, fixture0001 61 / 76, fixture0002 105 / 125. Against the frozen packs, fixture0004 goes from 35 to 37 hits and from 13 to 15 aliases recognized: the two 0:19 rows. Its misses go from 5 to 3 and its false positives stay at 5. Its bound moves to hits >= 37. fixture0001 and fixture0002 do not move in hits, false positives or aliases, against either pack. Against 0.2.4, fixture0004 has 40 hits, 0 misses and 4 false positives. One `manter` row of fixture0001 now carries an applied annotation: 7:30 `Léo ruim` is recognized as the term Leo. The gold note says the speaker said "Leo, ruim?". The text is not substituted, but D-026 counts any applied annotation on a manter row, so that fixture's bound allows one touched row. Amended by D-042: recognitions do not touch a manter row, and the bound is back to zero.
 
 ## D-042 A manter row forbids corrections, not recognitions
 
-Amends D-026. A manter row forbids an applied correction on its span, not a recognition annotation; recognitions never change text. Measured: `Léo ruim` at 7:30 in R2Qgz8tFWVI was counted as touched once canonical mentions were recognized (D-041).
+Amends D-026. A manter row forbids an applied correction on its span, not a recognition annotation; recognitions never change text. Measured: `Léo ruim` at 7:30 in fixture0001 was counted as touched once canonical mentions were recognized (D-041).
 
-The evaluator's touched list for a manter row now holds applied corrections only, of any term. Recognitions (kind alias) are not in it. Measured: R2Qgz8tFWVI goes back to no touched manter row, and its bound is zero again. wxgFO_fyfXg keeps its one touched row, 15:54 `divide a`, which is a correction. No fixture moves in hits, misses, false positives or aliases.
+The evaluator's touched list for a manter row now holds applied corrections only, of any term. Recognitions (kind alias) are not in it. Measured: fixture0001 goes back to no touched manter row, and its bound is zero again. fixture0002 keeps its one touched row, 15:54 `divide a`, which is a correction. No fixture moves in hits, misses, false positives or aliases.
 
 ## D-043 The curated pack ships in the package
 
@@ -294,21 +294,21 @@ The root `packs/financas-ptbr.yaml` is no longer a link to the bundled copy. It 
 
 ## D-044 pt-BR n-grams stop at a comma
 
-Add comma to the pt-BR sentence boundaries (D-024). Measured: the proposals `preço, valor`, `preço, não` and `isso, Amigo` crossed a comma in 4tTmY8Buask.
+Add comma to the pt-BR sentence boundaries (D-024). Measured: the proposals `preço, valor`, `preço, não` and `isso, Amigo` crossed a comma in fixture0003.
 
 This supersedes D-024's "a comma does not count" for pt-BR only. The generic language module keeps `. ? ! ;`. A comma inside a token is still part of it, so a decimal comma (`11,5%`) and a decimal point (`6.7`) are both unaffected. A caption break is still not punctuation (D-007). No term, alias or variant in any pack contains a comma.
 
-Measured on the 4tTmY8Buask run with the bundled pack 0.2.4, no learned layer: eight proposals crossed a comma. Three were medium band and applied (`preço, valor` and `preço, não` → preço alvo at 85 and 84, `isso, Amigo` → CEMIG at 80), and five were low marks. None is left. Applied annotations go from 46 to 43 and corrections from 7 to 4. That run's caption is the translated `pt` track (`automatica (pt)`) D-045 is about, fetched before D-045. The fixtures do not move against their frozen packs, so no bound changes. Against 0.2.4, 4wCtn8BWR4o goes from 4 to 3 false positives (`preço, você` → preço alvo is gone), and R2Qgz8tFWVI and wxgFO_fyfXg do not move. No hit is lost anywhere.
+Measured on the fixture0003 run with the bundled pack 0.2.4, no learned layer: eight proposals crossed a comma. Three were medium band and applied (`preço, valor` and `preço, não` → preço alvo at 85 and 84, `isso, Amigo` → CEMIG at 80), and five were low marks. None is left. Applied annotations go from 46 to 43 and corrections from 7 to 4. That run's caption is the translated `pt` track (`automatica (pt)`) D-045 is about, fetched before D-045. The fixtures do not move against their frozen packs, so no bound changes. Against 0.2.4, fixture0004 goes from 4 to 3 false positives (`preço, você` → preço alvo is gone), and fixture0001 and fixture0002 do not move. No hit is lost anywhere.
 
 ## D-045 fetch prefers the original automatic caption
 
-YouTube publishes the original automatic caption as `<lang>-orig` and an auto-translated track as `<lang>`. fetch must prefer `<lang>-orig`, then a manual `<lang>`, then automatic `<lang>`, and record which track it took in the header and meta.yaml. Measured: for 4tTmY8Buask the `pt` track was a translation (`BTG Pacific`, `Portfólio de canais`, `Ofertas públicas iniciais (IPOs)`), useless as a normalization source.
+YouTube publishes the original automatic caption as `<lang>-orig` and an auto-translated track as `<lang>`. fetch must prefer `<lang>-orig`, then a manual `<lang>`, then automatic `<lang>`, and record which track it took in the header and meta.yaml. Measured: for fixture0003 the `pt` track was a translation (`BTG Pacific`, `Portfólio de canais`, `Ofertas públicas iniciais (IPOs)`), useless as a normalization source.
 
-Within each of the three, an exact code comes before a regional variant (`pt-BR-orig` for `--lang pt`), with the existing warning when there are several. Another language's `-orig` (`en-orig`) says nothing about `pt`, so an automatic `pt` is still taken. It is a translation then, but the chain has no better caption to offer, and the header names the track. The header keeps its line `# Origem da legenda: <source> (<track>)`. The source is `manual`, `automatica` or the new `automatica original`, so a caption from `pt-orig` reads `automatica original (pt-orig)`. meta.yaml gains `caption_track` and `caption_source` when step 1 produced the text. Tested with a fake track list shaped like 4tTmY8Buask's (`pt-orig` alongside translations into `de`, `en`, `es`, `fr`, `pt`, `zh-Hans`). Existing headers are unchanged, since a video without `-orig` takes the same track as before.
+Within each of the three, an exact code comes before a regional variant (`pt-BR-orig` for `--lang pt`), with the existing warning when there are several. Another language's `-orig` (`en-orig`) says nothing about `pt`, so an automatic `pt` is still taken. It is a translation then, but the chain has no better caption to offer, and the header names the track. The header keeps its line `# Origem da legenda: <source> (<track>)`. The source is `manual`, `automatica` or the new `automatica original`, so a caption from `pt-orig` reads `automatica original (pt-orig)`. meta.yaml gains `caption_track` and `caption_source` when step 1 produced the text. Tested with a fake track list shaped like fixture0003's (`pt-orig` alongside translations into `de`, `en`, `es`, `fr`, `pt`, `zh-Hans`). Existing headers are unchanged, since a video without `-orig` takes the same track as before.
 
 ## D-046 Fourth fixture: a new sector, and one misrecognition with two meanings
 
-Fourth fixture, new sector (investment bank), same speaker as the third. With pack 0.2.4 the tool found 4 of 81 expected corrections and produced 8 false positives; the 77 misses were all missing pack data, dominated by one company name in 18 misrecognitions. First case of one misrecognition meaning two different terms by context (`dividendio`: dividend yield in 4wCtn8BWR4o, dividendo mínimo in 4tTmY8Buask), recorded as the concrete motivation for the collocation layer (open).
+Fourth fixture, new sector (investment bank), same speaker as the third. With pack 0.2.4 the tool found 4 of 81 expected corrections and produced 8 false positives; the 77 misses were all missing pack data, dominated by one company name in 18 misrecognitions. First case of one misrecognition meaning two different terms by context (`dividendio`: dividend yield in fixture0004, dividendo mínimo in fixture0003), recorded as the concrete motivation for the collocation layer (open).
 
 The caption is the platform's `pt-orig` track (D-045). The gold has 121 rows: 79 conferido, 36 alias, 4 certo, 2 manter. 83 rows expect a correction, and two of those have no term (`realo`, `portas` → pelo menos), so 81 are in scope with the 36 alias rows: 117. The 40 hits are the 36 alias rows plus 4 corrections (`dividendield`, `freeat` twice, `SEMIG`). The company is BR Partners: 50 rows, 18 distinct forms after folding. Among the misses, "pack data" includes data that was there but wrong: `dividend` was a variant of dividendo, while this gold has it as dividend yield. Also counted are five forms D-005 and D-032 keep out of any pack (`RO`, `sel`, `Port`, `porta`, `portas`). The touched manter row is 19:46 `bicho`, then an EBITDA variant. Bounds against the frozen pack 0.2.4: in scope 117, hits >= 40, false positives <= 8, one touched manter row.
 
@@ -318,14 +318,14 @@ Measured against 0.3.0, no learned layer (hits / misses / false positives):
 
 | fixture | 0.2.4 | 0.3.0 |
 |---|---|---|
-| 4tTmY8Buask | 40 / 77 / 8 | 103 / 14 / 10 |
-| 4wCtn8BWR4o | 40 / 0 / 3 | 40 / 0 / 15 |
-| R2Qgz8tFWVI | 147 / 20 / 22 | 146 / 21 / 28 |
-| wxgFO_fyfXg | 214 / 11 / 18 | 211 / 14 / 19 |
+| fixture0003 | 40 / 77 / 8 | 103 / 14 / 10 |
+| fixture0004 | 40 / 0 / 3 | 40 / 0 / 15 |
+| fixture0001 | 147 / 20 / 22 | 146 / 21 / 28 |
+| fixture0002 | 214 / 11 / 18 | 211 / 14 / 19 |
 
-The removals cost four hits elsewhere. R2Qgz8tFWVI 28:44 `sobre bicho` is EBITDA there, a second context-dependent misrecognition. wxgFO_fyfXg 33:17, 33:25 and 39:32 have gold rows `dividend` → dividendo, inside spans the same gold also marks `dividend y` → dividend yield.
+The removals cost four hits elsewhere. fixture0001 28:44 `sobre bicho` is EBITDA there, a second context-dependent misrecognition. fixture0002 33:17, 33:25 and 39:32 have gold rows `dividend` → dividendo, inside spans the same gold also marks `dividend y` → dividend yield.
 
-Most of the new false positives are curated variants reaching ordinary words fuzzily at 80 to 86. `Portizar` reaches `aportar` (×5) and `amortizar`. `Portess` reaches `por essa`, `por esse` and `por três`, `Portudo` reaches `oportuno`, and `Portinas` reaches `portas`. `Selica` reaches `eólica`, `securizadora` reaches `seguradora`, `Dio Bazin` reaches `do bazinho`, and `adapta Vala` reaches `adaptar a`. `commodit` corrects the singular `commodity` (×2) to the plural. Seven of 4wCtn8BWR4o's twelve new false positives are spellings of the channel's tool (`AdaptaValor`, `adaptavala`, `DAPTA Valdre`), likely gaps in that fixture's gold, not checked. Only the frozen packs are bounds, so none of this blocks.
+Most of the new false positives are curated variants reaching ordinary words fuzzily at 80 to 86. `Portizar` reaches `aportar` (×5) and `amortizar`. `Portess` reaches `por essa`, `por esse` and `por três`, `Portudo` reaches `oportuno`, and `Portinas` reaches `portas`. `Selica` reaches `eólica`, `securizadora` reaches `seguradora`, `Dio Bazin` reaches `do bazinho`, and `adapta Vala` reaches `adaptar a`. `commodit` corrects the singular `commodity` (×2) to the plural. Seven of fixture0004's twelve new false positives are spellings of the channel's tool (`AdaptaValor`, `adaptavala`, `DAPTA Valdre`), likely gaps in that fixture's gold, not checked. Only the frozen packs are bounds, so none of this blocks.
 
 ## D-047 Fuzzy from a curated variant needs 85
 
@@ -335,33 +335,33 @@ Two rules were measured on all four fixtures with the bundled pack 0.3.0, before
 
 | fixture | 0.3.0 | A | C |
 |---|---|---|---|
-| 4tTmY8Buask | 103 / 10 | 98 / 8 | 103 / 7 |
-| 4wCtn8BWR4o | 40 / 15 | 40 / 7 | 40 / 9 |
-| R2Qgz8tFWVI | 146 / 28 | 146 / 14 | 146 / 17 |
-| wxgFO_fyfXg | 211 / 19 | 206 / 8 | 211 / 9 |
+| fixture0003 | 103 / 10 | 98 / 8 | 103 / 7 |
+| fixture0004 | 40 / 15 | 40 / 7 | 40 / 9 |
+| fixture0001 | 146 / 28 | 146 / 14 | 146 / 17 |
+| fixture0002 | 211 / 19 | 206 / 8 | 211 / 9 |
 | total | 500 / 72 | 490 / 37 | 500 / 42 |
 
 The same, after the gold fixes below:
 
 | fixture | 0.3.0 | A | C |
 |---|---|---|---|
-| 4tTmY8Buask | 103 / 10 | 98 / 8 | 103 / 7 |
-| 4wCtn8BWR4o | 45 / 7 | 42 / 4 | 44 / 4 |
-| R2Qgz8tFWVI | 146 / 28 | 146 / 14 | 146 / 17 |
-| wxgFO_fyfXg | 211 / 19 | 206 / 8 | 211 / 9 |
+| fixture0003 | 103 / 10 | 98 / 8 | 103 / 7 |
+| fixture0004 | 45 / 7 | 42 / 4 | 44 / 4 |
+| fixture0001 | 146 / 28 | 146 / 14 | 146 / 17 |
+| fixture0002 | 211 / 19 | 206 / 8 | 211 / 9 |
 | total | 505 / 64 | 492 / 34 | 504 / 37 |
 
-C is adopted. It removes 27 false positives for one hit, while A removes 30 for thirteen, so the two are not close. A loses hits that only a variant reaches fuzzily: `Waren Buff`, `esse mig`, `sem mig`, `ebítica`, `valorist`, `freeat` twice, `Adaptavalda`, `adaptavala` and `adaptar a válvula`, plus three more on 4tTmY8Buask. C loses one hit, 4wCtn8BWR4o 4:54 `adaptar a válvula`, reached at 80 from `adapta Vala`. Ranking is by the demoted score, so a variant's match under 85 does not win a span from a better proposal. Two tests now hold the old threshold on purpose: the confirmation-loop tests script answers against R2Qgz8tFWVI's four-variant CEMIG group, and C leaves two of those four.
+C is adopted. It removes 27 false positives for one hit, while A removes 30 for thirteen, so the two are not close. A loses hits that only a variant reaches fuzzily: `Waren Buff`, `esse mig`, `sem mig`, `ebítica`, `valorist`, `freeat` twice, `Adaptavalda`, `adaptavala` and `adaptar a válvula`, plus three more on fixture0003. C loses one hit, fixture0004 4:54 `adaptar a válvula`, reached at 80 from `adapta Vala`. Ranking is by the demoted score, so a variant's match under 85 does not win a span from a better proposal. Two tests now hold the old threshold on purpose: the confirmation-loop tests script answers against fixture0001's four-variant CEMIG group, and C leaves two of those four.
 
-Gold fixes, authorized. In wxgFO_fyfXg the rows `dividend` → dividendo at 33:17, 33:25 and 39:32 are dropped. Those spans are dividend yield, and the dividend yield rows stay. In 4wCtn8BWR4o there are five conferido rows for the channel's tool, Adapta Valuer, each checked on its line: 1:04 `Adaptavalda`, 4:54 `adaptar a válvula` ("pra você que tem acesso [à Adapta Valuer], temos agora essa nova aba"), 5:03 `DAPTA Valdre`, 18:16 `AdaptaValor`, 18:42 `adaptavala`. Against the frozen pack, wxgFO_fyfXg goes from 107 / 58 to 104 / 67 from the gold alone. The evaluator scores proposals before overlap resolution, so each dropped row's `dividend` correction also brings its overlapping `o dividend`, `de dividend` and `dividend y`. C then takes it to 104 / 59.
+Gold fixes, authorized. In fixture0002 the rows `dividend` → dividendo at 33:17, 33:25 and 39:32 are dropped. Those spans are dividend yield, and the dividend yield rows stay. In fixture0004 there are five conferido rows for the channel's tool, Adapta Valuer, each checked on its line: 1:04 `Adaptavalda`, 4:54 `adaptar a válvula` ("pra você que tem acesso [à Adapta Valuer], temos agora essa nova aba"), 5:03 `DAPTA Valdre`, 18:16 `AdaptaValor`, 18:42 `adaptavala`. Against the frozen pack, fixture0002 goes from 107 / 58 to 104 / 67 from the gold alone. The evaluator scores proposals before overlap resolution, so each dropped row's `dividend` correction also brings its overlapping `o dividend`, `de dividend` and `dividend y`. C then takes it to 104 / 59.
 
-Pack 0.3.1 adds `commodity` as an alias of commodities: the singular is not an error. 4wCtn8BWR4o loses its two `commodity` → commodities false positives.
+Pack 0.3.1 adds `commodity` as an alias of commodities: the singular is not an error. fixture0004 loses its two `commodity` → commodities false positives.
 
-Bounds, frozen packs (hits / false positives): R2Qgz8tFWVI 150 / 14 (was 18), 4wCtn8BWR4o 37 / 4 with 45 in scope (was 37 / 5 with 40), wxgFO_fyfXg 104 / 59 with 222 in scope (was 107 / 58 with 225, the gold change). 4tTmY8Buask does not move. Bundled 0.3.1: 4tTmY8Buask 103 / 7, 4wCtn8BWR4o 44 / 2, R2Qgz8tFWVI 146 / 17, wxgFO_fyfXg 211 / 9.
+Bounds, frozen packs (hits / false positives): fixture0001 150 / 14 (was 18), fixture0004 37 / 4 with 45 in scope (was 37 / 5 with 40), fixture0002 104 / 59 with 222 in scope (was 107 / 58 with 225, the gold change). fixture0003 does not move. Bundled 0.3.1: fixture0003 103 / 7, fixture0004 44 / 2, fixture0001 146 / 17, fixture0002 211 / 9.
 
 ## D-048 The evaluator scores what is applied
 
-The evaluator scores only the annotations that survive `resolve_overlaps`, exactly the set rendered into normalized.txt. Before, it scored every proposal, so a proposal that lost its span to a longer or better one counted as a false positive, though it never reached the output. Measured: wxgFO_fyfXg went from 58 to 67 false positives when D-047 dropped three gold rows. Each dropped row's `dividend` correction also brought its overlapping `o dividend`, `de dividend` and `dividend y`.
+The evaluator scores only the annotations that survive `resolve_overlaps`, exactly the set rendered into normalized.txt. Before, it scored every proposal, so a proposal that lost its span to a longer or better one counted as a false positive, though it never reached the output. Measured: fixture0002 went from 58 to 67 false positives when D-047 dropped three gold rows. Each dropped row's `dividend` correction also brought its overlapping `o dividend`, `de dividend` and `dividend y`.
 
 The rule applies everywhere `evaluate` is called: the regression test, `scripts/measure.py`, and the manter check, which now sees only the resolved set too. A proposal that loses its span is neither a hit nor a false positive. This replaces the "as exp2 did" scoring that `evaluate_fixture` and the regression test had kept. Matching and its numbers are unchanged.
 
@@ -369,22 +369,22 @@ Measured, hits / false positives, before → after:
 
 | fixture | frozen | bundled 0.3.1 |
 |---|---|---|
-| 4tTmY8Buask | 40 / 8 → 40 / 6 | 103 / 7 → 102 / 6 |
-| 4wCtn8BWR4o | 37 / 4 → 37 / 4 | 44 / 2 → 44 / 2 |
-| R2Qgz8tFWVI | 150 / 14 → 150 / 14 | 146 / 17 → 146 / 15 |
-| wxgFO_fyfXg | 104 / 59 → 104 / 53 | 211 / 9 → 211 / 9 |
+| fixture0003 | 40 / 8 → 40 / 6 | 103 / 7 → 102 / 6 |
+| fixture0004 | 37 / 4 → 37 / 4 | 44 / 2 → 44 / 2 |
+| fixture0001 | 150 / 14 → 150 / 14 | 146 / 17 → 146 / 15 |
+| fixture0002 | 104 / 59 → 104 / 53 | 211 / 9 → 211 / 9 |
 
-What went out: `de dividend` → dividendo ×2 on 4tTmY8Buask (both packs), `bit` → EBITDA ×2 on R2Qgz8tFWVI with 0.3.1, and on wxgFO_fyfXg (frozen) `dividend y` ×3, `de dividend` ×2 and `o dividend`. 4tTmY8Buask with 0.3.1 loses one hit, which the output never had: at 3:34 the rendered annotation is `dividend` → dividendo (94, from the canonical term), which wins the span from the proposal for dividend yield. That annotation is now the false positive. No manter count moves. New bounds: 4tTmY8Buask false positives <= 6, wxgFO_fyfXg <= 53.
+What went out: `de dividend` → dividendo ×2 on fixture0003 (both packs), `bit` → EBITDA ×2 on fixture0001 with 0.3.1, and on fixture0002 (frozen) `dividend y` ×3, `de dividend` ×2 and `o dividend`. fixture0003 with 0.3.1 loses one hit, which the output never had: at 3:34 the rendered annotation is `dividend` → dividendo (94, from the canonical term), which wins the span from the proposal for dividend yield. That annotation is now the false positive. No manter count moves. New bounds: fixture0003 false positives <= 6, fixture0002 <= 53.
 
 ## D-049 The spelled-out guard means covered, not contained
 
-D-030's guard skips a candidate when an exact name of its term (canonical, alias, or D-031a's inflection of either) is spelled out in the span. It now skips only when that exact span covers the whole window, equal or larger. A window that is longer and merely contains the name stays eligible, and the longer span wins in overlap resolution. Measured: in wxgFO_fyfXg the alias `dividend` (0.3.2) blocked the variant `dividend y` → dividend yield three times.
+D-030's guard skips a candidate when an exact name of its term (canonical, alias, or D-031a's inflection of either) is spelled out in the span. It now skips only when that exact span covers the whole window, equal or larger. A window that is longer and merely contains the name stays eligible, and the longer span wins in overlap resolution. Measured: in fixture0002 the alias `dividend` (0.3.2) blocked the variant `dividend y` → dividend yield three times.
 
 "Covers" is positional, over the exact-name spans D-040 already records: the window's tokens lie inside an exact name of the same term. A window shorter than a name is now skipped too (`Value` inside `Enterprise Value`). Before, it was not, because it does not contain the whole name. A longer fuzzy window around a name (`o Enterprise Value`, 94) becomes a proposal again. It loses its span to the name's own recognition (100, D-041) in overlap resolution, so neither normalized.txt nor the scores (D-048) see it.
 
-Measured with the old gold, before → after (hits / false positives). With the bundled 0.3.2, wxgFO_fyfXg goes from 208 / 9 to 211 / 9: the three `dividend y` and `dividend y build` rows. 4tTmY8Buask goes from 102 / 4 to 104 / 4, through variants that contain an alias: `Dio Bazin` (alias `Bazin`) and `B Partners` (alias `Partners`). R2Qgz8tFWVI and 4wCtn8BWR4o do not move, and no fixture moves against its frozen pack. The strict expected failure of 0.3.2 in tests/test_inflection.py is a test again.
+Measured with the old gold, before → after (hits / false positives). With the bundled 0.3.2, fixture0002 goes from 208 / 9 to 211 / 9: the three `dividend y` and `dividend y build` rows. fixture0003 goes from 102 / 4 to 104 / 4, through variants that contain an alias: `Dio Bazin` (alias `Bazin`) and `B Partners` (alias `Partners`). fixture0001 and fixture0004 do not move, and no fixture moves against its frozen pack. The strict expected failure of 0.3.2 in tests/test_inflection.py is a test again.
 
-Gold, authorized, fixtures/4tTmY8Buask/gold.csv. The rows 3:34 and 9:19 `dividend` are now alias rows of dividend yield, with `correct` equal to `wrong`: the speaker's short form, and the text stays. Two conferido rows for BR Partners are added, each checked on its line: 7:48 `A Partens` ("A Partens, em 2025, ano passado, ela terminou o ano") and 11:39 `partner` ("eu tenho partner e é minha segunda maior posição de small caps"). After the gold change: frozen 0.2.4 has 119 in scope, 40 hits and 6 false positives, and its bound moves to 119 in scope. Bundled 0.3.2 has 106 hits and 4 false positives, with 38 aliases recognized.
+Gold, authorized, fixtures/fixture0003/gold.csv. The rows 3:34 and 9:19 `dividend` are now alias rows of dividend yield, with `correct` equal to `wrong`: the speaker's short form, and the text stays. Two conferido rows for BR Partners are added, each checked on its line: 7:48 `A Partens` ("A Partens, em 2025, ano passado, ela terminou o ano") and 11:39 `partner` ("eu tenho partner e é minha segunda maior posição de small caps"). After the gold change: frozen 0.2.4 has 119 in scope, 40 hits and 6 false positives, and its bound moves to 119 in scope. Bundled 0.3.2 has 106 hits and 4 false positives, with 38 aliases recognized.
 
 ## D-050 A phonetic skeleton is the fourth matching source, for names
 
@@ -396,14 +396,14 @@ Measured, hits / false positives, before → after:
 
 | fixture | frozen | bundled 0.3.2 |
 |---|---|---|
-| 4tTmY8Buask | 40 / 6 → 40 / 6 | 106 / 4 → 108 / 4 |
-| 4wCtn8BWR4o | 37 / 4 → 37 / 4 | 44 / 2 → 44 / 2 |
-| R2Qgz8tFWVI | 150 / 14 → 150 / 15 | 145 / 15 → 145 / 16 |
-| wxgFO_fyfXg | 104 / 53 → 105 / 55 | 211 / 9 → 211 / 10 |
+| fixture0003 | 40 / 6 → 40 / 6 | 106 / 4 → 108 / 4 |
+| fixture0004 | 37 / 4 → 37 / 4 | 44 / 2 → 44 / 2 |
+| fixture0001 | 150 / 14 → 150 / 15 | 145 / 15 → 145 / 16 |
+| fixture0002 | 104 / 53 → 105 / 55 | 211 / 9 → 211 / 10 |
 
-Gained: 4tTmY8Buask 7:48 `A Partens` and 11:39 `partner e` → BR Partners (90), the two rows D-049 added. wxgFO_fyfXg 36:41 `Warn Buffet` → Warren Buffett (100) with the frozen pack, the hit D-024 lost. Added false positives: `para três` (R2Qgz8tFWVI) and `por três` (wxgFO_fyfXg) → BR Partners with 0.3.2 (`prtrs` against `prtnrs`, 90). With the frozen packs, `como gestão` (R2Qgz8tFWVI) and `mesmo jeito` ×2 (wxgFO_fyfXg) → CEMIG (88). Both go through the alias `Cemig GT`, whose skeleton is four letters (`smjt`). The frozen bounds move with the measurement: R2Qgz8tFWVI false positives <= 15, wxgFO_fyfXg hits >= 105 and false positives <= 55. Three tests account for the new medium-band proposals. The confirmation-loop tests turn the source off, as they hold D-047's threshold, to keep their scripted group.
+Gained: fixture0003 7:48 `A Partens` and 11:39 `partner e` → BR Partners (90), the two rows D-049 added. fixture0002 36:41 `Warn Buffet` → Warren Buffett (100) with the frozen pack, the hit D-024 lost. Added false positives: `para três` (fixture0001) and `por três` (fixture0002) → BR Partners with 0.3.2 (`prtrs` against `prtnrs`, 90). With the frozen packs, `como gestão` (fixture0001) and `mesmo jeito` ×2 (fixture0002) → CEMIG (88). Both go through the alias `Cemig GT`, whose skeleton is four letters (`smjt`). The frozen bounds move with the measurement: fixture0001 false positives <= 15, fixture0002 hits >= 105 and false positives <= 55. Three tests account for the new medium-band proposals. The confirmation-loop tests turn the source off, as they hold D-047's threshold, to keep their scripted group.
 
-Amended: the minimum skeleton length is 5, not 4. A name, alias or window whose skeleton has fewer than 5 letters is skipped. Measured: the three CEMIG false positives with the frozen packs (`como gestão` in R2Qgz8tFWVI, `mesmo jeito` ×2 in wxgFO_fyfXg) all went through the alias `Cemig GT`, whose skeleton `smjt` has four letters. At 5 they disappear and no gain is lost. `Warn Buffet` stays (frozen wxgFO_fyfXg). `Partens` and `partner` stay with 0.3.2, at 108 / 4, the pack where the phonetic source produced them; since 0.3.3 they are variants. Hits / false positives at 4 → 5: frozen R2Qgz8tFWVI 150 / 15 → 150 / 14 and wxgFO_fyfXg 105 / 55 → 105 / 53. Nothing else moves, frozen or with the bundled 0.3.3 (4tTmY8Buask 108 / 4, 4wCtn8BWR4o 44 / 2, R2Qgz8tFWVI 145 / 16, wxgFO_fyfXg 211 / 10). The bounds go back to false positives <= 14 and <= 53. With 0.3.3 the source's two remaining false positives are `para três` and `por três` → BR Partners (`prtrs`, five letters).
+Amended: the minimum skeleton length is 5, not 4. A name, alias or window whose skeleton has fewer than 5 letters is skipped. Measured: the three CEMIG false positives with the frozen packs (`como gestão` in fixture0001, `mesmo jeito` ×2 in fixture0002) all went through the alias `Cemig GT`, whose skeleton `smjt` has four letters. At 5 they disappear and no gain is lost. `Warn Buffet` stays (frozen fixture0002). `Partens` and `partner` stay with 0.3.2, at 108 / 4, the pack where the phonetic source produced them; since 0.3.3 they are variants. Hits / false positives at 4 → 5: frozen fixture0001 150 / 15 → 150 / 14 and fixture0002 105 / 55 → 105 / 53. Nothing else moves, frozen or with the bundled 0.3.3 (fixture0003 108 / 4, fixture0004 44 / 2, fixture0001 145 / 16, fixture0002 211 / 10). The bounds go back to false positives <= 14 and <= 53. With 0.3.3 the source's two remaining false positives are `para três` and `por três` → BR Partners (`prtrs`, five letters).
 
 ## D-051 Interactive mode
 
@@ -449,13 +449,13 @@ Measured, distinct high-band terms per caption (`scripts/measure.py runs/BIrASod
 
 | caption | frozen pack | bundled 0.3.4 | fits |
 |---|---|---|---|
-| 4tTmY8Buask | 6 | 23 | yes |
-| 4wCtn8BWR4o | 11 | 15 | yes |
-| R2Qgz8tFWVI | 29 | 35 | yes |
-| wxgFO_fyfXg | 18 | 44 | yes |
+| fixture0003 | 6 | 23 | yes |
+| fixture0004 | 11 | 15 | yes |
+| fixture0001 | 29 | 35 | yes |
+| fixture0002 | 18 | 44 | yes |
 | BIrASod49XY (prank, D-035) | - | 1 | no |
 
-The prank's one term is the `tir` recognition of D-035. The closest fixture is 4tTmY8Buask against its frozen 0.2.4 at 6; with the pack users run, the lowest is 15. Counting corrections only would also separate them (bundled: 15, 4, 26, 28 against 0), but 4wCtn8BWR4o, a video in the domain whose terms are mostly spelled right, would sit at 4, one away from the threshold. The threshold of 3 is not calibrated beyond these five captions; a short clip in the domain can fall under it, which is what `--force` is for.
+The prank's one term is the `tir` recognition of D-035. The closest fixture is fixture0003 against its frozen 0.2.4 at 6; with the pack users run, the lowest is 15. Counting corrections only would also separate them (bundled: 15, 4, 26, 28 against 0), but fixture0004, a video in the domain whose terms are mostly spelled right, would sit at 4, one away from the threshold. The threshold of 3 is not calibrated beyond these five captions; a short clip in the domain can fall under it, which is what `--force` is for.
 
 ## D-055 Packs live in their own repository
 
@@ -486,7 +486,7 @@ The bug: fetch ran `sys.executable -m yt_dlp`. In a PyInstaller build `sys.execu
 
 A silent logger keeps yt-dlp from printing its own copy of an error. The error comes back as an exception, whose message is shown as it is, and whose `HTTP Error 429` triggers the retries of D-036. In the lite build, step 2 raises the lite notice before anything else, and only when the chain reaches step 2. The menu no longer runs `--caption-only` there and guesses from the exit code: it runs the plain chain, so step 1's own error comes first. The test fake is shaped like the API (`open(params)` returning an object with `extract_info` and `download`), and a test fails if fetch starts a subprocess.
 
-`fetch --check` prints yt-dlp, curl_cffi and faster-whisper, each with its version or "not installed", and exits 0. The versions are read from the modules, since a frozen build may lack the package metadata. The release workflow's smoke test runs it: yt-dlp must be there in both flavors, faster-whisper only in `full`. Then it runs `fetch --list https://youtu.be/4wCtn8BWR4o`. A track list or an HTTP 429 passes, and so does YouTube's bot check: datacenter runners get it, and it still comes from yt-dlp. A traceback or an argparse error fails. Checked locally against a lite executable built from this code: `fetch --check`, `fetch --list` and a full caption download (`pt-orig`, 511 lines) all work, where the 0.4.2 build failed with `invalid choice: 'yt_dlp'`.
+`fetch --check` prints yt-dlp, curl_cffi and faster-whisper, each with its version or "not installed", and exits 0. The versions are read from the modules, since a frozen build may lack the package metadata. The release workflow's smoke test runs it: yt-dlp must be there in both flavors, faster-whisper only in `full`. Then it runs `fetch --list https://youtu.be/fixture0004`. A track list or an HTTP 429 passes, and so does YouTube's bot check: datacenter runners get it, and it still comes from yt-dlp. A traceback or an argparse error fails. Checked locally against a lite executable built from this code: `fetch --check`, `fetch --list` and a full caption download (`pt-orig`, 511 lines) all work, where the 0.4.2 build failed with `invalid choice: 'yt_dlp'`.
 
 ## D-058 Executables are built from the lock
 
@@ -512,13 +512,13 @@ In the same release, the executable's entry point reconfigures stdout and stderr
 
 ## D-060 Phonetic proposals ask, never apply
 
-Phonetic matches are proposals only: they go to the confirm queue and are never substituted until the user confirms the form (which makes it an exact variant). Amends D-050. Measured: three independent runs produced phonetic false positives (`para três` → BR Partners in R2Qgz8tFWVI and `por três` → BR Partners in wxgFO_fyfXg, both with the bundled pack; `proteínas` → BR Partners ×40 in a forced out-of-domain run, D-035), while every phonetic hit in the fixtures is now covered by a curated variant.
+Phonetic matches are proposals only: they go to the confirm queue and are never substituted until the user confirms the form (which makes it an exact variant). Amends D-050. Measured: three independent runs produced phonetic false positives (`para três` → BR Partners in fixture0001 and `por três` → BR Partners in fixture0002, both with the bundled pack; `proteínas` → BR Partners ×40 in a forced out-of-domain run, D-035), while every phonetic hit in the fixtures is now covered by a curated variant.
 
 The phonetic source's annotations now carry a band of their own, `ask` (`BAND_ASK`). It is not one of the applied bands, so nothing is substituted in normalized.txt and nothing counts as a hit or a false positive. It is one of the question bands (`QUESTION_BANDS`, with medium), so the report lists it under "to confirm", needs-review/pending.txt lists it, and `--confirm`, `--review` and the menu ask about it. A confirmed form is a learned variant, and from then on it is matched exactly, in the high band (D-013). A rejected form is never proposed again. Pack fit (D-054) counted only the high band already, so it does not move.
 
-Measured, hits / false positives before → after, against the bundled pack 0.3.4: R2Qgz8tFWVI 142 / 16 → 142 / 15 (`para três` is gone), wxgFO_fyfXg 211 / 10 → 211 / 9 (`por três` is gone), 4tTmY8Buask 108 / 4 and 4wCtn8BWR4o 44 / 2 unchanged. Against the frozen packs, one hit is lost: wxgFO_fyfXg 36:41 `Warn Buffet` → Warren Buffett, which the frozen 0.1.0 pack does not list and only the phonetic source reached (105 → 104). The bundled pack lists `Warn Buffet` as a variant, so it is still a hit there, and that bound moves to hits >= 104. No other fixture, frozen or bundled, loses a hit. "Every phonetic hit is covered by a curated variant" holds for the bundled pack; for the frozen ones it is that single row.
+Measured, hits / false positives before → after, against the bundled pack 0.3.4: fixture0001 142 / 16 → 142 / 15 (`para três` is gone), fixture0002 211 / 10 → 211 / 9 (`por três` is gone), fixture0003 108 / 4 and fixture0004 44 / 2 unchanged. Against the frozen packs, one hit is lost: fixture0002 36:41 `Warn Buffet` → Warren Buffett, which the frozen 0.1.0 pack does not list and only the phonetic source reached (105 → 104). The bundled pack lists `Warn Buffet` as a variant, so it is still a hit there, and that bound moves to hits >= 104. No other fixture, frozen or bundled, loses a hit. "Every phonetic hit is covered by a curated variant" holds for the bundled pack; for the frozen ones it is that single row.
 
-Pack 0.3.5 in the same release replaces the variant `trio` of tri with `primeiro trio`, `segundo trio`, `terceiro trio` and `quarto trio`. The garble of the unit of time matches only in its phrase, because alone `trio` is an ordinary word (D-032). R2Qgz8tFWVI 8:24 `segundo trio` → tri is still a hit, and no fixture moves.
+Pack 0.3.5 in the same release replaces the variant `trio` of tri with `primeiro trio`, `segundo trio`, `terceiro trio` and `quarto trio`. The garble of the unit of time matches only in its phrase, because alone `trio` is an ordinary word (D-032). fixture0001 8:24 `segundo trio` → tri is still a hit, and no fixture moves.
 
 ## D-061 Menu structure: settings, Back, stages
 
@@ -742,7 +742,7 @@ Help has a section "YOUTUBE SAYS I'M A BOT", and both guides one under section 3
 
 ## D-072 The review is one stop per form, in the order of the video, and Enter decides nothing
 
-**What happened.** A user reviewed 4tTmY8Buask in the menu. The review was one screen per term, a multi-select (D-053): the forms selected were confirmed and the ones left unselected were **rejected**. He pressed Enter with nothing selected to move on, believing he was skipping, and rejected every form of two terms, which the tool then never proposed again. Nothing on the screen said Enter rejects; the hint said "the others are rejected", under a list he did not mean to answer.
+**What happened.** A user reviewed fixture0003 in the menu. The review was one screen per term, a multi-select (D-053): the forms selected were confirmed and the ones left unselected were **rejected**. He pressed Enter with nothing selected to move on, believing he was skipping, and rejected every form of two terms, which the tool then never proposed again. Nothing on the screen said Enter rejects; the hint said "the others are rejected", under a list he did not mean to answer.
 
 **The review now** (the menu and `normalize --review`) stops once at each pending form: one stop per (term, form) in the ask bands, ordered by the form's first occurrence. A form taken as a term (yes, only here, or said that way) is not asked again for another term, and its later occurrences take the same answer, since an answer is per form. A form answered "No" for one term can still be asked about another.
 
@@ -762,7 +762,7 @@ Some forms are right for one video only: a guest's name the recognizer garbled i
 
 ## D-074 Dubbed caption tracks: the video's own language is the original
 
-YouTube now dubs some videos automatically, and each dubbed audio brings its own automatic caption with the `-orig` suffix: 4tTmY8Buask, in Portuguese, listed `en-US-orig`, `es-US-orig` and `pt-orig`. D-045 took any `-orig` track as the original audio's, so the menu listed three "original audio" tracks, sorted by code, and English came first.
+YouTube now dubs some videos automatically, and each dubbed audio brings its own automatic caption with the `-orig` suffix: fixture0003, in Portuguese, listed `en-US-orig`, `es-US-orig` and `pt-orig`. D-045 took any `-orig` track as the original audio's, so the menu listed three "original audio" tracks, sorted by code, and English came first.
 
 The original is now the `-orig` track in the video's language as yt-dlp's `language` field reports it (exact code first, then by base language). The other `-orig` tracks are dubbed (source `automatica dublada`, in the header and meta.yaml) and named "<language>, dubbed audio (automatic)". The track list goes by language: the original language first (its original-audio track, then the channel's own), then English, then the rest, each in D-045's order within. `choose_language` (`--lang`) ranks a dub after a manual track of that language and before an automatic translation. `fetch --list` prints the dubs on a line of their own, `dubbed:`. When yt-dlp names no language, or one with no `-orig` track, every `-orig` track is original, as before.
 
@@ -822,13 +822,13 @@ From Marco's test. `fetch` without `--lang` asked for `pt` whatever the video sp
 
 ## D-081 In the original language, the channel's caption before the automatic one (provisional, amends D-045)
 
-From Marco's test of 3S4vuHxGh7c (English): it has a manual `en` written by the channel beside `en-orig`, and the tool took `en-orig`. D-045 put the original automatic caption first because its measured alternative was a machine translation (4tTmY8Buask's `pt`), never a manual track; no fixture or run had shown a manual track in the original language until this one.
+From Marco's test of 3S4vuHxGh7c (English): it has a manual `en` written by the channel beside `en-orig`, and the tool took `en-orig`. D-045 put the original automatic caption first because its measured alternative was a machine translation (fixture0003's `pt`), never a manual track; no fixture or run had shown a manual track in the original language until this one.
 
 The order is now: a manual track in the original language, then the original audio's automatic one (`-orig`), then manual tracks of other languages, then automatic ones (dubs, D-074, and translations). `choose_language` (`--lang`, and fetch without it, D-080) tries the manual `<lang>` first; the menu's list puts, within each language group of D-074, manual before automatic, and its default is the first track in the original language, so the channel's own when there is one. The manual one is named "(written by the channel)", as since D-062. `--track` still takes exactly the track named.
 
 Provisional: it rests on one observed video, 3S4vuHxGh7c. A channel's manual track can be worse than YouTube's recognition (a summary, or out of sync); if one turns up, this is revisited.
 
-Nothing changes on the four fixtures: `fetch --list` on 2026-10-12 shows no manual track at all on any of them (4tTmY8Buask and 4wCtn8BWR4o: `pt-orig` and two dubs; R2Qgz8tFWVI and wxgFO_fyfXg: `pt-orig`), so the choice for each is the same track as before, and `scripts/measure.py` does not move.
+Nothing changes on the four fixtures: `fetch --list` on 2026-10-12 shows no manual track at all on any of them (fixture0003 and fixture0004: `pt-orig` and two dubs; fixture0001 and fixture0002: `pt-orig`), so the choice for each is the same track as before, and `scripts/measure.py` does not move.
 
 ## D-082 "Applied, please confirm", not "to confirm"
 
@@ -842,16 +842,16 @@ When a fuzzy candidate's window holds a token that is one of the language module
 
 Gate: annotations.json for the eight fixture × pack runs (frozen and bundled 0.3.7, no learned layer), before and after. None is byte-identical; every difference, with its gold verdict:
 
-- No gold hit is lost. 4wCtn8BWR4o, bundled, 5:03: `a DAPTA Valdre` (fuzzy 81) gave way to `DAPTA Valdre` (fuzzy 80), which is exactly the gold row's `wrong`; still a hit for the same row, and the speaker's `a` now stays ("a Adapta Valuer").
-- Seven false positives fewer (applied, medium band): R2Qgz8tFWVI, frozen and bundled, 19:36 `preço dela` → preço teto (85) and 29:16 `e caiu` → CEMIG (92); wxgFO_fyfXg, frozen, 15:54 `divide` → dividendo (85), which also leaves the manter row `15:54 divide a` untouched without D-027's rejection; wxgFO_fyfXg, frozen and bundled, 33:27 `preço até` → preço teto (84).
-- Low marks (never applied, never scored) go, all of them windows with an ordinary word (`meu amigo` → CEMIG, `de venda` → dividendo, `projeção de` → preço teto, `de Minas` → M&A …), and six low marks take a shorter or neighbouring span instead: `dentre` → debêntures (4tTmY8Buask 3:59; 4wCtn8BWR4o 5:29 and 5:40), `preço-alvo` → preço teto (4wCtn8BWR4o 15:02), `dívida` → dividendo (R2Qgz8tFWVI 5:38), `preciso` → preço teto (wxgFO_fyfXg 20:57).
+- No gold hit is lost. fixture0004, bundled, 5:03: `a DAPTA Valdre` (fuzzy 81) gave way to `DAPTA Valdre` (fuzzy 80), which is exactly the gold row's `wrong`; still a hit for the same row, and the speaker's `a` now stays ("a Adapta Valuer").
+- Seven false positives fewer (applied, medium band): fixture0001, frozen and bundled, 19:36 `preço dela` → preço teto (85) and 29:16 `e caiu` → CEMIG (92); fixture0002, frozen, 15:54 `divide` → dividendo (85), which also leaves the manter row `15:54 divide a` untouched without D-027's rejection; fixture0002, frozen and bundled, 33:27 `preço até` → preço teto (84).
+- Low marks (never applied, never scored) go, all of them windows with an ordinary word (`meu amigo` → CEMIG, `de venda` → dividendo, `projeção de` → preço teto, `de Minas` → M&A …), and six low marks take a shorter or neighbouring span instead: `dentre` → debêntures (fixture0003 3:59; fixture0004 5:29 and 5:40), `preço-alvo` → preço teto (fixture0004 15:02), `dívida` → dividendo (fixture0001 5:38), `preciso` → preço teto (fixture0002 20:57).
 
 | fixture | false positives, frozen | false positives, bundled 0.3.7 | low marks at 70 | at 60 |
 |---|---|---|---|---|
-| 4tTmY8Buask | 6 → 6 | 4 → 4 | 106 → 84 | 456 → 291 |
-| 4wCtn8BWR4o | 4 → 4 | 2 → 2 | 74 → 49 | 302 → 180 |
-| R2Qgz8tFWVI | 14 → 12 | 15 → 13 | 110 → 80 | 466 → 245 |
-| wxgFO_fyfXg | 53 → 51 | 9 → 8 | 89 → 52 | 554 → 250 |
+| fixture0003 | 6 → 6 | 4 → 4 | 106 → 84 | 456 → 291 |
+| fixture0004 | 4 → 4 | 2 → 2 | 74 → 49 | 302 → 180 |
+| fixture0001 | 14 → 12 | 15 → 13 | 110 → 80 | 466 → 245 |
+| fixture0002 | 53 → 51 | 9 → 8 | 89 → 52 | 554 → 250 |
 
 Hits, misses, aliases recognized and aliases wrongly substituted do not move anywhere, nor does pack fit. The regression test's bounds hold unchanged.
 
@@ -859,7 +859,7 @@ Hits, misses, aliases recognized and aliases wrongly substituted do not move any
 
 From Marco's test: a speaker says tickers as words ("BOVA onze"), and the recognizer writes them so; the pack has `BOVA11`. Both language modules now fold the words for 2 to 20 to digits inside `normalize` (pt-BR: `dois`/`duas` … `vinte`, with `catorze`/`quatorze` and the pt-PT `dezasseis`, `dezassete`, `dezanove`; English: `two` … `twenty`). 1 is left out: `um`, `uma` and `one` are articles and pronouns far more often than numbers. A number word one space after a word ending in a letter joins it, as a ticker is written (`bova onze` → `bova11`), unless that word is itself a number word or one of the module's `common_words` (`de onze` → `de 11`). The spacing is otherwise kept, so no fuzzy score of a window without number words changes. It is folding: what normalized.txt shows is never rewritten from it, and an exact match of the term's own name stays a recognition (D-041), so "BOVA onze" is found as BOVA11 and left as said. The generic module does not fold.
 
-Measured, eight fixture × pack runs: hits, misses, false positives, aliases, pack fit and the low marks at 70 do not move. annotations.json is byte-identical for six runs; for R2Qgz8tFWVI and wxgFO_fyfXg with the bundled 0.3.7, one ask-band proposal each is gone, `para três` and `por três` → BR Partners (phonetic, 90, never applied, not scored): `três` is now `3`, and its skeleton no longer sounds like the name. The diagnostic count of low marks at 60 moves by one or two (4tTmY8Buask 291 → 289, R2Qgz8tFWVI 245 → 244, wxgFO_fyfXg 250 → 251).
+Measured, eight fixture × pack runs: hits, misses, false positives, aliases, pack fit and the low marks at 70 do not move. annotations.json is byte-identical for six runs; for fixture0001 and fixture0002 with the bundled 0.3.7, one ask-band proposal each is gone, `para três` and `por três` → BR Partners (phonetic, 90, never applied, not scored): `três` is now `3`, and its skeleton no longer sounds like the name. The diagnostic count of low marks at 60 moves by one or two (fixture0003 291 → 289, fixture0001 245 → 244, fixture0002 250 → 251).
 
 ## D-085 Applied and suggested are counted apart (amends D-082)
 
@@ -885,9 +885,9 @@ Gate: with no `context` in any pack, annotations.json for the eight fixture × p
 
 **Why the whole run, by simulation.** The design was validated by simulation before it was written. A window of words around each occurrence fails, because the context word is said once and the garble thirty times: window-based context had 1 of 30 in recall. Context counted over the whole run had 27 of 30. Detecting context by free string or fuzzy similarity creates context that is not there (`a gente` ≈ `agente`), and weak context words destroy unrelated videos: 20 false positives. The rule above, whole-run positive context from pack terms plus a local negative check, made 0 false positives on the pure and the mixed runs, with the ambiguous occurrences asked.
 
-**First real case: `Ox` → OPEX, financas-ptbr 0.3.8.** D-035 took `Ox` out of OPEX (0.3.4): the Northeastern `oxe` in a street-prank video (BIrASod49XY) became OPEX twice, at the cost of three gold hits in R2Qgz8tFWVI, where the speaker spells the term out ("Ox. O PX. O editor vai escrever aí"). 0.3.8 puts it back with `context: {Ox: [CAPEX]}` and `unless_near: {Ox: []}`. Measured, no learned layer:
+**First real case: `Ox` → OPEX, financas-ptbr 0.3.8.** D-035 took `Ox` out of OPEX (0.3.4): the Northeastern `oxe` in a street-prank video (BIrASod49XY) became OPEX twice, at the cost of three gold hits in fixture0001, where the speaker spells the term out ("Ox. O PX. O editor vai escrever aí"). 0.3.8 puts it back with `context: {Ox: [CAPEX]}` and `unless_near: {Ox: []}`. Measured, no learned layer:
 
-- R2Qgz8tFWVI against the bundled pack: 142 → 145 hits, 25 → 22 misses, false positives 13 → 13. The three gold rows come back (10:59, 11:03, 11:20), and a fourth `Ox` on the 11:03 line ("Ox é") is applied too, scored as the same row. CAPEX is found there 18 times. No other annotation of any fixture changes beyond the pack version; the frozen numbers do not move.
+- fixture0001 against the bundled pack: 142 → 145 hits, 25 → 22 misses, false positives 13 → 13. The three gold rows come back (10:59, 11:03, 11:20), and a fourth `Ox` on the 11:03 line ("Ox é") is applied too, scored as the same row. CAPEX is found there 18 times. No other annotation of any fixture changes beyond the pack version; the frozen numbers do not move.
 - The silence runs, forced: BIrASod49XY (pt-orig, 481 lines, fetched again 2026-10-17), whose two `Ox` lines (2:08, 2:12) were D-035's false positives: CAPEX never appears, so `Ox` is neither applied nor proposed. yJxxTf0IQC8 (its new manual pt track, and its pt-orig): no `Ox`, no OPEX, nothing applied.
 - A synthetic mixed caption (tests/data/context-mixed.txt with tests/data/context-ia.yaml): Claude in the first half, cloud infrastructure in the second, and one sentence with both. `cloud` → Claude is applied three times, asked in the sentence with AWS and twice near AWS and Kubernetes; the infrastructure half alone proposes nothing.
 
@@ -952,7 +952,7 @@ Some terms are short codes or names that every similarity source reaches by acci
 
 **Older engines.** An engine without this decision ignores both keys and matches the term fuzzily, by inflection and by sound, which is what the pack meant to stop. A pack that uses `match:` therefore declares `min_engine:` (D-087) equal to the first released engine that has this decision, in the file and in its index entry, and bumps its minor version (CONTRIBUTING 2.7: a new key). As D-087 decided, the loader does not check this for the pack author: the engine that would run such a check already knows the key.
 
-Gate: with no `match:` in any pack, annotations.json is byte-identical before and after for thirteen runs: the four fixtures against their frozen pack and against the bundled 0.3.8, wxgFO_fyfXg with tests/data/wxgFO_fyfXg.learned.yaml, R2Qgz8tFWVI and 4wCtn8BWR4o with a learned layer of confirmed variants, an alias and a context-conditioned variant, tests/data/context-mixed.txt with context-ia.yaml, and tests/data/xx with the generic module. Tested in tests/test_match_exact.py and tests/test_context.py.
+Gate: with no `match:` in any pack, annotations.json is byte-identical before and after for thirteen runs: the four fixtures against their frozen pack and against the bundled 0.3.8, fixture0002 with tests/data/fixture0002.learned.yaml, fixture0001 and fixture0004 with a learned layer of confirmed variants, an alias and a context-conditioned variant, tests/data/context-mixed.txt with context-ia.yaml, and tests/data/xx with the generic module. Tested in tests/test_match_exact.py and tests/test_context.py.
 
 ## D-091 A legenda.txt is never replaced unasked
 
@@ -995,6 +995,18 @@ A line of a platform caption, or of a converted `.srt` or `.vtt`, is stamped wit
 The three headers now say it. A caption and a converted file: `# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o` / `# instante em que a legenda sai da tela. A fala comeca antes dele.` A transcription: `# Cada linha comeca com o timestamp mm:ss do INICIO do trecho: o` / `# instante em que a fala comeca.` The rest of the paragraph is unchanged. The converter and the transcriber are not changed: the same moments as before, now named.
 
 A `legenda.txt` written before this decision keeps its header; its kind (the first line) still says which convention it has. The fixtures keep theirs, since they were fetched before it: test_header_writer_reproduces_the_fixture_header now checks that the writer gives the fixture's header with this one paragraph replaced, and tests/data/rolling.legenda.txt, the converter's expected output, has the new paragraph.
+
+## D-094 The fixtures name no channel, video or link
+
+The four fixtures were folders named after the videos' ids, and each caption's header (and meta.yaml) kept the video's title, channel, publication date and link, as fetch wrote them. The repository is public; the owner asked that it carry the terms only, with no tie to the channels the captions came from.
+
+**Renamed.** The folders and every reference to them (tests, scripts, experiments, guides, CONTRIBUTING, this file, the CHANGELOG, the frozen packs' comments) use `fixture0001` to `fixture0004`. Which video each was is not written anywhere in the repository. Eleven characters, so the run id is still read from the header (D-018).
+
+**The headers.** `# Titulo:` is the fixture's name, `# Canal:` and `# Publicado:` say `omitido`, and `# URL:` is `https://example.invalid/watch?v=<fixture name>`: a reserved domain that never resolves, with the fixture's name where the video id was, so a caption still normalizes into `runs/<fixture name>/` and the tests of D-018 keep their input. meta.yaml in fixture0003 and fixture0004 the same. Nothing below the header changes: the caption's lines, gold.csv and the frozen packs' terms are byte for byte what they were, and `scripts/measure.py` prints the same numbers, only in the new names' order.
+
+**Tests.** The header writer's test describes the fixture's video with these values, and the catalog's test, which read a publication date from the fixture's header, now writes one into its copy, since the fixture has none.
+
+**Not done here.** The included financas-ptbr.yaml names the old ids in its comments; it is a copy of the packs repository's file at a released version, so its next version there renames them, and this copy follows when it is included. The release workflow's check that fetch reaches YouTube (`fetch --list`) still uses one of the videos, since it needs a real public video with an original-language track; which one replaces it is the owner's choice. The text the speakers said is still in the captions, and the git history still has the old names and headers: changing history was not asked for.
 
 ## Open, not yet decided
 

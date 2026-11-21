@@ -18,7 +18,7 @@ def as_bilhao(pack, caption):
 
 
 def test_milhoes_is_never_applied_or_rendered_as_bilhao(v2):
-    """wxgFO_fyfXg: the alias `bilhões` reached `milhões` at 85.7, medium band."""
+    """fixture0002: the alias `bilhões` reached `milhões` at 85.7, medium band."""
     found = as_bilhao(v2, MILHOES)
     assert not [a for a in found if a.applied]
 
@@ -33,7 +33,7 @@ def test_milhoes_is_never_annotated_as_bilhao(v2):
 
 
 def test_milhao_is_never_annotated_as_bilhao(v2):
-    """D-028: the canonical `bilhão` matched `milhão` at 83, applied, 3x on wxgFO_fyfXg."""
+    """D-028: the canonical `bilhão` matched `milhão` at 83, applied, 3x on fixture0002."""
     assert as_bilhao(v2, "0:01 foi 1 milhão só") == []
 
 

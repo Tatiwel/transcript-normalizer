@@ -14,8 +14,8 @@ def applied(pack, line):
 
 
 def test_deck_is_a_variant_of_dec_not_dec_spelled_out():
-    # financas-ptbr 0.3.9 dropped `deck` (D-032); the frozen 4tTmY8Buask pack still has it.
-    frozen = load_pack(Path(__file__).resolve().parents[1] / "fixtures" / "4tTmY8Buask" / "pack.yaml", learned=Learned())
+    # financas-ptbr 0.3.9 dropped `deck` (D-032); the frozen fixture0003 pack still has it.
+    frozen = load_pack(Path(__file__).resolve().parents[1] / "fixtures" / "fixture0003" / "pack.yaml", learned=Learned())
     assert ("deck", "DEC", "term:variant") in applied(frozen, "o índice deck subiu")
 
 
@@ -58,7 +58,7 @@ def test_the_guard_holds_when_the_name_is_itself_rejected():
     """Why D-049 is not left to overlap resolution: a rejection by containment
     (D-027) of `tetos -> preço teto` removes the annotation of the alias `preços
     tetos`, and without the guard `preços` comes back as a mark on preço teto
-    (fuzzy, 76) in annotations.json. Measured on wxgFO_fyfXg with the bundled
+    (fuzzy, 76) in annotations.json. Measured on fixture0002 with the bundled
     pack: three such marks."""
     pack = load_pack(PACK_V2, learned=Learned().reject("tetos", "preço teto"))
     found = resolve_overlaps(find_annotations(parse_caption(f"0:01 {TETOS}"), pack))

@@ -52,13 +52,13 @@ def test_an_alias_row_expects_an_alias_and_no_substitution(scored):
 
 
 def test_a_case_only_alias_row_is_still_an_alias(scored):
-    """wxgFO_fyfXg writes `CPFe -> CPFE`: different strings, same name."""
+    """fixture0002 writes `CPFe -> CPFE`: different strings, same name."""
     result = scored([row("0:01", "CPFE", "CPFe", "CPFL", "alias")])
     assert len(result.aliases_recognized) == 1
 
 
 def test_a_case_or_accent_only_correction_is_out_of_scope(scored):
-    """D-008, as for wxgFO_fyfXg 15:57 `Etaú -> ETAU`."""
+    """D-008, as for fixture0002 15:57 `Etaú -> ETAU`."""
     result = scored([row("0:01", "Semig", "SEMIG", "CEMIG", "conferido")])
     assert result.in_scope == []
 

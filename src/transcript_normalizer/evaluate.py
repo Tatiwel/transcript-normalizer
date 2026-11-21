@@ -157,7 +157,7 @@ def evaluate(
 
     # First match on the line, as exp2 did, so one annotation can answer for two
     # identical rows. No fixture has such a pair since commit 7 removed the
-    # duplicated `10:59 Ox` row from R2Qgz8tFWVI.
+    # duplicated `10:59 Ox` row from fixture0001.
     def find(row: dict, pool: list[Annotation], any_term: bool = False) -> Annotation | None:
         allowed = {id(a) for a in pool}
         for a in on_line.get(row["timestamp"], ()):

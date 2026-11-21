@@ -14,7 +14,7 @@ from transcript_normalizer import (
 from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.runs import BUNDLED_PACKS, DATA_DIR_ENV, run_dir
 
-FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "R2Qgz8tFWVI"
+FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "fixture0001"
 CAPTION = FIXTURE / "legenda.txt"
 PACK = FIXTURE / "pack.yaml"
 GOLD = FIXTURE / "gold.csv"
@@ -72,7 +72,7 @@ def annotate(pack, line):
 
 
 #: The video the fixture caption came from; its header declares the url.
-FIXTURE_VIDEO_ID = "R2Qgz8tFWVI"
+FIXTURE_VIDEO_ID = "fixture0001"
 
 
 def output_dir(caption, out=None):

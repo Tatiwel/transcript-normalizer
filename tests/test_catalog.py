@@ -81,15 +81,17 @@ def test_list_prints_id_date_and_title(tmp_path, monkeypatch, fake_ytdlp, capsys
 
 def test_a_run_without_meta_is_described_from_its_caption_header(tmp_path):
     """Runs from before D-022, or from a local caption, still list properly."""
-    run = tmp_path / "R2Qgz8tFWVI"
+    run = tmp_path / "fixture0001"
     run.mkdir()
-    shutil.copy(CAPTION, run / CAPTION_FILE)
+    # The fixture's publication date is left out; a header that has one is read.
+    text = CAPTION.read_text(encoding="utf-8").replace("# Publicado: omitido", "# Publicado: 20260821")
+    (run / CAPTION_FILE).write_text(text, encoding="utf-8")
 
     found = read_run(run)
     assert (found.id, found.date, found.title, found.source) == (
-        "R2Qgz8tFWVI",
+        "fixture0001",
         "2026-08-21",
-        "CEMIG despencando, armadilha ou oportunidade?",
+        "fixture0001",
         "header",
     )
 

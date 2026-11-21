@@ -12,7 +12,7 @@ from transcript_normalizer.runs import CAPTION_FILE, META_FILE
 from . import fetch_fakes
 from .fetch_fakes import URL, VIDEO_ID, FakeYtDlp
 
-# What 4tTmY8Buask offered, cut down: the spoken language as `pt-orig`, and
+# What fixture0003 offered, cut down: the spoken language as `pt-orig`, and
 # `pt` among dozens of machine translations.
 TRANSLATED = ("de", "en", "es", "fr", "pt", "pt-orig", "zh-Hans")
 

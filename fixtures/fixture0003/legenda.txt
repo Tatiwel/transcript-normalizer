@@ -4,10 +4,10 @@
 # Legenda obtida da plataforma, sem transcricao por IA.
 # Origem da legenda: automatica original (pt-orig)
 # Etapa: 1, legenda da plataforma
-# Titulo: BRBI11 DEIXOU DE VALER A PENA? (não está tão barata como parece!?)
-# Canal: Adan Paulo - Adapta Partners
-# Publicado: 20260927
-# URL: https://youtu.be/4tTmY8Buask
+# Titulo: fixture0003
+# Canal: omitido
+# Publicado: omitido
+# URL: https://example.invalid/watch?v=fixture0003
 # Baixado em: 2026-09-30
 #
 # Cada linha comeca com o timestamp mm:ss. O timestamp e a

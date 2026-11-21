@@ -72,7 +72,7 @@ Keyboard: ↑↓ move · enter confirm · esc back · ? explain
 corrected 24  (semiga → CEMIG, Semig → CEMIG)
 recognized 65  (terms already spelled right, left as they are)
 applied, please confirm 6  (the tool was unsure; your answer is remembered)
-result: runs/4wCtn8BWR4o/normalized.txt
+result: runs/<video-id>/normalized.txt
 ```
 
 `transcript-normalizer help` (or `--help`, or menu item 8) prints the whole reference in sections: USAGE, COMMANDS, MENU, WHAT HAPPENS, THE REVIEW LOOP, EXAMPLES, LEARN MORE. `transcript-normalizer --version` prints only the installed version, the one the menu shows.
@@ -80,15 +80,15 @@ result: runs/4wCtn8BWR4o/normalized.txt
 **The three commands.**
 
 ```
-transcript-normalizer fetch https://youtu.be/4wCtn8BWR4o
-transcript-normalizer runs/4wCtn8BWR4o/legenda.txt
-transcript-normalizer runs/4wCtn8BWR4o/legenda.txt --review
+transcript-normalizer fetch https://youtu.be/<video-id>
+transcript-normalizer runs/<video-id>/legenda.txt
+transcript-normalizer runs/<video-id>/legenda.txt --review
 ```
 
 `fetch` takes the platform's caption (in the original language, the channel's own track, else the original audio's automatic one; never an automatic translation, D-045, D-081) and falls back to transcribing the audio locally if there is none (D-036). A local audio or video file works too: `transcript-normalizer fetch aula.mp4`. The downloaded `.vtt` or `.srt` is deleted once converted into `legenda.txt`; `--keep-raw` keeps it. The second command normalizes, and takes a `.srt` or `.vtt` as well, which it converts into `runs/<file-name>/legenda.txt` first; the third does the same and then asks you about what it was unsure of. `fetch --list <url>` checks a link without downloading anything: the site, title and duration, the caption tracks (or none), whether there is audio to transcribe, and whether the site asks for a login (D-078); and `fetch --track <code>` takes one exactly (`pt-orig`, `pt`, `en`) instead of the choice `--lang` makes (D-062). Without `--lang`, the caption is in the video's own language, as the site reports it; when the site does not say, the video's only original-audio track, else its only manual track, else Portuguese, with a line saying so (D-080). `transcript-normalizer list` shows what you have. Part of what the second one prints for the video above:
 
 ```
-runs/4wCtn8BWR4o/legenda.txt: 239 caption lines, pack 0.4.0
+runs/<video-id>/legenda.txt: 239 caption lines, pack 0.4.0
 terms:
   Semig, semiga, SEMIG, Semiga (21 occurrences) -> CEMIG
   evitida (1 occurrence) -> EBITDA
@@ -182,7 +182,7 @@ Menu item 3, or `--review`, stops once at each form the tool was unsure about, i
     0:04  hoje a Klabine caiu bastante
   » 0:07  e a «Klabim» subiu depois
     0:10  a Clabine pagou dividendos
-  watch: https://youtu.be/4tTmY8Buask?t=7
+  watch: https://youtu.be/<video-id>?t=7
 Is «Klabim» Klabin?
   Enter decides later; b ends the review here
    1. Yes: this is Klabin (fix it from now on)
@@ -336,7 +336,7 @@ Conflict 1: Echo: the class differs on both sides
   mine      Echo  (exame)
   theirs    Echo  (doenca)
   in your runs:
-    R2Qgz8tFWVI  3:10 o Echo saiu da lista
+    fixture0001  3:10 o Echo saiu da lista
 Which one?
    m. Keep mine
    t. Take theirs
@@ -350,14 +350,14 @@ Which one?
 ```
 The wrong form you saw
 > mississões
-  in 1 line(s) of R2Qgz8tFWVI:
+  in 1 line(s) of fixture0001:
     3:22 gestão, tanto as mississões e tal. Então
 Is 'mississões' the form you saw? [Y/n]
 What it should be
 > emissão
 + term     emissão (conceito)
   + variant  mississões -> emissão
-Normalize R2Qgz8tFWVI again with it? [Y/n]
+Normalize fixture0001 again with it? [Y/n]
 ```
 
 **Giving back.** What you teach the tool in a review stays in your learned layer. To offer it to everyone who uses the pack:
@@ -389,15 +389,15 @@ Four videos have a hand-checked answer key (a **gold** file) and are re-measured
 
 | video | rows to get right | right | missed | wrong changes |
 |---|---|---|---|---|
-| R2Qgz8tFWVI | 167 | 123 | 44 | 12 |
-| wxgFO_fyfXg | 222 | 168 | 54 | 3 |
-| 4wCtn8BWR4o | 45 | 44 | 1 | 2 |
-| 4tTmY8Buask | 119 | 105 | 14 | 4 |
+| fixture0001 | 167 | 123 | 44 | 12 |
+| fixture0002 | 222 | 168 | 54 | 3 |
+| fixture0004 | 45 | 44 | 1 | 2 |
+| fixture0003 | 119 | 105 | 14 | 4 |
 
-- **R2Qgz8tFWVI**: a finance channel on one utility (CEMIG), platform captions; the first fixture, where most variants come from.
-- **wxgFO_fyfXg**: the same channel comparing two utilities; many aliases (tickers, plurals) that must not be changed.
-- **4wCtn8BWR4o**: another speaker on the same company, transcribed locally with faster-whisper instead of platform captions.
-- **4tTmY8Buask**: that second speaker on a new sector (an investment bank), with a company name the pack did not know.
+- **fixture0001**: finance, platform captions; the first fixture, where most variants come from.
+- **fixture0002**: finance, platform captions; many aliases (tickers, plurals) that must not be changed.
+- **fixture0004**: finance, transcribed locally with faster-whisper instead of platform captions.
+- **fixture0003**: finance, platform captions, with a company name the pack did not know.
 
 The limits, honestly:
 
