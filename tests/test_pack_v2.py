@@ -10,6 +10,8 @@ from transcript_normalizer.core.pack import Learned
 from transcript_normalizer.core.render import render_lines
 from transcript_normalizer.core.standoff import KIND_ALIAS, RULE_UNIT
 
+from .conftest import TAKEN_OUT_IN_0_4_1
+
 ROOT = Path(__file__).resolve().parents[1]
 FROZEN = sorted((ROOT / "fixtures").glob("*/pack.yaml"))
 #: The third and fourth fixtures froze the curated pack as it was when each was added.
@@ -32,7 +34,7 @@ def applied(pack, line):
 
 
 def test_versions(v2):
-    assert v2.version == "0.4.0"
+    assert v2.version == "0.4.1"
     assert {p.parent.name for p in FROZEN} == set(FROZEN_VERSIONS)
     for path in FROZEN:
         assert load_pack(path, learned=Learned()).version == FROZEN_VERSIONS[path.parent.name], path
@@ -41,7 +43,7 @@ def test_versions(v2):
 def test_every_new_term_from_the_second_gold_is_in_the_pack(v2):
     with (ROOT / "fixtures" / "fixture0002" / "gold.csv").open(encoding="utf-8-sig") as fh:
         wanted = {r["term"] for r in csv.DictReader(fh) if r["status"] in ("conferido", "alias") and r["term"]}
-    assert wanted <= {t.term for t in v2.terms}
+    assert wanted - TAKEN_OUT_IN_0_4_1 <= {t.term for t in v2.terms}  # D-098
 
 
 def test_cpfe_is_the_ticker_not_a_misrecognition(v2):

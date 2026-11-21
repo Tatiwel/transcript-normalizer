@@ -117,3 +117,9 @@ def answers_for(term, answers):
     """`answers` for `term`'s variants, after skipping every variant asked before it."""
     before = [t for t, _ in medium_order()]
     return ["s"] * before.index(term) + list(answers)
+
+
+#: D-098: financas-ptbr 0.4.1 took these out: tied to channels, not to the
+#: market. The included pack keeps every other term the fixtures' packs and
+#: gold files have.
+TAKEN_OUT_IN_0_4_1 = frozenset({"Geração Dividendos", "Adeus INSS", "Leo", "Adapta Valuer"})

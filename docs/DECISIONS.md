@@ -1034,6 +1034,17 @@ Packs now has "Update packs", which runs `pack update`, whenever a pack is insta
 
 Tested in tests/test_pack_upkeep.py.
 
+## D-098 The included financas-ptbr is 0.4.1
+
+The copy of financas-ptbr inside the program (D-088) is the packs repository's 0.4.1, byte for byte (sha256 `0c5bcdb14977865daf0febe3f1fbced742372851df3dee5b49b345644a767de6`, as its index publishes). Two changes from 0.4.0, measured and decided there:
+
+- BR Partners has `match: exact` (D-090): only its name, aliases and listed variants count. On a 2h40 lesson transcribed locally, 0.4.0 applied `aportes` and `portas` as BR Partners 10 times and asked about 5 more; 0.4.1 does none of it. Its cost is fixture0003's two hits that came fuzzily from ordinary words (`portas`, `Portes`), with one false positive fewer. The owner accepted the drop.
+- Four curated terms tied to channels rather than to the market go: a channel's name, a presenter's, a product and a course. Their gold rows stay in the fixtures and are now misses: 4 in fixture0001, 2 in fixture0003, 4 in fixture0004.
+
+So the included pack is no longer a superset of every term in the fixtures' frozen packs and gold files (D-017's "nothing is dropped"): those four are the exception, named once in tests/conftest.py (`TAKEN_OUT_IN_0_4_1`), and the tests check the rest is still there and those four are not. The bundled-pack numbers in GUIDE section 8 follow `scripts/measure.py`: fixture0001 119 of 167, fixture0002 168 of 222, fixture0003 101 of 119, fixture0004 40 of 45. The frozen fixture packs, and so the regression bounds, do not change.
+
+An installed 0.4.0 that was not edited is offered 0.4.1 by the menu and by `pack update` (D-097); one that was edited is offered a merge (D-069).
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.
