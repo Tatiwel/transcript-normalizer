@@ -53,6 +53,8 @@ Issues = "https://github.com/Tatiwel/transcript-normalizer/issues"
 
 [project.scripts]
 transcript-normalizer = "transcript_normalizer.cli:main"
+# D-104: the short name.
+tn = "transcript_normalizer.cli:main"
 
 [dependency-groups]
 # Every extra, so a plain `uv sync` in the repository keeps them: `ingest`

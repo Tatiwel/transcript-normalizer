@@ -1085,6 +1085,30 @@ A line's timestamp was always `m:ss`, with minutes past 59: `74:14` where a vide
 
 **Texts written before.** They keep `74:14`, and every reader takes it. D-091's check of a converted `.srt` or `.vtt` compares lines by the moment they name, so a subtitle converted before is still the same subtitle, not exit 4. `restamp <run folder or legenda.txt>` rewrites an old text the new way: the timestamp at the start of each line; every timestamp in the lines the program itself wrote about passages written twice (the header's `repete` lines, `repeats.txt`, the stretch files, renamed too); and the header's line that named the form `mm:ss`, followed by the new line above. No word changes, and a time said in the speech ("às 10:30", or `74:00` inside a line) is left as it is: only the leading stamp of a line of speech is a timestamp. What it changes is kept first in `replaced-<date and time>/` (D-091's archive), and so is what `normalize` made from the old text, which names the old timestamps and is to be made again; `meta.yaml` and what has nothing to rewrite come back as they were. A failure puts the run back as it was, a half-written file included. Two stretches that would end up under one name (an old `74-29.txt` beside a `1-14-29.txt`) stop it before anything is moved. Run on a text already the new way, it says so and writes nothing. The header's fields D-091 reads (model, language, file, fingerprint) do not change, so the same source is still the same source.
 
+## D-104 `tn`, and `tn update` and `tn upgrade`
+
+The command is long to type. Installing the package now gives a second name for the same program, `tn`; `transcript-normalizer` stays, and the executables keep their file name.
+
+`tn update` only reads: the version installed, the release GitHub marks latest, and the CHANGELOG sections between the two, read from the latest tag. A release is a tag that went through the release workflow (ci.yml on three systems and two Pythons, then the build), never a draft or a prerelease, so "the latest" is always something tested. Offline, it says it could not check and exits 1.
+
+`tn upgrade` installs the latest release the way this copy was installed, found from where its Python environment is:
+
+- in a project that lists the tool as a dependency (a `.venv` beside a `pyproject.toml` that names it): `uv add --project <folder> "transcript-normalizer<extras> @ git+…@<tag>"`, which moves the project's pin and its `uv.lock` to the new tag in one step, with the extras the project already asked for. Measured on a scratch project: from `v0.8.5` to `v0.8.6`, `[tool.uv.sources]` and `uv.lock` both moved and `[ingest]` was kept. Run it through the project's environment (`uv run tn upgrade`), or it upgrades whatever copy `tn` is on the PATH;
+- as a uv tool: `uv tool install --force`;
+- elsewhere: `pip install --upgrade` with the same Python;
+- the executable cannot replace itself: it names the release and where to download it, and exits 1;
+- a checkout of this repository is updated with git, and says so.
+
+It says the command before running it, and the command again, to run by hand, when it fails or when uv is not installed. Up to date, it does nothing. The owner of a project that depends on the tool chose that the dependency follows the latest release; a project that wants to stay on a tag simply does not run `upgrade`.
+
+## D-105 One language for the documentation; a README that shows
+
+The guide was kept in English and in Brazilian Portuguese, two copies of 430 lines to keep in step. The documentation is now in English only: `docs/GUIDE.pt-BR.md` is gone, and the README, the guide, the help and CONTRIBUTING point to the English guide. The header of `legenda.txt` stays in Portuguese (D-022), since it travels with the text.
+
+The README was text from top to bottom. It now leads with what the tool does, a real before-and-after from a fixture, the flow and the architecture as diagrams (Mermaid, which GitHub draws, so there is no image to keep in step), the menu as it really is, the commands in tables by what they are for, how to use the tool in another project, and the measured numbers, with the reasoning left to the guide and these decisions. The picture of the menu is not a mock-up: `scripts/menu_svg.py` runs the program in a pseudo-terminal, presses ↓, reads the screen with a terminal emulator and writes it, colours and selection included, as `docs/images/menu.svg`; the release commit draws it again (CONTRIBUTING).
+
+Drawing it showed the first screen saying the keys twice, once as "Keyboard: …" and again beside the question. The first screen no longer says them; the question does, as every question does.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

@@ -72,7 +72,8 @@ def test_first_screen(tmp_path, monkeypatch, capsys):
     assert first[2] == f"Working in: {tmp_path}"
     assert first[3] == "Typical flow: 1 fetch → 2 normalize → 3 review"
     assert first[4] == "No pack installed yet: you will be asked what the video is about."  # D-088
-    assert first[5].startswith("Keyboard: ")
+    assert "Keyboard:" not in out  # D-105: the keys, once, beside the question
+    assert out.count(prompts.legend("select")) == 1
     assert "What would you like to do?" in out
     assert "   1. Fetch a video or file   download a caption, or transcribe audio locally" in out
     assert "   8. Help                    what each action does and its command" in out
