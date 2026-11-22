@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- After a local transcription, each passage written twice (D-092) has the stretch around it transcribed again on its own, from 15 seconds before its first copy to 10 seconds after it, into `needs-review/repeats/<time>.txt` (D-101). On the lesson that motivated D-092, the clip of that stretch had what the long file lost. It is help for listening, not a source: `legenda.txt` is not changed.
+- `fetch FILE --recheck` does the same for a `legenda.txt` already transcribed, in seconds, without transcribing the file again. FILE is checked against the header's fingerprint; a text from before 0.8.3 has none and needs `--unverified-source`.
+- D-092's text says what was measured: the 7 seconds off were seen only against the clip, and a measurement of the whole lesson found a median of 0 s before 44:00 and after 44:40.
+
 ## 0.8.3
 
 2026-11-21. A local file is told by its content, not its name (D-099); learned entries for a term the pack no longer has are said (D-100).

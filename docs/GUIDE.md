@@ -136,6 +136,10 @@ A run's `legenda.txt` is what everything taken from it cites, by its timestamps,
 
 Transcribing a long file, the speech model sometimes writes a passage a second time, and what was said in its place is lost. Measured on a lesson of 2h40: around 44:29, 24 words said at 44:06 came out again, and the same model on a clip of that stretch had it right (D-092). The text cannot show what is missing, but it can show what came out twice, and that is where to listen. After transcribing, fetch looks for a passage of 15 words or more that repeats one from less than a minute before. When it finds one it prints "1 passage(s) came out twice, at 44:29: listen there before citing", lists each one in `needs-review/repeats.txt` with where its first copy was (or copies, when it repeats two stretches back to back), and the header of `legenda.txt` says the same. When it finds none, the header says so, and that this does not guarantee nothing is missing. The text itself is never changed. A speaker who repeats a short phrase is not flagged; one who repeats 15 words within a minute is, and listening settles it.
 
+Then each passage's stretch is transcribed again on its own, with the same model and language: from 15 seconds before its first copy (what was lost may have been said before the passage it repeats) to 10 seconds after it, written to `needs-review/repeats/<time>.txt`, as `44-29.txt` (D-101). On D-092's lesson that is 43:51 to 44:43. It is help for listening, not a source: `legenda.txt` is not changed, and a citation still comes from it after listening. A loss that wrote nothing twice is not found this way either.
+
+A text already transcribed gets the same with `fetch FILE --recheck` (and `--out` when the run folder is not `runs/<file name>`): it finds the passages in the `legenda.txt` there and transcribes each stretch again from FILE, with the model and language the header names, in seconds rather than the hours of the whole file. FILE is checked against the fingerprint in the header (D-099); another file stops with exit 4 and writes nothing. A `legenda.txt` written before 0.8.3 has no fingerprint: `--recheck` refuses it unless `--unverified-source` is given, and then each stretch's file says that the file was not checked.
+
 ## 4. Reading the outputs
 
 Everything goes under `runs/<video-id>/` in the current directory; nothing is written beside your input (D-015, D-022).
@@ -150,6 +154,7 @@ Everything goes under `runs/<video-id>/` in the current directory; nothing is wr
 | `needs-review/pending.txt` | what still needs your answer |
 | `needs-review/corrections.csv` | with `--corrections`: the changes as a table to check by hand |
 | `needs-review/repeats.txt` | after a local transcription, the passages that came out twice, to listen to (D-092) |
+| `needs-review/repeats/<time>.txt` | each such passage's stretch, transcribed again on its own: help for listening, not a source (D-101) |
 | `replaced-<date and time>/` | a text replaced with `--replace-caption`, and what was made from it (D-091) |
 
 `needs-review/` holds the files that need a person. If it is empty or missing, nothing is waiting for you.

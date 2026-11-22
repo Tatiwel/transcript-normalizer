@@ -136,6 +136,10 @@ O `legenda.txt` de uma run é o que tudo que se tira dele cita, pelos timestamps
 
 Ao transcrever um arquivo longo, o modelo de fala às vezes escreve um trecho uma segunda vez, e o que foi dito no lugar dele se perde. Medido numa aula de 2h40: perto de 44:29, 24 palavras ditas em 44:06 saíram de novo, e o mesmo modelo num recorte daquele trecho acertou (D-092). O texto não mostra o que falta, mas mostra o que saiu duas vezes, e é ali que se deve ouvir. Depois de transcrever, o fetch procura um trecho de 15 palavras ou mais que repete outro de menos de um minuto antes. Quando acha, imprime "1 passage(s) came out twice, at 44:29: listen there before citing", lista cada um em `needs-review/repeats.txt` com o lugar da primeira cópia (ou das cópias, quando repete dois trechos em sequência), e o cabeçalho do `legenda.txt` diz o mesmo. Quando não acha, o cabeçalho diz isso, e diz que isso não garante que nada faltou. O texto em si nunca é alterado. Quem fala e repete uma frase curta não é marcado; quem repete 15 palavras em menos de um minuto é, e ouvir resolve.
 
+Depois, o trecho em volta de cada um é transcrito de novo, sozinho, com o mesmo modelo e idioma: de 15 segundos antes da primeira cópia (o que se perdeu pode ter sido dito antes do trecho que ele repete) até 10 segundos depois, gravado em `needs-review/repeats/<instante>.txt`, como `44-29.txt` (D-101). Na aula da D-092, isso dá 43:51 a 44:43. É ajuda para quem ouve, não fonte: o `legenda.txt` não muda, e a citação continua saindo dele, depois de ouvir. Uma perda que não escreveu nada duas vezes também não é achada assim.
+
+Um texto já transcrito ganha o mesmo com `fetch ARQUIVO --recheck` (e `--out` quando a pasta da run não é `runs/<nome do arquivo>`): ele acha os trechos no `legenda.txt` que está lá e transcreve cada recorte de novo a partir do ARQUIVO, com o modelo e o idioma do cabeçalho, em segundos, não nas horas do arquivo inteiro. O ARQUIVO é conferido pela impressão digital do cabeçalho (D-099); outro arquivo para com código 4 e não grava nada. Um `legenda.txt` gravado antes da 0.8.3 não tem impressão digital: o `--recheck` recusa, a não ser com `--unverified-source`, e aí o arquivo de cada recorte diz que o arquivo não foi conferido.
+
 ## 4. Lendo as saídas
 
 Tudo vai para `runs/<id-do-vídeo>/`, no diretório em que você está; nada é escrito ao lado do arquivo de entrada (D-015, D-022).
@@ -150,6 +154,7 @@ Tudo vai para `runs/<id-do-vídeo>/`, no diretório em que você está; nada é 
 | `needs-review/pending.txt` | o que ainda espera a sua resposta |
 | `needs-review/corrections.csv` | com `--corrections`: as mudanças numa tabela para conferir à mão |
 | `needs-review/repeats.txt` | depois de uma transcrição local, os trechos que saíram duas vezes, para ouvir (D-092) |
+| `needs-review/repeats/<instante>.txt` | o recorte em volta de cada um desses trechos, transcrito de novo sozinho: ajuda para ouvir, não fonte (D-101) |
 | `replaced-<data e hora>/` | um texto substituído com `--replace-caption`, e o que foi feito a partir dele (D-091) |
 
 `needs-review/` guarda o que precisa de uma pessoa. Vazio ou ausente, não há nada esperando por você.
