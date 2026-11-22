@@ -1,6 +1,6 @@
 # transcript-normalizer: the guide
 
-For three readers at once: you want cleaner transcripts and nothing else; you study another field and want to teach the tool your vocabulary (biomedicine is the running example); you are a developer. Each section is short. Decision numbers like (D-020) point into [DECISIONS.md](DECISIONS.md), where the reasons and the measurements live. A Brazilian Portuguese version is in [GUIDE.pt-BR.md](GUIDE.pt-BR.md).
+For three readers at once: you want cleaner transcripts and nothing else; you study another field and want to teach the tool your vocabulary (biomedicine is the running example); you are a developer. Each section is short. Decision numbers like (D-020) point into [DECISIONS.md](DECISIONS.md), where the reasons and the measurements live.
 
 **Start here** (section 2 has the details):
 - *I just want to use it:* download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it.
@@ -22,6 +22,8 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 ```
 pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.6"
 ```
+
+It installs two commands that do the same thing: `transcript-normalizer` and its short name, `tn` (D-104). `tn update` says whether a newer release exists and what it changed; `tn upgrade` installs it the way this copy was installed (in a project that lists the tool as a dependency, it moves the project's pin and `uv.lock` to the new tag; the executable cannot replace itself and says where to download the new one).
 
 Without an extra you get the normalizer alone (a few MB): call it from your own program, or normalize caption files you already have. `[captions]` adds `fetch` with platform captions (yt-dlp); `[ingest]` adds local speech recognition (faster-whisper) too. Files go under the current directory, unless the menu's Settings chose a folder. The package is not on PyPI yet; the wheel is also attached to each Release.
 

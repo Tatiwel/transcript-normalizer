@@ -62,7 +62,7 @@ from .runs import (
 )
 
 PROG = "transcript-normalizer"
-COMMANDS = ("normalize", "fetch", "list", "restamp", "pack", "help")
+COMMANDS = ("normalize", "fetch", "list", "restamp", "update", "upgrade", "pack", "help")
 
 #: How many example lines the confirmation loop shows per variant (D-019).
 EXAMPLES_PER_VARIANT = 3
@@ -808,6 +808,10 @@ def build_parser() -> argparse.ArgumentParser:
         "keeping the text before in replaced-<date and time>/. No word changes.",
     )
     restamp.add_arguments(restamping)
+
+    from . import selfupdate
+
+    selfupdate.add_arguments(commands)
 
     from . import contribute, merge, packedit, packfiles, registry
 

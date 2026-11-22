@@ -71,6 +71,7 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
         ("USAGE", [
             (PROG, "on a terminal: the interactive menu"),
             (f"{PROG} <command> [options]", ""),
+            ("tn <command> [options]", f"the same, shorter: tn is {PROG}"),
             (f"{PROG} <legenda.txt>", "same as `normalize <legenda.txt>`"),
             (f"{PROG} --version", "the installed version, on one line"),
         ]),
@@ -78,6 +79,8 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
             ("fetch <url|file>", "download a caption, or transcribe an audio or video file locally; `--list` checks a link without downloading (site, captions, audio, login) and `--track <code>` takes one caption track; `--keep-audio` keeps the audio after transcribing; a text already in the run folder from another source is never replaced unless `--replace-caption`, which keeps it in replaced-<date and time>/; `fetch --check` lists the fetch tools installed; --cookies-from-browser <browser> or --cookies <file> signs in, on any site"),
             ("normalize <legenda.txt>", "fix domain terms (a .srt or .vtt is converted first, never over a legenda.txt with other lines unless --replace-caption); --review (one stop per form, in the order of the video) or --confirm (form by form, by term) to answer what it was unsure about; --pack for your own pack; --force when the pack does not seem to fit"),
             ("list", "every run under runs/, with its date and title"),
+            ("update", "is there a newer version? The one installed, the latest release, and what changed between them"),
+            ("upgrade", "install the latest version the way this copy was installed: in a project, its pin and uv.lock move to the new tag"),
             ("restamp <run folder>", "rewrite the timestamps of a text written before 0.8.6 as a video player shows them, 1:14:14 instead of 74:14; no word changes, and the text before is kept in replaced-<date and time>/"),
             ("pack list | install <name> | update", "the packs installed, then those included in the program (installed offline) and in the packs repository, each marked; install one into packs/; update installed ones"),
             ("pack list --installed", "only the installed packs: version, language, terms, size, source, and ↑ where a newer one is included or in the repository"),
@@ -125,7 +128,6 @@ def sections() -> list[tuple[str, list[tuple[str, str]]]]:
         ]),
         ("LEARN MORE", [
             ("docs/GUIDE.md", "the guide"),
-            ("docs/GUIDE.pt-BR.md", "o guia, em português"),
             ("CONTRIBUTING.md", "adding a language, building a pack, measuring it"),
         ]),
     ]

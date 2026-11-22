@@ -89,7 +89,7 @@ def first_screen() -> None:
     say(pack_line_of_first_screen())
     for line in included_update_lines():
         say(mark(line, "need"))
-    say(mark(f"Keyboard: {prompts.legend('select')}", "hint"))
+    # D-105: the keys are said once, beside the question, not also here.
     start_merge_check()
 
 
