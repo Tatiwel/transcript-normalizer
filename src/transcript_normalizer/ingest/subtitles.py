@@ -10,6 +10,8 @@ from __future__ import annotations
 import html
 import re
 
+from .. import stamps
+
 #: How far back the de-duplication looks, in seconds.
 WINDOW_SECONDS = 30.0
 
@@ -81,7 +83,7 @@ def cues_to_lines(cues: list[tuple[float, float, list[str]]]) -> str:
             recent.append((start, line))
             if line in neighbours:
                 continue
-            out.append(f"{int(end) // 60}:{int(end) % 60:02d} {line}")
+            out.append(f"{stamps.clock(end)} {line}")  # D-103
 
     return "\n".join(out)
 

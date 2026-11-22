@@ -144,6 +144,8 @@ Um texto já transcrito ganha o mesmo com `fetch ARQUIVO --recheck` (e `--out` q
 
 Tudo vai para `runs/<id-do-vídeo>/`, no diretório em que você está; nada é escrito ao lado do arquivo de entrada (D-015, D-022).
 
+Cada linha começa com o timestamp, escrito como o player de vídeo mostra o tempo: `44:29` antes de 1 hora, `1:14:14` a partir de 1 hora (D-103). Um texto gravado antes da 0.8.6 tem `74:14` onde o player mostra `1:14:14`; tudo lê os dois jeitos, e `restamp <pasta da run>` reescreve um texto antigo do jeito novo. Ele reescreve só os timestamps do começo de cada linha e os das linhas que o próprio programa escreveu sobre trechos repetidos (o cabeçalho, o `repeats.txt` e os arquivos de recorte, que ele também renomeia); nenhuma palavra muda, e um horário dito na fala ("às 10:30") fica como está. O texto anterior vai para `replaced-<data e hora>/`, junto com o que o `normalize` tinha feito a partir dele, para ser feito de novo.
+
 | arquivo | o que é |
 |---|---|
 | `legenda.txt` | a transcrição como chegou, com um cabeçalho dizendo de onde veio e que instante é cada timestamp: o fim da legenda (a da plataforma, ou um `.srt`/`.vtt`), ou o início da fala (transcrição local) (D-093) |

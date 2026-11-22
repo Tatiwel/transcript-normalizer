@@ -37,6 +37,7 @@ from pathlib import Path
 from .. import caption_guard
 from ..catalog import write_meta
 from ..runs import NEEDS_REVIEW_DIR, is_frozen, runs_root
+from .. import stamps
 from . import clips
 from . import cookies as sign_in
 from . import repeats as repeated
@@ -851,8 +852,7 @@ def segment_line(segment, offset: float = 0.0) -> str:
     text = segment.text.strip()
     if not text:
         return ""
-    minutes, seconds = divmod(int(segment.start + offset), 60)
-    return f"{minutes}:{seconds:02d} {text}"
+    return f"{stamps.clock(segment.start + offset)} {text}"  # D-103
 
 
 def window_transcriber(lang: str, model: str, out: Output) -> clips.Transcriber:
