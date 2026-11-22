@@ -872,9 +872,11 @@ def window_transcriber(lang: str, model: str, out: Output) -> clips.Transcriber:
 
 def transcribe_repeats(
     found: list[repeated.Repeat], media: Path, target: Path, lang: str, model: str, out: Output,
-    *, source: str, origin: str = clips.SAME_RUN,
+    *, source: str, origin: str = clips.SAME_RUN, fingerprint: str = "",
 ) -> list[Path]:
-    """D-101: each passage's stretch transcribed again, beside the warning."""
+    """D-101: each passage's stretch transcribed again, beside the warning.
+    With `fingerprint`, the file is read again once they are done (D-099): if
+    it changed meanwhile, what was written goes, and nothing is said of it."""
     if not found:
         return []
     out.info(f"transcribing again, on its own, the stretch around each passage ({len(found)})")
@@ -882,6 +884,16 @@ def transcribe_repeats(
         found, media, target / NEEDS_REVIEW_DIR, window_transcriber(lang, model, out), model, lang,
         source=source, origin=origin, warn=out.warn,
     )
+    if fingerprint and written:
+        try:
+            changed = caption_guard.fingerprint(media) != fingerprint
+        except OSError:
+            changed = True
+        if changed:
+            for path in written:
+                path.unlink(missing_ok=True)
+            out.warn(f"{media} changed while its stretches were transcribed again; they were not kept")
+            return []
     for path in written:
         out.detail("stretch", path, "path", note="(help for listening, not a source)")
     return written
@@ -1013,7 +1025,7 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     out.detail("meta", save_meta(target, meta, None, step, path=media), "path")
     out.detail("text", caption, "path", note=f"(step {step.number}, {step.name})")
     transcribe_repeats(found, media, target, args.lang, args.model, out,
-                       source=f"{media.name}, {fingerprint}")
+                       source=f"{media.name}, {fingerprint}", fingerprint=fingerprint)
     return 0
 
 
@@ -1069,7 +1081,8 @@ def run_recheck(args: argparse.Namespace, media: Path, out: Output) -> int:
         return 0
     look_for_repeats(body, target, out)
     written = transcribe_repeats(found, media, target, lang, existing.model, out,
-                                 source=f"{media.name}, {fingerprint}", origin=origin)
+                                 source=f"{media.name}, {fingerprint}", origin=origin,
+                                 fingerprint=fingerprint)
     return 0 if len(written) == len(found) else 1
 
 

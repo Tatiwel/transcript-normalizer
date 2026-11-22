@@ -101,6 +101,60 @@ def test_a_stretch_of_an_mp4_with_video_is_the_right_stretch(tmp_path):
     assert found == [800, 900]
 
 
+def dominant(samples):
+    spectrum = np.abs(np.fft.rfft(samples[2000:14000]))
+    return round(np.fft.rfftfreq(12000, 1 / 16000)[spectrum.argmax()])
+
+
+@pytest.mark.parametrize("suffix", [".mkv", ".mp4"])
+def test_a_file_whose_audio_starts_late_is_timed_from_its_audio(tmp_path, suffix):
+    # A whole file's transcription counts from its first audio sample. Here the
+    # audio starts 5 s into the container; second n of it holds 200 + 100 n Hz.
+    av = pytest.importorskip("av")
+    decode_audio = pytest.importorskip("faster_whisper").decode_audio
+    path, rate = str(tmp_path / f"late{suffix}"), 44100
+    with av.open(path, "w") as container:
+        audio = container.add_stream("aac", rate=rate)
+        audio.layout = "mono"
+        pts = 5 * rate
+        for second in range(8):
+            tone = (0.3 * np.sin(2 * np.pi * (200 + 100 * second) * np.arange(rate) / rate)).astype(np.float32)
+            for at in range(0, rate, 1024):
+                chunk = tone[at:at + 1024]
+                frame = av.AudioFrame.from_ndarray(chunk[None, :], format="fltp", layout="mono")
+                frame.sample_rate, frame.pts = rate, pts
+                pts += len(chunk)
+                for packet in audio.encode(frame):
+                    container.mux(packet)
+        for packet in audio.encode(None):
+            container.mux(packet)
+    whole = decode_audio(path)
+    stretch = clips.decode_window(path, 2, 4)
+    assert dominant(whole[2 * 16000:3 * 16000]) == 400
+    assert [dominant(stretch[:16000]), dominant(stretch[16000:])] == [400, 500]
+
+
+def two(start, sources):
+    return [Repeat(start=start, end=start, source_start=s, source_end=s, words=20, text="") for s in sources]
+
+
+def test_two_passages_on_one_line_get_two_files(tmp_path):
+    warnings = []
+    written = clips.write_clips(two("1:00", ["0:10", "0:20"]), tmp_path / "m.wav", tmp_path, lambda m, a, b: "",
+                                "medium", "pt", source="m.wav", origin=clips.SAME_RUN, warn=warnings.append)
+    assert [p.name for p in written] == ["1-00.txt", "1-00-2.txt"]
+    assert "0:10" in written[0].read_text(encoding="utf-8") and "0:20" in written[1].read_text(encoding="utf-8")
+
+
+def test_a_folder_that_cannot_be_written_is_said(tmp_path):
+    review = tmp_path / "needs-review"
+    review.write_text("a file where the folder would be", encoding="utf-8")
+    warnings = []
+    assert clips.write_clips(two("1:00", ["0:10"]), tmp_path / "m.wav", review, lambda m, a, b: "",
+                             "medium", "pt", source="m.wav", origin=clips.SAME_RUN, warn=warnings.append) == []
+    assert warnings and warnings[0].startswith("could not write")
+
+
 # ------------------------------------------------------------------ after a transcription
 
 
@@ -220,6 +274,22 @@ def old_text(tmp_path, body, file_name="aula.wav"):
 
 
 OLD_BODY = f"1:06 {PASSAGE}\n1:29 porque {PASSAGE}\n1:35 beleza\n"
+
+
+def test_a_file_changed_during_the_recheck_keeps_no_stretch(tmp_path, monkeypatch, capsys, media):
+    monkeypatch.setattr(fetch, "load_whisper", repeating_then_right([]))
+    assert main(["fetch", str(media)]) == 0
+    clip = run(tmp_path) / NEEDS_REVIEW_DIR / clips.CLIPS_DIR / "1-29.txt"
+
+    def and_change(path, start, end):
+        media.write_bytes(media.read_bytes() + b"\0\0")
+        return np.zeros(16000, dtype=np.float32)
+
+    monkeypatch.setattr(clips, "decode_window", and_change)
+    capsys.readouterr()
+    assert main(["fetch", str(media), "--recheck"]) == 1
+    assert "changed while its stretches were transcribed again" in capsys.readouterr().out
+    assert not clip.exists()
 
 
 def test_an_old_text_is_rechecked_only_when_asked_and_says_so(tmp_path, monkeypatch, capsys, media):
