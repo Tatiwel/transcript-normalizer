@@ -102,17 +102,53 @@ def test_a_project_is_moved_to_the_new_tag_with_its_extras(tmp_path, online, mon
     assert "0.8.6 → 0.8.8 (project)" in out and "done: 0.8.8 is installed" in out
 
 
-@pytest.mark.parametrize("prefix, kind", [
-    ("/home/u/.local/share/uv/tools/transcript-normalizer", selfupdate.UV_TOOL),
-    ("/home/u/venvs/anything", selfupdate.PIP),
+def test_a_uv_tool_is_known_by_its_receipt_wherever_it_is(tmp_path):
+    tool = tmp_path / "opt" / "cli-envs" / "transcript-normalizer"  # a UV_TOOL_DIR of one's own
+    tool.mkdir(parents=True)
+    (tool / "uv-receipt.toml").write_text(
+        '[tool]\nrequirements = [{ name = "transcript-normalizer", extras = ["captions"], '
+        'git = "https://github.com/Tatiwel/transcript-normalizer?rev=v0.8.6" }]\n', encoding="utf-8")
+    install = selfupdate.install_kind(tool)
+    assert (install.kind, install.extras) == (selfupdate.UV_TOOL, "[captions]")  # as asked for
+    assert selfupdate.command(install, "v0.8.8") == [
+        "uv", "tool", "install", "--force",
+        "transcript-normalizer[captions] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.8"]
+
+
+def test_pip_keeps_the_largest_extra_installed(tmp_path, monkeypatch):
+    present = {"yt_dlp", "questionary"}  # captions, which carries menu; not ingest
+    monkeypatch.setattr(selfupdate.importlib.util, "find_spec", lambda name: object() if name in present else None)
+    install = selfupdate.install_kind(tmp_path / "venv")
+    assert (install.kind, install.extras) == (selfupdate.PIP, "[captions]")
+    assert selfupdate.command(install, "v0.8.8")[:4] == [sys.executable, "-m", "pip", "install"]
+
+
+@pytest.mark.parametrize("dependency", [
+    '"transcript-normalizer-plugin>=1"', '"other-transcript-normalizer"',
 ])
-def test_each_install_kind_has_its_command(tmp_path, monkeypatch, prefix, kind):
-    install = selfupdate.install_kind(prefix)
-    assert install.kind == kind
-    argv = selfupdate.command(install, "v0.8.8")
-    assert argv[-1].endswith("@ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.8")
-    assert argv[:4] == (["uv", "tool", "install", "--force"] if kind == selfupdate.UV_TOOL
-                        else [sys.executable, "-m", "pip", "install"])
+def test_a_project_that_asks_for_another_package_is_not_this_one(tmp_path, dependency):
+    folder = project(tmp_path, dependency + ",")
+    assert selfupdate.install_kind(folder / ".venv").kind == selfupdate.PIP
+
+
+def test_a_name_written_another_way_is_the_same_package(tmp_path):
+    folder = project(tmp_path, '"Transcript_Normalizer[ingest]==0.8.6",')
+    install = selfupdate.install_kind(folder / ".venv")
+    assert (install.kind, install.extras, install.group) == (selfupdate.PROJECT, "[ingest]", "")
+
+
+@pytest.mark.parametrize("group, flags", [("dev", ["--dev"]), ("tools", ["--group", "tools"])])
+def test_a_declaration_in_a_group_is_moved_in_that_group(tmp_path, group, flags):
+    folder = tmp_path / "proj"
+    (folder / ".venv").mkdir(parents=True)
+    (folder / "pyproject.toml").write_text(
+        f'[project]\nname = "x"\ndependencies = []\n\n[dependency-groups]\n{group} = ["transcript-normalizer[menu]"]\n',
+        encoding="utf-8")
+    install = selfupdate.install_kind(folder / ".venv")
+    assert (install.kind, install.group) == (selfupdate.PROJECT, group)
+    assert selfupdate.command(install, "v0.8.8") == [
+        "uv", "add", "--project", str(folder), *flags,
+        "transcript-normalizer[menu] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.8"]
 
 
 def test_the_repository_itself_is_a_checkout(tmp_path):

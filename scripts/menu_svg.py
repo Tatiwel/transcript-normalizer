@@ -94,10 +94,12 @@ def render(screen, home: str) -> str:
         at = line.find(home)
         if at >= 0:  # the temporary folder, shown as the usual one, in the path's own style
             cells = cells[:at] + [cells[at]._replace(data=c) for c in SHOWN_HOME] + cells[at + len(home):]
+        row = Text()
         for cell in cells:
-            text.append(cell.data, Style(color=colour(cell.fg), bold=cell.bold, italic=cell.italics,
-                                         underline=cell.underscore, reverse=cell.reverse))
-        text.rstrip()
+            row.append(cell.data, Style(color=colour(cell.fg), bold=cell.bold, italic=cell.italics,
+                                        underline=cell.underscore, reverse=cell.reverse))
+        row.rstrip()  # this row only: a blank row between two others stays a blank row
+        text.append_text(row)
         text.append("\n")
     text.rstrip()
     console = Console(record=True, width=COLS, force_terminal=True, color_system="truecolor", file=io.StringIO())

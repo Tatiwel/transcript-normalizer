@@ -40,7 +40,13 @@ CHANGELOG_URL = "https://raw.githubusercontent.com/" + REPOSITORY + "/{tag}/CHAN
 FROZEN, PROJECT, UV_TOOL, PIP, CHECKOUT = "executable", "project", "uv tool", "pip", "checkout"
 
 _HEADING = re.compile(r"^## (\d+(?:\.\d+)*)\s*$", re.M)
-_REQUIREMENT = re.compile(r"""["']transcript-normalizer(\[[^\]]*\])?""")
+#: A requirement's name and extras, as PEP 508 writes them before anything else.
+_NAME = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?")
+NAME = "transcript-normalizer"
+#: Each extra carries the one before it (pyproject.toml): the largest installed is the one asked for.
+EXTRAS = (("ingest", "faster_whisper"), ("captions", "yt_dlp"), ("menu", "questionary"))
+#: What uv writes in a tool's environment, saying how it was asked for.
+RECEIPT = "uv-receipt.toml"
 
 
 def parse(text: str) -> tuple[int, ...]:
@@ -79,12 +85,58 @@ def changes(changelog: str, since: str, until: str) -> str:
 class Install:
     kind: str
     where: Path | None = None  # the project's folder, or the checkout's
-    extras: str = ""  # `[ingest]`, as installed
+    extras: str = ""  # `[ingest]`, as asked for
+    group: str = ""  # the dependency group that declares it in a project; "" for the project's own
 
 
-def _extras_here() -> str:
-    """`[ingest]` when the ingest extra is installed beside this copy."""
-    return "[ingest]" if importlib.util.find_spec("yt_dlp") is not None else ""
+def normalized(name: str) -> str:
+    """PEP 503: `Transcript_Normalizer` and `transcript.normalizer` are the same name."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def requirement(text: str) -> str | None:
+    """The extras (`[ingest]`, or "") when `text` asks for this package; None for another."""
+    found = _NAME.match(text) if isinstance(text, str) else None
+    if found is None or normalized(found.group(1)) != NAME:
+        return None
+    return found.group(2) or ""
+
+
+def declared(pyproject: dict) -> tuple[str, str] | None:
+    """(extras, group) where a project's pyproject.toml asks for this package; None when it does not."""
+    for entry in pyproject.get("project", {}).get("dependencies", []):
+        if (extras := requirement(entry)) is not None:
+            return extras, ""
+    for group, entries in pyproject.get("dependency-groups", {}).items():
+        for entry in entries:
+            if (extras := requirement(entry)) is not None:
+                return extras, group
+    return None
+
+
+def _extras_installed() -> str:
+    """The largest extra whose own package is installed beside this copy."""
+    for extra, module in EXTRAS:
+        if importlib.util.find_spec(module) is not None:
+            return f"[{extra}]"
+    return ""
+
+
+def _extras_of_receipt(receipt: dict) -> str:
+    for entry in receipt.get("tool", {}).get("requirements", []):
+        if isinstance(entry, dict) and normalized(str(entry.get("name", ""))) == NAME:
+            extras = entry.get("extras") or []
+            return f"[{','.join(extras)}]" if extras else ""
+    return _extras_installed()
+
+
+def _toml(path: Path) -> dict | None:
+    import tomllib
+
+    try:
+        return tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
 
 
 def install_kind(prefix: Path | None = None) -> Install:
@@ -92,19 +144,18 @@ def install_kind(prefix: Path | None = None) -> Install:
     if getattr(sys, "frozen", False):
         return Install(FROZEN)
     prefix = Path(prefix or sys.prefix)
+    receipt = _toml(prefix / RECEIPT)
+    if receipt is not None:  # uv wrote it: a uv tool, wherever UV_TOOL_DIR put it
+        return Install(UV_TOOL, extras=_extras_of_receipt(receipt))
     folder = prefix.parent
-    pyproject = folder / "pyproject.toml"
-    if pyproject.is_file():
-        text = pyproject.read_text(encoding="utf-8")
-        if re.search(r'^name\s*=\s*"transcript-normalizer"', text, re.M):
+    project = _toml(folder / "pyproject.toml")
+    if project is not None:
+        if normalized(str(project.get("project", {}).get("name", ""))) == NAME:
             return Install(CHECKOUT, folder)
-        found = _REQUIREMENT.search(text)
-        if found:
-            return Install(PROJECT, folder, found.group(1) or "")
-    parts = [part.lower() for part in prefix.parts]
-    if "uv" in parts and "tools" in parts:
-        return Install(UV_TOOL, extras=_extras_here())
-    return Install(PIP, extras=_extras_here())
+        found = declared(project)
+        if found is not None:
+            return Install(PROJECT, folder, found[0], found[1])
+    return Install(PIP, extras=_extras_installed())
 
 
 def spec(tag: str, extras: str) -> str:
@@ -115,7 +166,8 @@ def command(install: Install, tag: str) -> list[str] | None:
     """What installs `tag` the way this copy was installed; None when nothing can."""
     wanted = spec(tag, install.extras)
     if install.kind == PROJECT:
-        return ["uv", "add", "--project", str(install.where), wanted]
+        group = [] if not install.group else ["--dev"] if install.group == "dev" else ["--group", install.group]
+        return ["uv", "add", "--project", str(install.where), *group, wanted]
     if install.kind == UV_TOOL:
         return ["uv", "tool", "install", "--force", wanted]
     if install.kind == PIP:

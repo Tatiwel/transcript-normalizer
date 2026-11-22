@@ -50,7 +50,7 @@ Run it with no arguments and it opens a menu: arrow keys, enter, esc to go back,
 | **add it to your project** | see [Use it in another project](#use-it-in-another-project) |
 | **work on it** | `git clone` this repository, `uv sync`, `uv run pytest -q`, then [CONTRIBUTING.md](CONTRIBUTING.md) |
 
-Installed with pip or uv, it gives two commands that do the same thing: `transcript-normalizer` and its short name, `tn`. No ffmpeg is needed.
+Installed with pip or uv, it gives two commands that do the same thing: `transcript-normalizer` and its short name, `tn`, which the tables below use. The downloaded program is named `transcript-normalizer` and has no `tn`: run it by its name (from the folder it is in: `./transcript-normalizer fetch <url>`, or `transcript-normalizer.exe fetch <url>` on Windows). No ffmpeg is needed.
 
 ## Commands
 
