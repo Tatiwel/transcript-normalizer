@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -147,15 +148,28 @@ def install_kind(prefix: Path | None = None) -> Install:
     receipt = _toml(prefix / RECEIPT)
     if receipt is not None:  # uv wrote it: a uv tool, wherever UV_TOOL_DIR put it
         return Install(UV_TOOL, extras=_extras_of_receipt(receipt))
-    folder = prefix.parent
-    project = _toml(folder / "pyproject.toml")
-    if project is not None:
+    for folder in project_folders(prefix):
+        project = _toml(folder / "pyproject.toml")
+        if project is None:
+            continue
         if normalized(str(project.get("project", {}).get("name", ""))) == NAME:
             return Install(CHECKOUT, folder)
         found = declared(project)
         if found is not None:
             return Install(PROJECT, folder, found[0], found[1])
     return Install(PIP, extras=_extras_installed())
+
+
+def project_folders(prefix: Path) -> list[Path]:
+    """Where the project this environment belongs to may be: beside it, as uv
+    puts `.venv`; or, when UV_PROJECT_ENVIRONMENT names this environment
+    elsewhere, the folder `uv` is run from and the ones above it."""
+    folders = [prefix.parent]
+    elsewhere = os.environ.get("UV_PROJECT_ENVIRONMENT")
+    if elsewhere and Path(elsewhere).expanduser().resolve() == prefix.resolve():
+        here = Path.cwd().resolve()
+        folders += [here, *here.parents]
+    return folders
 
 
 def spec(tag: str, extras: str) -> str:
