@@ -60,12 +60,17 @@ def decode_window(path: Path, start: float, end: float):
     chunks = []
     with av.open(str(path)) as container:
         stream = container.streams.audio[0]
+        # A whole file's transcription counts from its first audio sample, so
+        # times here are from the audio stream's start, which a file may put
+        # later than the container's (or a little before, for an encoder's delay).
+        origin = float(stream.start_time * stream.time_base) if stream.start_time is not None else 0.0
         resampler = av.AudioResampler(format="s16", layout="mono", rate=SAMPLE_RATE)
-        container.seek(int(max(start - 1, 0) * av.time_base))  # lands on a keyframe at or before
-        position = None  # seconds of the next resampled sample
+        # The container's clock, in microseconds; it lands on a keyframe at or before.
+        container.seek(int(max(origin + start - 1, 0) * av.time_base))
+        position = None  # seconds of the next resampled sample, from the stream's start
         for frame in container.decode(stream):
             if position is None:
-                position = float(frame.time) if frame.time is not None else max(start - 1, 0)
+                position = float(frame.time) - origin if frame.time is not None else max(start - 1, 0)
             for resampled in resampler.resample(frame):
                 samples = resampled.to_ndarray().reshape(-1)
                 chunks.append((position, samples))
@@ -116,12 +121,16 @@ def write_clips(
     """One file per passage in `review`/repeats/, the folder written anew. A
     passage whose stretch fails is said and skipped: the others still go."""
     folder = review / CLIPS_DIR
-    if folder.exists():
-        shutil.rmtree(folder)
-    if not found:
+    try:  # what this writes helps; failing to write it never undoes the text
+        if folder.exists():
+            shutil.rmtree(folder)
+        if not found:
+            return []
+        folder.mkdir(parents=True)
+    except OSError as error:
+        warn(f"could not write {folder}: {error}")
         return []
-    folder.mkdir(parents=True)
-    written = []
+    written: list[Path] = []
     for repeat in found:
         start, end = window(repeat)
         try:
@@ -129,7 +138,20 @@ def write_clips(
         except Exception as error:  # a decoder or model failure on one stretch
             warn(f"could not transcribe {stamp(start)} to {stamp(end)} again: {error}")
             continue
-        path = folder / file_name(repeat)
-        path.write_text(clip_text(repeat, body, source, model, lang, origin), encoding="utf-8")
+        path = unique(folder / file_name(repeat), written)
+        try:
+            path.write_text(clip_text(repeat, body, source, model, lang, origin), encoding="utf-8")
+        except OSError as error:
+            warn(f"could not write {path}: {error}")
+            continue
         written.append(path)
     return written
+
+
+def unique(path: Path, taken: list[Path]) -> Path:
+    """Two passages can start on the same line: the second is `44-29-2.txt`."""
+    number, candidate = 1, path
+    while candidate in taken:
+        number += 1
+        candidate = path.with_name(f"{path.stem}-{number}{path.suffix}")
+    return candidate
