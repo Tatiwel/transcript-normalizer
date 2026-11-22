@@ -187,3 +187,15 @@ def test_without_uv_the_command_is_shown(tmp_path, online, monkeypatch, capsys):
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("ran without uv"))
     assert main(["upgrade"]) == 1
     assert "uv is not installed" in capsys.readouterr().err
+
+
+def test_a_project_whose_environment_is_elsewhere_is_found_from_where_uv_runs(tmp_path, monkeypatch):
+    folder = project(tmp_path)
+    elsewhere = tmp_path / "envs" / "ingest"
+    elsewhere.mkdir(parents=True)
+    monkeypatch.setenv("UV_PROJECT_ENVIRONMENT", str(elsewhere))
+    monkeypatch.chdir(folder / ".venv")  # anywhere inside the project
+    install = selfupdate.install_kind(elsewhere)
+    assert (install.kind, install.where) == (selfupdate.PROJECT, folder.resolve())
+    monkeypatch.delenv("UV_PROJECT_ENVIRONMENT")
+    assert selfupdate.install_kind(elsewhere).kind == selfupdate.PIP  # not named: not guessed
