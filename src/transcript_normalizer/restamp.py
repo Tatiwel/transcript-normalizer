@@ -93,6 +93,20 @@ def plan(run: Path) -> dict[Path, tuple[Path, str]]:
     return changes
 
 
+def collisions(run: Path, changes: dict[Path, tuple[Path, str]]) -> str:
+    """Why renaming would put two stretches under one name; "" when it would not."""
+    clips = run / NEEDS_REVIEW_DIR / CLIPS_DIR
+    staying = {p for p in clips.glob("*.txt") if p not in changes} if clips.is_dir() else set()
+    seen: dict[Path, Path] = {}
+    for path, (target, _) in changes.items():
+        if target in staying:
+            return f"{path.name} would take the name of {target.name}, which is there already"
+        if target in seen:
+            return f"{path.name} and {seen[target].name} would both be named {target.name}"
+        seen[target] = path
+    return ""
+
+
 def run_restamp(args: argparse.Namespace) -> int:
     given = Path(args.path)
     caption = given / CAPTION_FILE if given.is_dir() else given
@@ -104,6 +118,10 @@ def run_restamp(args: argparse.Namespace) -> int:
         print(f"{caption} is not a {CAPTION_FILE}: restamp rewrites a run's text", file=sys.stderr)
         return 1
     changes = plan(run)
+    clash = collisions(run, changes)
+    if clash:
+        print(f"{run}: {clash}; nothing was changed", file=sys.stderr)
+        return 1
     if not changes:
         print(f"{caption}: every timestamp is already written as a video player shows it; nothing to do")
         return 0
@@ -112,8 +130,8 @@ def run_restamp(args: argparse.Namespace) -> int:
     try:
         for path, (target, text) in changes.items():
             target.parent.mkdir(parents=True, exist_ok=True)
+            written.append(target)  # before writing: a half-written file goes on a failure too
             target.write_text(text, encoding="utf-8")
-            written.append(target)
         # What restamp leaves as it was comes back too: the source's record, the
         # stretches with nothing to rewrite, repeats.txt with nothing to rewrite.
         kept = [archived / CAPTION_FILE, archived / META_FILE, archived / NEEDS_REVIEW_DIR / REPEATS_FILE]
@@ -124,8 +142,8 @@ def run_restamp(args: argparse.Namespace) -> int:
             target = run / source.relative_to(archived)
             if source.is_file() and target not in changes and not target.exists():
                 target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, target)
                 written.append(target)
+                shutil.copy2(source, target)
     except BaseException:
         for path in reversed(written):
             path.unlink(missing_ok=True)
