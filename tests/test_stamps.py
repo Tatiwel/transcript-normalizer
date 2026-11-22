@@ -213,3 +213,32 @@ def test_a_text_of_the_new_way_is_left_alone(tmp_path):
     run.mkdir()
     shutil.copy(DATA / "rolling.legenda.txt", run / CAPTION_FILE)
     assert restamp.plan(run) == {}
+
+
+def test_two_stretches_that_would_share_a_name_stop_it_before_anything(old_run, capsys):
+    stretches = old_run / NEEDS_REVIEW_DIR / clips.CLIPS_DIR
+    (stretches / "1-14-29.txt").write_text("The stretch 1:13:51 to 1:14:43, another one.\n", encoding="utf-8")
+    files = {p.relative_to(old_run): p.read_bytes() for p in old_run.rglob("*") if p.is_file()}
+    assert main(["restamp", str(old_run)]) == 1
+    assert "74-29.txt would take the name of 1-14-29.txt" in capsys.readouterr().err
+    assert {p.relative_to(old_run): p.read_bytes() for p in old_run.rglob("*") if p.is_file()} == files
+    assert replaced(old_run) == []
+
+
+def test_a_half_written_file_goes_too_when_writing_fails(old_run, monkeypatch):
+    files = {p.relative_to(old_run): p.read_bytes() for p in old_run.rglob("*") if p.is_file()}
+    real = restamp.Path.write_text
+    calls = []
+
+    def half(self, text, *args, **kwargs):
+        calls.append(self)
+        if len(calls) == 2:  # the second file: something written, then the disk is full
+            real(self, text[:5], *args, **kwargs)
+            raise OSError("disk full")
+        return real(self, text, *args, **kwargs)
+
+    monkeypatch.setattr(restamp.Path, "write_text", half)
+    with pytest.raises(OSError):
+        main(["restamp", str(old_run)])
+    monkeypatch.undo()
+    assert {p.relative_to(old_run): p.read_bytes() for p in old_run.rglob("*") if p.is_file()} == files
