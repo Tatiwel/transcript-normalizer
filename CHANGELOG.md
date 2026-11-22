@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.6
+
+2026-11-22. A timestamp from 1 hour on is written as a video player shows it, and `restamp` rewrites older texts (D-103).
+
 - A timestamp from 1 hour on is written as a video player shows it, `1:14:14` instead of `74:14` (D-103); before 1 hour nothing changes. Every reader takes both forms, so older texts work as they did. `restamp <run folder>` rewrites an older text the new way: only the timestamps, no word, and the text before is kept in `replaced-<date and time>/`.
 
 ## 0.8.5
