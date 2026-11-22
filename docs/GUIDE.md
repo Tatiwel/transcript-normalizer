@@ -4,7 +4,7 @@ For three readers at once: you want cleaner transcripts and nothing else; you st
 
 **Start here** (section 2 has the details):
 - *I just want to use it:* download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases) and double-click it.
-- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.6"`.
+- *I use Python:* `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.7"`.
 - *I want to contribute:* `git clone https://github.com/Tatiwel/transcript-normalizer`, then [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 1. What it does, and what it does not
@@ -20,7 +20,7 @@ It never changes what the speaker said; it fixes what the recognizer heard. That
 **I use Python.**
 
 ```
-pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.6"
+pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.7"
 ```
 
 It installs two commands that do the same thing: `transcript-normalizer` and its short name, `tn` (D-104). `tn update` says whether a newer release exists and what it changed; `tn upgrade` installs it the way this copy was installed (in a project that lists the tool as a dependency, it moves the project's pin and `uv.lock` to the new tag; the executable cannot replace itself and says where to download the new one).
