@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.7
+
+2026-11-22. `tn`, with `tn update` and `tn upgrade` (D-104); a README that shows what the tool does, and English-only documentation (D-105).
+
 - `tn` is the program's short name: `tn fetch`, `tn update`, the same as `transcript-normalizer` (D-104).
 - `tn update` shows the installed version, the latest release and what changed between them; `tn upgrade` installs the latest release the way this copy was installed. In a project that depends on the tool, it moves the project's pin and `uv.lock` to the new tag, keeping its extras (D-104).
 - The README now shows what the tool does: a real before-and-after, the flow and the architecture as diagrams, the menu as it is, and the commands by what they are for. The documentation is in English only; the Portuguese guide is gone (D-105).

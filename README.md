@@ -46,7 +46,7 @@ Run it with no arguments and it opens a menu: arrow keys, enter, esc to go back,
 | you want to | do this |
 |---|---|
 | **just use it** | download the program for your system from [Releases](https://github.com/Tatiwel/transcript-normalizer/releases/latest) and open it. `lite` reads captions; `full` also transcribes audio |
-| **use it from Python** | `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.6"` |
+| **use it from Python** | `pip install "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.7"` |
 | **add it to your project** | see [Use it in another project](#use-it-in-another-project) |
 | **work on it** | `git clone` this repository, `uv sync`, `uv run pytest -q`, then [CONTRIBUTING.md](CONTRIBUTING.md) |
 
@@ -97,7 +97,7 @@ Installed with pip or uv, it gives two commands that do the same thing: `transcr
 A project that runs the tool lists it as a dependency, pinned to a release tag. With [uv](https://docs.astral.sh/uv/):
 
 ```
-uv add "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.6"
+uv add "transcript-normalizer[ingest] @ git+https://github.com/Tatiwel/transcript-normalizer@v0.8.7"
 ```
 
 That writes the pin to the project's `pyproject.toml` and the exact build to `uv.lock`, so every machine installs the same thing. Leave out `[ingest]` to get the normalizer alone, a few MB, for captions you already have; `[captions]` adds `fetch` with platform captions only.
