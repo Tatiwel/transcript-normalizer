@@ -37,6 +37,7 @@ from pathlib import Path
 from .. import caption_guard
 from ..catalog import write_meta
 from ..runs import NEEDS_REVIEW_DIR, is_frozen, runs_root
+from . import clips
 from . import cookies as sign_in
 from . import repeats as repeated
 from .console import Output
@@ -826,22 +827,64 @@ def transcribe(audio: Path, lang: str, model: str, out: Output | None = None) ->
     out = out or Output()
     out.info(f"loading speech model '{model}'")
     engine = load_whisper(model, out)
-    segments, info = engine.transcribe(
-        str(audio), language=lang.split("-")[0], vad_filter=True, condition_on_previous_text=False
-    )
+    segments, info = engine.transcribe(str(audio), **whisper_options(lang))
     lines = []
     done = 0.0
     with out.progress(total=float(info.duration or 0), description="transcribing") as advance:
         for segment in segments:
             advance(max(segment.end - done, 0.0))
             done = max(done, segment.end)
-            text = segment.text.strip()
-            if not text:
-                continue
-            minutes, seconds = divmod(int(segment.start), 60)
-            lines.append(f"{minutes}:{seconds:02d} {text}")
+            line = segment_line(segment)
+            if line:
+                lines.append(line)
     out.info(f"segments with speech: {len(lines)}")
     return "\n".join(lines), float(info.duration or 0)
+
+
+def whisper_options(lang: str) -> dict:
+    """The options every transcription uses, a whole file's or a stretch's (D-101)."""
+    return {"language": lang.split("-")[0], "vad_filter": True, "condition_on_previous_text": False}
+
+
+def segment_line(segment, offset: float = 0.0) -> str:
+    """`m:ss text` at the segment's start, `offset` seconds later; "" when it has no text."""
+    text = segment.text.strip()
+    if not text:
+        return ""
+    minutes, seconds = divmod(int(segment.start + offset), 60)
+    return f"{minutes}:{seconds:02d} {text}"
+
+
+def window_transcriber(lang: str, model: str, out: Output) -> clips.Transcriber:
+    """D-101: transcribe a stretch of a file on its own, timed from the file's
+    start. The model is loaded once, on the first stretch."""
+    engines = []
+
+    def transcribe_window(media: Path, start: float, end: float) -> str:
+        samples = clips.decode_window(media, start, end)
+        if not engines:
+            engines.append(load_whisper(model, out))
+        segments, _ = engines[0].transcribe(samples, **whisper_options(lang))
+        return "\n".join(line for line in (segment_line(s, start) for s in segments) if line)
+
+    return transcribe_window
+
+
+def transcribe_repeats(
+    found: list[repeated.Repeat], media: Path, target: Path, lang: str, model: str, out: Output,
+    *, source: str, origin: str = clips.SAME_RUN,
+) -> list[Path]:
+    """D-101: each passage's stretch transcribed again, beside the warning."""
+    if not found:
+        return []
+    out.info(f"transcribing again, on its own, the stretch around each passage ({len(found)})")
+    written = clips.write_clips(
+        found, media, target / NEEDS_REVIEW_DIR, window_transcriber(lang, model, out), model, lang,
+        source=source, origin=origin, warn=out.warn,
+    )
+    for path in written:
+        out.detail("stretch", path, "path", note="(help for listening, not a source)")
+    return written
 
 
 def look_for_repeats(body: str, target: Path, out: Output) -> list[repeated.Repeat]:
@@ -969,7 +1012,65 @@ def run_file(args: argparse.Namespace, media: Path, out: Output) -> int:
     )
     out.detail("meta", save_meta(target, meta, None, step, path=media), "path")
     out.detail("text", caption, "path", note=f"(step {step.number}, {step.name})")
+    transcribe_repeats(found, media, target, args.lang, args.model, out,
+                       source=f"{media.name}, {fingerprint}")
     return 0
+
+
+def run_recheck(args: argparse.Namespace, media: Path, out: Output) -> int:
+    """D-101: `fetch FILE --recheck`. The passages an existing local
+    transcription wrote twice, each stretch transcribed again from FILE, with
+    the model and language legenda.txt names. legenda.txt is not changed."""
+    missing = missing_extra("faster_whisper")
+    if missing:
+        return report_missing(missing)
+    target = fetch_dir(media.stem, args.out)
+    existing = caption_guard.read_existing(target)
+    if existing is None:
+        print(f"{target} has no {CAPTION_FILE} to recheck; --out names the run folder", file=sys.stderr)
+        return 1
+    if existing.kind != caption_guard.SPEECH or not existing.model:
+        print(f"{existing.path} holds {existing.describe()}: only a local transcription that names "
+              f"its model is rechecked", file=sys.stderr)
+        return 1
+    try:
+        fingerprint = caption_guard.fingerprint(media)
+    except OSError as error:
+        print(f"could not read {media}: {error}", file=sys.stderr)
+        return 1
+    if existing.fingerprint:
+        if existing.fingerprint != fingerprint:
+            print(f"{existing.path} holds {existing.describe()}, and {media.name} has other content "
+                  f"({fingerprint}; the header says {existing.fingerprint}). Nothing was written.",
+                  file=sys.stderr)
+            return caption_guard.EXIT_CAPTION_EXISTS
+        origin = clips.CHECKED
+    elif not args.unverified_source:
+        print(f"{existing.path} was written before 0.8.3 and has no fingerprint, so {media.name} "
+              f"cannot be checked to be the file it came from. --unverified-source rechecks it anyway, "
+              f"and each stretch's file says it was not checked. Nothing was written.", file=sys.stderr)
+        return 1
+    elif existing.file_name and existing.file_name != media.name:
+        print(f"{existing.path} holds {existing.describe()}, not of {media.name}. Nothing was written.",
+              file=sys.stderr)
+        return caption_guard.EXIT_CAPTION_EXISTS
+    else:
+        origin = clips.UNCHECKED
+    lang = existing.lang or DEFAULT_LANG
+    out.detail("text", existing.path, "path", note=f"(model {existing.model}, language {lang}; not changed)")
+    body = "\n".join(existing.body)
+    found = repeated.find_repeats(body)
+    review = target / NEEDS_REVIEW_DIR
+    if not found:
+        clips.write_clips([], media, review, None, existing.model, lang, source="", origin=origin,
+                          warn=out.warn)  # an earlier recheck's stretches go with what they were of
+        (review / repeated.REPEATS_FILE).unlink(missing_ok=True)
+        out.info(repeated.header_lines([])[0].removeprefix("# "))
+        return 0
+    look_for_repeats(body, target, out)
+    written = transcribe_repeats(found, media, target, lang, existing.model, out,
+                                 source=f"{media.name}, {fingerprint}", origin=origin)
+    return 0 if len(written) == len(found) else 1
 
 
 def step_caption(
@@ -1035,6 +1136,8 @@ def step_speech(
         + "\n",
         encoding="utf-8",
     )
+    transcribe_repeats(found, audio, target, args.lang, args.model, out,
+                       source=f"the audio downloaded from {args.url}")
     keep_or_delete(audio, meta, target, keeps_audio(args), out)
     return step, meta
 
@@ -1144,6 +1247,19 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         help="when the run folder already has a legenda.txt from another source (another model, track "
         "or file), replace it; the current one and what was made from it move to replaced-<date and time>/ "
         "inside the folder. Without this, fetch stops there and says so",
+    )
+    parser.add_argument(
+        "--recheck",
+        action="store_true",
+        help="for a local file already transcribed: find the passages its legenda.txt wrote twice and "
+        "transcribe the stretch around each again, on its own, into needs-review/repeats/. legenda.txt "
+        "is not changed. The file is checked against the fingerprint in legenda.txt's header",
+    )
+    parser.add_argument(
+        "--unverified-source",
+        action="store_true",
+        help="with --recheck, for a legenda.txt written before 0.8.3, which has no fingerprint: take "
+        "the file to be the one it came from (by name), and say so in each stretch's file",
     )
     parser.add_argument(
         "--keep-raw",
@@ -1278,6 +1394,12 @@ def run(args: argparse.Namespace) -> int:
         )
         return 2
     media = local_media(args.url)
+    if getattr(args, "recheck", False):
+        if media is None:
+            print("--recheck takes the local file legenda.txt was transcribed from, not a url "
+                  "(a downloaded audio kept with --keep-audio is such a file)", file=sys.stderr)
+            return 2
+        return run_recheck(args, media, out)
     if media is not None:
         return run_file(args, media, out)
     if "://" not in args.url:
