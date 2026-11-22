@@ -1,9 +1,10 @@
 """D-091: a run's legenda.txt is never replaced without being asked to.
 
-A legenda.txt is the provenance of everything taken from it: a project cites
-its lines by their timestamps. `fetch` and `normalize <file.vtt>` used to write
-it over whatever was there, so running either again, with another model, track
-or file, changed the text under every citation already made, without a word.
+Everything a run makes comes from its legenda.txt: normalized.txt, needs-review/,
+and any note a person took by its timestamps (D-102). `fetch` and `normalize
+<file.vtt>` used to write it over whatever was there, so running either again,
+with another model, track or file, changed the text under all of that, without
+a word.
 
 Now each command that writes a legenda.txt looks first. When one is there and
 the new text would come from the same origin, the one there is used and nothing

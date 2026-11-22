@@ -139,7 +139,7 @@ def header_lines(repeats: list[Repeat]) -> list[str]:
     """The lines the header of a transcription gets (in Portuguese, like the header)."""
     if not repeats:
         return ["# Trecho repetido: nenhum encontrado. Isto nao garante que nada faltou."]
-    lines = [f"# Trecho repetido: {len(repeats)}. Ouca o audio antes de citar estes trechos:"]
+    lines = [f"# Trecho repetido: {len(repeats)}. Ouca o audio antes de usar estes trechos:"]
     for repeat in repeats:
         lines.append(
             f"#   {_span(repeat.start, repeat.end)} repete {_sources(repeat, 'a', ' e ')}"
@@ -153,7 +153,7 @@ def report(repeats: list[Repeat]) -> str:
     out = [
         "Passages the local transcription wrote twice.",
         "The second copy usually stands where something else was said, which is lost.",
-        "Listen to the audio at each time before citing it. The text was not changed.",
+        "Listen to the audio at each time before using it. The text was not changed.",
         "",
     ]
     for repeat in repeats:
@@ -169,5 +169,5 @@ def report(repeats: list[Repeat]) -> str:
 def summary(repeats: list[Repeat]) -> str:
     """The one line fetch prints."""
     where = ", ".join(r.start for r in repeats)
-    return (f"{len(repeats)} passage(s) came out twice, at {where}: listen there before citing "
+    return (f"{len(repeats)} passage(s) came out twice, at {where}: listen there before using it "
             f"(needs-review/{REPEATS_FILE})")

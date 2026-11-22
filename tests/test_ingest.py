@@ -44,10 +44,9 @@ BEFORE_D093 = (
 SINCE_D093 = (
     "# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o\n"
     "# instante em que a legenda sai da tela. A fala comeca antes dele.\n"
-    "# O timestamp e a procedencia de qualquer afirmacao extraida\n"
-    "# daqui, do mesmo modo que documento e pagina sao a procedencia\n"
-    "# de um PDF.\n"
 )
+#: D-102: the header no longer carries the rules of a program that uses it.
+BEFORE_D102 = "# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.\n"
 
 
 def test_header_writer_reproduces_the_fixture_header():
@@ -58,8 +57,9 @@ def test_header_writer_reproduces_the_fixture_header():
         lang="pt",
         downloaded=FIXTURE_DOWNLOADED,
     )
-    assert BEFORE_D093 in fixture_header()
-    assert written == fixture_header().replace(BEFORE_D093, SINCE_D093)
+    assert BEFORE_D093 in fixture_header() and BEFORE_D102 in fixture_header()
+    expected = fixture_header().replace(BEFORE_D093, SINCE_D093).replace(BEFORE_D102, "")
+    assert written == expected.replace("antes de citar.", "antes de usar.")
 
 
 def test_the_written_header_is_what_the_core_skips():
