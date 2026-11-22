@@ -1,4 +1,4 @@
-"""The provenance header of a `legenda.txt`.
+"""The header of a `legenda.txt`.
 
 The header is what the core reads: `core.text.parse_caption` skips these `#`
 lines and every line after them is `m:ss text`. The wording stays in Portuguese
@@ -68,7 +68,6 @@ def caption_header(
         [
             "# Legenda de video, material bruto para ingestao",
             "#",
-            "# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.",
             "# Legenda obtida da plataforma, sem transcricao por IA.",
             f"# Origem da legenda: {source} ({lang})",
             *_step_line(step),
@@ -79,12 +78,9 @@ def caption_header(
             f"# Baixado em: {downloaded or _today()}",
             "#",
             *END_OF_CUE,
-            "# O timestamp e a procedencia de qualquer afirmacao extraida",
-            "# daqui, do mesmo modo que documento e pagina sao a procedencia",
-            "# de um PDF.",
             "#",
             "# Legenda automatica erra termo de dominio por semelhanca fonetica.",
-            "# Confira nome proprio e sigla contra outra fonte antes de citar.",
+            "# Confira nome proprio e sigla contra outra fonte antes de usar.",
             "",
         ]
     )
@@ -109,7 +105,6 @@ def speech_header(
         [
             "# Transcricao por reconhecimento de fala local, material bruto",
             "#",
-            "# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.",
             "# NAO FOI TRANSCRITO POR PROVEDOR DE IA. Reconhecimento de fala",
             "# mapeia audio para texto e nao completa lacuna com plausibilidade.",
             f"# Modelo: faster-whisper {model}, idioma {lang}, vad_filter ativo",
@@ -122,12 +117,11 @@ def speech_header(
             f"# Transcrito em: {transcribed or _today()}",
             "#",
             *START_OF_SEGMENT,
-            "# O timestamp e a procedencia de qualquer afirmacao extraida daqui.",
             "#",
             "# TRES LIMITACOES MEDIDAS:",
             "# 1. Erro fonetico em termo de dominio. Sigla, nome de agencia,",
             "#    nome de norma e nome de companhia sao os mais afetados.",
-            "#    Confira contra outra fonte antes de citar.",
+            "#    Confira contra outra fonte antes de usar.",
             "# 2. Trecho sem fala pode gerar texto inventado. O vad_filter",
             "#    reduz isso e nao elimina. Frase curta e generica isolada,",
             "#    perto de vinheta ou musica, e suspeita.",
@@ -145,13 +139,11 @@ def file_header(file_name: str, title: str, converted: str | None = None) -> str
         [
             "# Legenda convertida de arquivo, material bruto para ingestao",
             "#",
-            "# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.",
             f"# Titulo: {title}",
             f"# Arquivo: {file_name}",
             f"# Convertido em: {converted or _today()}",
             "#",
             *END_OF_CUE,
-            "# O timestamp e a procedencia de qualquer afirmacao extraida daqui.",
             "",
         ]
     )

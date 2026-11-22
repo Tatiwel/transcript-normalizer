@@ -895,7 +895,7 @@ def transcribe_repeats(
             out.warn(f"{media} changed while its stretches were transcribed again; they were not kept")
             return []
     for path in written:
-        out.detail("stretch", path, "path", note="(help for listening, not a source)")
+        out.detail("stretch", path, "path", note="(help for listening; legenda.txt not changed)")
     return written
 
 

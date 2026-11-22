@@ -321,7 +321,7 @@ def test_fetch_says_so_and_lists_it_for_review(tmp_path, monkeypatch, capsys):
     report = (run / NEEDS_REVIEW_DIR / REPEATS_FILE).read_text(encoding="utf-8")
     assert "1:29  repeats 1:06" in report and "  1:29 porque " + PASSAGE in report
     header = read_caption(run / CAPTION_FILE).header
-    assert "# Trecho repetido: 1. Ouca o audio antes de citar estes trechos:" in header
+    assert "# Trecho repetido: 1. Ouca o audio antes de usar estes trechos:" in header
     assert any(line.startswith("#   1:29 repete 1:06") for line in header)
     assert [line.text for line in read_caption(run / CAPTION_FILE).lines][1] == "porque " + PASSAGE
 

@@ -4,8 +4,8 @@ D-092's lesson: the long file wrote a passage twice at 44:29 and lost what was
 said there, and the same model on a clip of 44:02 to 44:33 got it right. So for
 each passage D-092 finds, the stretch around it is cut from the same file and
 transcribed alone, with the same model and language, and written to
-needs-review/repeats/ beside the warning. It is help for whoever listens, never
-a source: legenda.txt is not changed, and a citation still comes from it.
+needs-review/repeats/ beside the warning. It is help for whoever listens:
+legenda.txt is not changed.
 
 The window starts BEFORE seconds before the earliest first copy, since what
 was lost may have been said before the passage the transcription repeated (in
@@ -102,8 +102,8 @@ def clip_text(repeat: repeated.Repeat, body: str, source: str, model: str, lang:
         f"{repeated._sources(repeat, 'to', ' and ')} ({repeat.words} words), and what was said there "
         f"may be lost.",
         "",
-        "This is help for listening, not a source. legenda.txt was not changed; cite from it,",
-        "after listening to the audio at this time. A loss that wrote nothing twice is not found.",
+        "This is help for listening. legenda.txt was not changed. A loss that wrote nothing twice",
+        "is not found.",
         "",
         f"File: {source}",
         origin,

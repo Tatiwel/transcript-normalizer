@@ -204,11 +204,11 @@ def test_each_passage_s_stretch_is_transcribed_again_beside_the_warning(tmp_path
     assert calls == [(99 - 51) * 16000]  # 0:51 (1:06 less 15) to 1:39 (1:29 plus 10)
     assert text.startswith("The stretch 0:51 to 1:39, transcribed again on its own.")
     assert "1:01 o que foi dito de verdade" in text  # 10 s into the stretch, timed from the file's start
-    assert "not a source" in text and clips.SAME_RUN in text
+    assert "help for listening" in text and clips.SAME_RUN in text
     assert caption_guard.fingerprint(media) in text
     caption = (run(tmp_path) / CAPTION_FILE).read_text(encoding="utf-8")
     assert "o que foi dito de verdade" not in caption  # legenda.txt is not changed
-    assert "(help for listening, not a source)" in capsys.readouterr().out
+    assert "(help for listening; legenda.txt not changed)" in capsys.readouterr().out
 
 
 def test_a_stretch_that_fails_is_said_and_the_text_is_still_there(tmp_path, monkeypatch, capsys, media):

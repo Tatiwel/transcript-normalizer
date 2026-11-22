@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The header of `legenda.txt` no longer carries the rules of a program that uses the library (D-102): "Nao carregue isto em conhecimento/" and "O timestamp e a procedencia de qualquer afirmacao extraida daqui" are gone, and "antes de citar" became "antes de usar". The timestamp, the fingerprint, the warning of a passage written twice and the measured limitations stay. Texts written before keep the old lines, which nothing reads.
+
 ## 0.8.4
 
 2026-11-22. The stretch around a passage written twice is transcribed again on its own, and `fetch FILE --recheck` does it for a text already there (D-101).
