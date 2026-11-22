@@ -1,7 +1,7 @@
 """D-091: a run's legenda.txt is never replaced without being asked to.
 
-Everything a run makes comes from its legenda.txt: normalized.txt, needs-review/,
-and any note a person took by its timestamps (D-102). `fetch` and `normalize
+What is made from a run's legenda.txt depends on it: normalized.txt, the review
+lists in needs-review/, and any note a person took by its timestamps (D-102). `fetch` and `normalize
 <file.vtt>` used to write it over whatever was there, so running either again,
 with another model, track or file, changed the text under all of that, without
 a word.
