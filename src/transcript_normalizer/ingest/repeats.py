@@ -20,6 +20,8 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from .. import stamps
+
 #: Words compared at a time.
 NGRAM = 6
 #: How far back the first copy may be, in seconds.
@@ -54,15 +56,18 @@ def _fold(word: str) -> str:
 
 
 def _seconds(stamp: str) -> int:
-    minutes, seconds = stamp.split(":")
-    return int(minutes) * 60 + int(seconds)
+    """`44:29`, `74:14` or `1:14:14` (D-103) in seconds."""
+    value = stamps.seconds(stamp)
+    if value is None:
+        raise ValueError(f"not a timestamp: {stamp!r}")
+    return value
 
 
 def _lines(body: str) -> list[tuple[str, str]]:
     lines = []
     for raw in body.splitlines():
         stamp, _, text = raw.strip().partition(" ")
-        if re.fullmatch(r"\d+:\d\d", stamp) and text:
+        if stamps.STAMP.fullmatch(stamp) and text:
             lines.append((stamp, text))
     return lines
 

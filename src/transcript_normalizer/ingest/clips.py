@@ -19,6 +19,7 @@ import shutil
 from collections.abc import Callable
 from pathlib import Path
 
+from .. import stamps
 from . import repeats as repeated
 
 #: Seconds before the earliest first copy the window starts.
@@ -35,19 +36,18 @@ Transcriber = Callable[[Path, float, float], str]
 
 
 def stamp(seconds: float) -> str:
-    minutes, rest = divmod(int(seconds), 60)
-    return f"{minutes}:{rest:02d}"
+    return stamps.clock(seconds)  # D-103
 
 
 def window(repeat: repeated.Repeat) -> tuple[int, int]:
     """The stretch transcribed again, in whole seconds from the file's start."""
-    start = repeated._seconds(repeat.source_start) - BEFORE
-    return max(start, 0), repeated._seconds(repeat.end) + AFTER
+    start = stamps.seconds(repeat.source_start) - BEFORE
+    return max(start, 0), stamps.seconds(repeat.end) + AFTER
 
 
 def file_name(repeat: repeated.Repeat) -> str:
     """`44-29.txt`: the second copy's time, with no colon (Windows has none in names)."""
-    return repeat.start.replace(":", "-") + ".txt"
+    return stamps.in_name(repeat.start) + ".txt"
 
 
 def decode_window(path: Path, start: float, end: float):

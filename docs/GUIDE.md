@@ -144,6 +144,8 @@ A text already transcribed gets the same with `fetch FILE --recheck` (and `--out
 
 Everything goes under `runs/<video-id>/` in the current directory; nothing is written beside your input (D-015, D-022).
 
+Each line starts with its timestamp, written as a video player shows the time: `44:29` before 1 hour, `1:14:14` from 1 hour on (D-103). A text written before 0.8.6 has `74:14` where the player shows `1:14:14`; everything reads both, and `restamp <run folder>` rewrites an old text the new way. It rewrites only the timestamps at the start of each line and in the program's own lines about passages written twice (the header, `repeats.txt`, the stretch files, which it renames too); no word changes, and a time said in the speech ("às 10:30") is left as it is. The text before goes to `replaced-<date and time>/`, and so does whatever `normalize` made from it, to be made again.
+
 | file | what it is |
 |---|---|
 | `legenda.txt` | the transcript as received, with a header saying where it came from and which moment each timestamp is: the end of the caption (the platform's, or a `.srt`/`.vtt`), or the start of the speech (local transcription) (D-093) |

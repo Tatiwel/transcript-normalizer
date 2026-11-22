@@ -42,8 +42,9 @@ BEFORE_D093 = (
     "# que documento e pagina sao a procedencia de um PDF.\n"
 )
 SINCE_D093 = (
-    "# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o\n"
+    "# Cada linha comeca com o timestamp do FIM do trecho: o\n"
     "# instante em que a legenda sai da tela. A fala comeca antes dele.\n"
+    "# Antes de 1 hora, m:ss (44:29); depois, h:mm:ss (1:14:14).\n"  # D-103
 )
 #: D-102: the header no longer carries the rules of a program that uses it.
 BEFORE_D102 = "# NAO E CONHECIMENTO AUTORADO. Nao carregue isto em conhecimento/.\n"

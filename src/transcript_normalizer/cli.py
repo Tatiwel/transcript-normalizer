@@ -41,7 +41,7 @@ from .core.standoff import (
     write_json,
 )
 from .core.text import Transcript, read_caption
-from . import caption_guard
+from . import caption_guard, stamps
 from .review import apply_local, read_local, write_local
 from .catalog import list_runs
 from .languages import LanguageNotFound
@@ -62,7 +62,7 @@ from .runs import (
 )
 
 PROG = "transcript-normalizer"
-COMMANDS = ("normalize", "fetch", "list", "pack", "help")
+COMMANDS = ("normalize", "fetch", "list", "restamp", "pack", "help")
 
 #: How many example lines the confirmation loop shows per variant (D-019).
 EXAMPLES_PER_VARIANT = 3
@@ -499,7 +499,7 @@ def convert_subtitle(subtitle: Path, out: Path | None = None, replace: bool = Fa
     text = file_header(subtitle.name, subtitle.stem) + body + "\n"
     existing = caption_guard.read_existing(target)
     if existing is not None:
-        if existing.body == caption_guard.split(text)[1]:
+        if stamps.same_lines(existing.body, caption_guard.split(text)[1]):  # D-103: 74:14 is 1:14:14
             return caption
         if not replace:
             raise CaptionExists(caption_guard.refusal(
@@ -798,6 +798,16 @@ def build_parser() -> argparse.ArgumentParser:
         "date and its title.",
     )
     listing.set_defaults(run=run_list)
+
+    from . import restamp
+
+    restamping = commands.add_parser(
+        "restamp",
+        help="rewrite a run's timestamps as a video player shows them (1:14:14, not 74:14)",
+        description="D-103: rewrite the timestamps of a legenda.txt written before 0.8.6, "
+        "keeping the text before in replaced-<date and time>/. No word changes.",
+    )
+    restamp.add_arguments(restamping)
 
     from . import contribute, merge, packedit, packfiles, registry
 

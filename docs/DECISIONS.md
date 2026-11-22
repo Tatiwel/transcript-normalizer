@@ -1079,6 +1079,12 @@ What stays has a use of its own: the timestamp on each line and the moment it ma
 
 A `legenda.txt` written before 0.8.5 keeps the old lines; nothing reads them, and D-091's check reads the header's fields, not these lines.
 
+## D-103 A timestamp from 1 hour on is written as a video player shows it
+
+A line's timestamp was always `m:ss`, with minutes past 59: `74:14` where a video player shows `1:14:14`. Finding the moment in the player meant converting it by hand. From 0.8.6 a timestamp is `m:ss` before 1 hour, as it was (`44:29`), and `h:mm:ss` from 1 hour on (`1:14:14`), in the three kinds of text (D-022, D-038, D-087), in D-092's warning and `repeats.txt`, and in D-101's stretch files, whose name follows (`1-14-29.txt`). The header says so in one line: `# Antes de 1 hora, m:ss (44:29); depois, h:mm:ss (1:14:14).` One function writes every timestamp (`stamps.clock`), and one reads both forms (`stamps.seconds`); the matcher and the review already read `h:mm:ss`, D-092's search now does too. Nothing is slower: it is how a number is written.
+
+**Texts written before.** They keep `74:14`, and every reader takes it. D-091's check of a converted `.srt` or `.vtt` compares lines by the moment they name, so a subtitle converted before is still the same subtitle, not exit 4. `restamp <run folder or legenda.txt>` rewrites an old text the new way: the timestamp at the start of each line; every timestamp in the lines the program itself wrote about passages written twice (the header's `repete` lines, `repeats.txt`, the stretch files, renamed too); and the header's line that named the form `mm:ss`, followed by the new line above. No word changes, and a time said in the speech ("às 10:30", or `74:00` inside a line) is left as it is: only the leading stamp of a line of speech is a timestamp. What it changes is kept first in `replaced-<date and time>/` (D-091's archive), and so is what `normalize` made from the old text, which names the old timestamps and is to be made again; `meta.yaml` and what has nothing to rewrite come back as they were. A failure puts the run back as it was. Run on a text already the new way, it says so and writes nothing. The header's fields D-091 reads (model, language, file, fingerprint) do not change, so the same source is still the same source.
+
 ## Open, not yet decided
 
 - Calibration of the two thresholds of D-011.

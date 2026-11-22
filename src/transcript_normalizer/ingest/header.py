@@ -1,7 +1,7 @@
 """The header of a `legenda.txt`.
 
 The header is what the core reads: `core.text.parse_caption` skips these `#`
-lines and every line after them is `m:ss text`. The wording stays in Portuguese
+lines and every line after them is `m:ss text`, or `h:mm:ss text` from 1 hour on (D-103). The wording stays in Portuguese
 because `fixtures/fixture0001/legenda.txt` is the reference for this format and
 the fixture is the regression test's input.
 """
@@ -29,16 +29,21 @@ class Metadata:
     duration_from_audio: bool = False  # D-079: the site gave none; step 2 measured it
 
 
+#: D-103: how the timestamp is written, as a video player shows the time.
+CLOCK = "# Antes de 1 hora, m:ss (44:29); depois, h:mm:ss (1:14:14)."
+
 #: D-093: which moment of a line the timestamp is. A caption cue (the
 #: platform's, or a .srt or .vtt) is stamped with its end, as the converter does
 #: (ingest/subtitles.py); a speech segment with its start (fetch.transcribe).
 END_OF_CUE = (
-    "# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o",
+    "# Cada linha comeca com o timestamp do FIM do trecho: o",
     "# instante em que a legenda sai da tela. A fala comeca antes dele.",
+    CLOCK,
 )
 START_OF_SEGMENT = (
-    "# Cada linha comeca com o timestamp mm:ss do INICIO do trecho: o",
+    "# Cada linha comeca com o timestamp do INICIO do trecho: o",
     "# instante em que a fala comeca.",
+    CLOCK,
 )
 
 

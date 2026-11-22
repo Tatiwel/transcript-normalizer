@@ -8,8 +8,9 @@
 # URL: https://example.invalid/synthetic
 # Baixado em: 2026-01-02
 #
-# Cada linha comeca com o timestamp mm:ss do FIM do trecho: o
+# Cada linha comeca com o timestamp do FIM do trecho: o
 # instante em que a legenda sai da tela. A fala comeca antes dele.
+# Antes de 1 hora, m:ss (44:29); depois, h:mm:ss (1:14:14).
 #
 # Legenda automatica erra termo de dominio por semelhanca fonetica.
 # Confira nome proprio e sigla contra outra fonte antes de usar.
